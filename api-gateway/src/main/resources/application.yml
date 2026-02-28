@@ -1,0 +1,58 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 30s
+        pool:
+          type: DISABLED
+      routes:
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/api/auth/**, /api/users/**, /api/health
+          filters:
+            - StripPrefix=1
+
+        - id: nutrition-service
+          uri: lb://nutrition-service
+          predicates:
+            - Path=/api/nutrition/**
+          filters:
+            - StripPrefix=1
+
+        - id: exercise-service
+          uri: lb://exercise-service
+          predicates:
+            - Path=/api/exercises/**, /api/workouts/**
+          filters:
+            - StripPrefix=1
+
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+
+  main:
+    web-application-type: reactive
+
+jwt:
+  secret: YourSuperSecretKeyForJWTTokenGenerationPleaseChangeInProduction2024FitnessApp
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    hostname: localhost
+    prefer-ip-address: false
+
+logging:
+  level:
+    root: INFO
+    com.fitnessapp: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+

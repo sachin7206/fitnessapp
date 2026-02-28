@@ -1,0 +1,36 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-workout-plans-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: workout_plans
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_id, type: BIGINT }
+              - column: { name: plan_name, type: VARCHAR(255) }
+              - column: { name: plan_type, type: VARCHAR(50) }
+              - column: { name: frequency, type: VARCHAR(50) }
+              - column: { name: difficulty, type: VARCHAR(50) }
+              - column: { name: duration_weeks, type: INT }
+              - column: { name: is_active, type: BOOLEAN }
+              - column: { name: created_at, type: DATETIME }
+        - createTable:
+            tableName: workout_exercises
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: workout_plan_id, type: BIGINT }
+              - column: { name: exercise_id, type: BIGINT }
+              - column: { name: exercise_name, type: VARCHAR(255) }
+              - column: { name: sets, type: INT }
+              - column: { name: reps, type: INT }
+              - column: { name: duration_seconds, type: INT }
+              - column: { name: rest_time_seconds, type: INT }
+              - column: { name: exercise_order, type: INT }
+        - addForeignKeyConstraint:
+            baseTableName: workout_exercises
+            baseColumnNames: workout_plan_id
+            referencedTableName: workout_plans
+            referencedColumnNames: id
+            constraintName: fk_workout_exercises_plan
+

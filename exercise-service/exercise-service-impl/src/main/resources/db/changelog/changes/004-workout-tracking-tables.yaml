@@ -1,0 +1,83 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-add-workout-plan-columns
+      author: fitnessapp
+      changes:
+        - addColumn:
+            tableName: workout_plans
+            columns:
+              - column: { name: exercise_type, type: VARCHAR(50) }
+              - column: { name: exercise_time, type: VARCHAR(20) }
+              - column: { name: exercise_duration_minutes, type: INT }
+              - column: { name: goal, type: VARCHAR(50) }
+              - column: { name: days_per_week, type: INT }
+              - column: { name: calories_per_session, type: INT }
+              - column: { name: cardio_type, type: VARCHAR(50) }
+              - column: { name: cardio_duration_minutes, type: INT }
+              - column: { name: cardio_steps, type: INT }
+              - column: { name: cardio_calories, type: INT }
+              - column: { name: is_template, type: BOOLEAN, defaultValueBoolean: false }
+        - addColumn:
+            tableName: workout_exercises
+            columns:
+              - column: { name: day_of_week, type: VARCHAR(20) }
+              - column: { name: muscle_group, type: VARCHAR(50) }
+              - column: { name: calories_burned, type: INT }
+              - column: { name: is_cardio, type: BOOLEAN, defaultValueBoolean: false }
+              - column: { name: steps, type: INT }
+
+  - changeSet:
+      id: 004-create-user-workout-plans
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: user_workout_plans
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_email, type: VARCHAR(255), constraints: { nullable: false } }
+              - column: { name: workout_plan_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: start_date, type: DATE }
+              - column: { name: end_date, type: DATE }
+              - column: { name: status, type: VARCHAR(20), defaultValue: 'ACTIVE' }
+              - column: { name: completed_workouts, type: INT, defaultValueNumeric: 0 }
+              - column: { name: total_workouts, type: INT, defaultValueNumeric: 0 }
+              - column: { name: current_week, type: INT, defaultValueNumeric: 1 }
+              - column: { name: created_at, type: DATETIME }
+        - addForeignKeyConstraint:
+            baseTableName: user_workout_plans
+            baseColumnNames: workout_plan_id
+            referencedTableName: workout_plans
+            referencedColumnNames: id
+            constraintName: fk_user_workout_plan
+
+  - changeSet:
+      id: 004-create-workout-completions
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: workout_completions
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_email, type: VARCHAR(255), constraints: { nullable: false } }
+              - column: { name: user_workout_plan_id, type: BIGINT }
+              - column: { name: completion_date, type: DATE, constraints: { nullable: false } }
+              - column: { name: completed, type: BOOLEAN, defaultValueBoolean: false }
+              - column: { name: completed_at, type: DATETIME }
+        - addForeignKeyConstraint:
+            baseTableName: workout_completions
+            baseColumnNames: user_workout_plan_id
+            referencedTableName: user_workout_plans
+            referencedColumnNames: id
+            constraintName: fk_workout_completion_plan
+
+  - changeSet:
+      id: 004-create-motivational-quotes
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: motivational_quotes
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: quote_text, type: VARCHAR(500), constraints: { nullable: false } }
+              - column: { name: category, type: VARCHAR(50) }
+

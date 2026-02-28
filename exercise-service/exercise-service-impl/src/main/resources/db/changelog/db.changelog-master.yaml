@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - include:
+      file: changes/001-create-exercises-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/002-create-exercise-collections.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/003-create-workout-plans-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/004-workout-tracking-tables.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/005-seed-motivational-quotes.yaml
+      relativeToChangelogFile: true
+

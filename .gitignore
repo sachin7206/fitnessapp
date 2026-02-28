@@ -1,0 +1,28 @@
+.DS_Store
+.idea/
+*.iml
+
+# Gradle
+.gradle/
+**/build/
+!**/gradle/wrapper/gradle-wrapper.jar
+
+# Mobile
+mobile/node_modules/
+mobile/.expo/
+mobile/.expo-shared/
+mobile/npm-debug.*
+mobile/yarn-error.log
+mobile/.env
+mobile/dist/
+mobile/web-build/
+
+# Environment
+.env
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+

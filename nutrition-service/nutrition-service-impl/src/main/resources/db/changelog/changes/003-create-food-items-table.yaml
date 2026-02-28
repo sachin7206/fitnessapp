@@ -1,0 +1,36 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-food-items-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: food_items
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: meal_id, type: BIGINT }
+              - column: { name: name, type: VARCHAR(255), constraints: { nullable: false } }
+              - column: { name: hindi_name, type: VARCHAR(255) }
+              - column: { name: regional_name, type: VARCHAR(255) }
+              - column: { name: description, type: VARCHAR(500) }
+              - column: { name: quantity, type: VARCHAR(100) }
+              - column: { name: calories, type: INT }
+              - column: { name: protein_grams, type: DOUBLE }
+              - column: { name: carbs_grams, type: DOUBLE }
+              - column: { name: fat_grams, type: DOUBLE }
+              - column: { name: fiber_grams, type: DOUBLE }
+              - column: { name: ingredients, type: VARCHAR(1000) }
+              - column: { name: recipe, type: VARCHAR(1000) }
+              - column: { name: image_url, type: VARCHAR(500) }
+              - column: { name: is_vegetarian, type: BOOLEAN, defaultValueBoolean: true }
+              - column: { name: is_vegan, type: BOOLEAN, defaultValueBoolean: false }
+              - column: { name: is_gluten_free, type: BOOLEAN, defaultValueBoolean: false }
+              - column: { name: is_dairy_free, type: BOOLEAN, defaultValueBoolean: false }
+              - column: { name: is_jain_friendly, type: BOOLEAN, defaultValueBoolean: false }
+              - column: { name: region, type: VARCHAR(50) }
+        - addForeignKeyConstraint:
+            baseTableName: food_items
+            baseColumnNames: meal_id
+            referencedTableName: meals
+            referencedColumnNames: id
+            constraintName: fk_food_items_meal
+

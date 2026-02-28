@@ -1,0 +1,2 @@
+{"timestamp":"2026-02-28T16:20:48.727+00:00","path":"/api/auth/login","status":500,"error":"Internal Server Error","requestId":"81581fa6-7"}
+HTTP_CODE:500

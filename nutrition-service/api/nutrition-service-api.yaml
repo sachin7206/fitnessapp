@@ -1,0 +1,347 @@
+openapi: 3.0.3
+info:
+  title: Nutrition Service API
+  description: API for nutrition plans, meals, AI-generated plans, and food preferences
+  version: 1.0.0
+
+paths:
+  /nutrition/plans:
+    get:
+      tags: [NutritionPlan]
+      operationId: getAllPlans
+      summary: Get all nutrition plans
+      parameters:
+        - name: region
+          in: query
+          schema:
+            type: string
+        - name: dietType
+          in: query
+          schema:
+            type: string
+        - name: goal
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Plans retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NutritionPlanDTO'
+
+  /nutrition/plans/{id}:
+    get:
+      tags: [NutritionPlan]
+      operationId: getPlanById
+      summary: Get plan by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Plan retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NutritionPlanDTO'
+
+  /nutrition/plans/recommended:
+    get:
+      tags: [NutritionPlan]
+      operationId: getRecommendedPlans
+      summary: Get recommended plans for authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Recommended plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NutritionPlanDTO'
+
+  /nutrition/plans/{planId}/enroll:
+    post:
+      tags: [NutritionPlan]
+      operationId: enrollInPlan
+      summary: Enroll in a nutrition plan
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: planId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Enrolled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserNutritionPlanDTO'
+
+  /nutrition/generate-plan:
+    post:
+      tags: [NutritionPlan]
+      operationId: generatePersonalizedPlan
+      summary: Generate AI-based personalized nutrition plan
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateNutritionPlanRequest'
+      responses:
+        '200':
+          description: Plan generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NutritionPlanDTO'
+
+  /nutrition/my-plan:
+    get:
+      tags: [UserNutritionPlan]
+      operationId: getActivePlan
+      summary: Get active nutrition plan
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Active plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserNutritionPlanDTO'
+
+  /nutrition/food-preferences:
+    get:
+      tags: [FoodPreference]
+      operationId: getFoodPreferences
+      summary: Get food preferences
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Food preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserFoodPreferenceDTO'
+    post:
+      tags: [FoodPreference]
+      operationId: saveFoodPreferences
+      summary: Save food preferences
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserFoodPreferenceDTO'
+      responses:
+        '200':
+          description: Preferences saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserFoodPreferenceDTO'
+
+  /nutrition/profile-status:
+    get:
+      tags: [NutritionPlan]
+      operationId: checkProfileStatus
+      summary: Check if profile is complete for nutrition
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileCompletionStatusDTO'
+
+  /health:
+    get:
+      tags: [Health]
+      operationId: healthCheck
+      summary: Health check
+      responses:
+        '200':
+          description: Service is healthy
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    NutritionPlanDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+        region:
+          type: string
+        dietType:
+          type: string
+        goal:
+          type: string
+        totalCalories:
+          type: integer
+        proteinGrams:
+          type: number
+        carbsGrams:
+          type: number
+        fatGrams:
+          type: number
+        fiberGrams:
+          type: number
+        difficulty:
+          type: string
+        durationDays:
+          type: integer
+        meals:
+          type: array
+          items:
+            $ref: '#/components/schemas/MealDTO'
+        isActive:
+          type: boolean
+
+    MealDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        mealType:
+          type: string
+        timeOfDay:
+          type: string
+        dayNumber:
+          type: integer
+        calories:
+          type: integer
+        proteinGrams:
+          type: number
+        carbsGrams:
+          type: number
+        fatGrams:
+          type: number
+        foodItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/FoodItemDTO'
+        preparationTips:
+          type: string
+        indianAlternatives:
+          type: string
+
+    FoodItemDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+        quantity:
+          type: string
+        calories:
+          type: integer
+        proteinGrams:
+          type: number
+        carbsGrams:
+          type: number
+        fatGrams:
+          type: number
+        fiberGrams:
+          type: number
+        isVegetarian:
+          type: boolean
+        region:
+          type: string
+
+    GenerateNutritionPlanRequest:
+      type: object
+      properties:
+        region:
+          type: string
+        primaryGoal:
+          type: string
+        targetCalories:
+          type: integer
+        excludeIngredients:
+          type: array
+          items:
+            type: string
+
+    UserFoodPreferenceDTO:
+      type: object
+      properties:
+        includeChicken:
+          type: boolean
+        includeFish:
+          type: boolean
+        includeRice:
+          type: boolean
+        includeRoti:
+          type: boolean
+        region:
+          type: string
+
+    UserNutritionPlanDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        userId:
+          type: integer
+          format: int64
+        nutritionPlan:
+          $ref: '#/components/schemas/NutritionPlanDTO'
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        status:
+          type: string
+
+    ProfileCompletionStatusDTO:
+      type: object
+      properties:
+        isComplete:
+          type: boolean
+        completionPercentage:
+          type: integer
+

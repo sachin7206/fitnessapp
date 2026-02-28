@@ -1,0 +1,48 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: nutrition-service
+  datasource:
+    url: jdbc:mysql://localhost:3306/fitnessapp_nutrition?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: root
+    password: infa@1234
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+jwt:
+  secret: YourSuperSecretKeyForJWTTokenGenerationPleaseChangeInProduction2024FitnessApp
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    hostname: localhost
+    prefer-ip-address: false
+
+gemini:
+  api:
+    key: AIzaSyCnv3Fm2H5zkr6e9ppUsUPOEGhwahFmsik,AIzaSyBLSd7utQaRyf3qgrQyNrlGTib5hrzmqYc,AIzaSyBwVRfG3KhGtipCytduqfPNML6Btl_94nA
+    url: https://generativelanguage.googleapis.com/v1beta/models
+  model: gemini-2.0-flash
+  enabled: true
+  timeout:
+    connect: 10000
+    read: 60000
+
+logging:
+  level:
+    root: INFO
+    com.fitnessapp: DEBUG
+

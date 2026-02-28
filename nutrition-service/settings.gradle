@@ -1,0 +1,6 @@
+rootProject.name = 'nutrition-service'
+
+include 'nutrition-service-common'
+include 'nutrition-service-rest'
+include 'nutrition-service-impl'
+

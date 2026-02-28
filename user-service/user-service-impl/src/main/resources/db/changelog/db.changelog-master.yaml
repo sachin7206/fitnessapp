@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - include:
+      file: changes/001-create-users-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/002-create-user-goals-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/003-create-user-roles-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/004-create-user-health-conditions-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/005-create-user-dietary-preferences-table.yaml
+      relativeToChangelogFile: true
+

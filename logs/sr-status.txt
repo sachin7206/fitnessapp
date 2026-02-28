@@ -1,0 +1,8 @@
+2026-02-28T21:58:40.813+05:30  INFO 40047 --- [service-registry] [           main] c.f.registry.ServiceRegistryApplication  : Starting ServiceRegistryApplication v1.0.0 using Java 21.0.9 with PID 40047 (/Users/sbisht/Documents/fitnessapp/service-registry/build/libs/service-registry-1.0.0.jar started by sbisht in /Users/sbisht/Documents/fitnessapp)
+2026-02-28T21:58:42.354+05:30  INFO 40047 --- [service-registry] [       Thread-9] e.s.EurekaServerInitializerConfiguration : Started Eureka Server
+2026-02-28T21:58:42.363+05:30 ERROR 40047 --- [service-registry] [t-Conn-Cleaner2] c.n.d.s.t.j.EurekaJersey3ClientImpl      : Cannot clean connections
+2026-02-28T21:58:42.365+05:30  WARN 40047 --- [service-registry] [           main] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.context.ApplicationContextException: Failed to start bean 'webServerStartStop'
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2026-02-28T21:58:42.391+05:30 ERROR 40047 --- [service-registry] [           main] o.s.b.d.LoggingFailureAnalysisReporter   : 
+APPLICATION FAILED TO START
+Web server failed to start. Port 8761 was already in use.

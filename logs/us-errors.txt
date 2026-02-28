@@ -1,0 +1,8 @@
+2026-02-28T21:37:21.339+05:30 ERROR 31128 --- [user-service] [o-8081-Acceptor] org.apache.tomcat.util.net.NioEndpoint   : Error setting socket options
+java.net.SocketException: Invalid argument
+2026-02-28T21:46:45.684+05:30 ERROR 31128 --- [user-service] [o-8081-Acceptor] org.apache.tomcat.util.net.NioEndpoint   : Error setting socket options
+java.net.SocketException: Invalid argument
+2026-02-28T21:46:53.881+05:30 ERROR 31128 --- [user-service] [o-8081-Acceptor] org.apache.tomcat.util.net.NioEndpoint   : Error setting socket options
+java.net.SocketException: Invalid argument
+2026-02-28T21:50:48.724+05:30 ERROR 31128 --- [user-service] [o-8081-Acceptor] org.apache.tomcat.util.net.NioEndpoint   : Error setting socket options
+java.net.SocketException: Invalid argument

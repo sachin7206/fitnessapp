@@ -1,0 +1,6 @@
+rootProject.name = 'exercise-service'
+
+include 'exercise-service-common'
+include 'exercise-service-rest'
+include 'exercise-service-impl'
+

@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - include:
+      file: changes/001-create-nutrition-plans-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/002-create-meals-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/003-create-food-items-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/004-create-user-nutrition-plans-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/005-create-user-food-preferences-table.yaml
+      relativeToChangelogFile: true
+

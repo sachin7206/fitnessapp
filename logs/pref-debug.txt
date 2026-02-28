@@ -1,0 +1,18 @@
+LOGIN RESPONSE:
+{"success":false,"message":"Invalid credentials","data":null,"timestamp":"2026-02-28T23:19:21.803328"}
+
+TOKEN: ...
+NO TOKEN FOUND, trying alternate parse
+TOKEN2: ...
+
+=== SAVE FOOD PREFERENCES ===
+
+HTTP_CODE:403
+
+=== GET FOOD PREFERENCES ===
+
+HTTP_CODE:403
+
+=== GET VIA GATEWAY ===
+
+HTTP_CODE:401

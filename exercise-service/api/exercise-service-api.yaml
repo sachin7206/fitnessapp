@@ -1,0 +1,69 @@
+openapi: 3.0.3
+info:
+  title: Exercise Service API
+  description: API for exercises and workout plans
+  version: 1.0.0
+
+paths:
+  /exercises:
+    get:
+      tags: [Exercise]
+      operationId: getAllExercises
+      summary: Get all exercises with optional filters
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: difficulty
+          in: query
+          schema:
+            type: string
+        - name: culturalOrigin
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Exercises retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /exercises/{id}:
+    get:
+      tags: [Exercise]
+      operationId: getExerciseById
+      summary: Get exercise by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Exercise retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /health:
+    get:
+      tags: [Health]
+      operationId: healthCheck
+      summary: Health check
+      responses:
+        '200':
+          description: Service is healthy
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+

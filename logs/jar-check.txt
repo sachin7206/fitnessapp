@@ -1,0 +1,4 @@
+-rw-r--r--@ 1 sbisht  staff  51348145 Feb 28 21:57 /Users/sbisht/Documents/fitnessapp/api-gateway/build/libs/api-gateway-1.0.0.jar
+-rw-r--r--@ 1 sbisht  staff  88588966 Feb 28 21:58 /Users/sbisht/Documents/fitnessapp/exercise-service/exercise-service-impl/build/libs/exercise-service-impl-1.0.0.jar
+-rw-r--r--@ 1 sbisht  staff  88757447 Feb 28 21:57 /Users/sbisht/Documents/fitnessapp/nutrition-service/nutrition-service-impl/build/libs/nutrition-service-impl-1.0.0.jar
+-rw-r--r--@ 1 sbisht  staff  88641503 Feb 28 21:57 /Users/sbisht/Documents/fitnessapp/user-service/user-service-impl/build/libs/user-service-impl-1.0.0.jar
