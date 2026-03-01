@@ -31,6 +31,7 @@ const MyWorkoutScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [now, setNow] = useState(new Date());
+  const [expandedDays, setExpandedDays] = useState({});
 
   useEffect(() => {
     dispatch(loadWorkoutTrackingFromStorage());
@@ -274,21 +275,64 @@ const MyWorkoutScreen = ({ navigation }) => {
           </TouchableOpacity>
         )}
 
-        {/* Weekly Overview */}
+        {/* Weekly Overview — Expandable */}
         <Text style={styles.sectionTitle}>Weekly Overview</Text>
         {DAY_NAMES.slice(1).concat(DAY_NAMES.slice(0, 1)).map(day => {
           const dayExercises = allExercises.filter(e => e.dayOfWeek === day);
           const isToday = day === todayDay;
+          const isExpanded = expandedDays[day] || false;
+          const hasExercises = dayExercises.length > 0;
+          const dayCals = dayExercises.reduce((s, e) => s + (e.caloriesBurned || 0), 0);
+
           return (
-            <View key={day} style={[styles.weekDayRow, isToday && styles.weekDayRowToday]}>
-              <Text style={[styles.weekDayName, isToday && styles.weekDayNameToday]}>
-                {formatLabel(day)} {isToday ? '(Today)' : ''}
-              </Text>
-              <Text style={styles.weekDayExercises}>
-                {dayExercises.length > 0
-                  ? `${dayExercises.length} exercises • ~${dayExercises.reduce((s, e) => s + (e.caloriesBurned || 0), 0)} cal`
-                  : 'Rest Day 😴'}
-              </Text>
+            <View key={day}>
+              <TouchableOpacity
+                style={[styles.weekDayRow, isToday && styles.weekDayRowToday]}
+                onPress={() => {
+                  if (hasExercises) {
+                    setExpandedDays(prev => ({ ...prev, [day]: !prev[day] }));
+                  }
+                }}
+                activeOpacity={hasExercises ? 0.7 : 1}
+              >
+                <View style={styles.weekDayLeft}>
+                  {hasExercises && (
+                    <Text style={styles.expandIcon}>{isExpanded ? '▼' : '▶'}</Text>
+                  )}
+                  <Text style={[styles.weekDayName, isToday && styles.weekDayNameToday]}>
+                    {formatLabel(day)} {isToday ? '(Today)' : ''}
+                  </Text>
+                </View>
+                <Text style={styles.weekDayExercises}>
+                  {hasExercises
+                    ? `${dayExercises.length} exercises • ~${dayCals} cal`
+                    : 'Rest Day 😴'}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Expanded exercise list */}
+              {isExpanded && hasExercises && (
+                <View style={styles.expandedExercises}>
+                  {dayExercises
+                    .sort((a, b) => (a.order || 0) - (b.order || 0))
+                    .map((ex, idx) => (
+                      <View key={idx} style={styles.expandedExRow}>
+                        <Text style={styles.expandedExIcon}>
+                          {ex.isCardio ? '❤️' : (MUSCLE_ICONS[ex.muscleGroup] || '💪')}
+                        </Text>
+                        <View style={styles.expandedExInfo}>
+                          <Text style={styles.expandedExName}>{ex.exerciseName}</Text>
+                          <Text style={styles.expandedExDetail}>
+                            {ex.isCardio
+                              ? `${Math.round((ex.durationSeconds || 0) / 60)} min${ex.steps > 0 ? ` • ${ex.steps} steps` : ''}`
+                              : `${ex.sets} sets × ${ex.reps} reps • Rest ${ex.restTimeSeconds}s`}
+                          </Text>
+                        </View>
+                        <Text style={styles.expandedExCal}>{ex.caloriesBurned || 0} cal</Text>
+                      </View>
+                    ))}
+                </View>
+              )}
             </View>
           );
         })}
@@ -389,9 +433,25 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs, ...shadows.sm,
   },
   weekDayRowToday: { borderLeftWidth: 3, borderLeftColor: colors.primary },
+  weekDayLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  expandIcon: { fontSize: 10, color: colors.text.secondary, marginRight: spacing.sm, width: 14 },
   weekDayName: { ...typography.body, fontWeight: '600', color: colors.text.primary },
   weekDayNameToday: { color: colors.primary },
   weekDayExercises: { ...typography.caption, color: colors.text.secondary },
+  expandedExercises: {
+    backgroundColor: colors.surface, marginBottom: spacing.sm, marginLeft: spacing.md,
+    borderLeftWidth: 2, borderLeftColor: colors.primary + '40', paddingLeft: spacing.sm,
+    borderBottomLeftRadius: borderRadius.md, borderBottomRightRadius: borderRadius.md,
+  },
+  expandedExRow: {
+    flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm, borderBottomWidth: 0.5, borderBottomColor: colors.border + '40',
+  },
+  expandedExIcon: { fontSize: 16, marginRight: spacing.sm },
+  expandedExInfo: { flex: 1 },
+  expandedExName: { ...typography.bodySmall, fontWeight: '600', color: colors.text.primary },
+  expandedExDetail: { ...typography.caption, color: colors.text.secondary },
+  expandedExCal: { ...typography.caption, color: colors.warning, fontWeight: '600' },
 });
 
 export default MyWorkoutScreen;

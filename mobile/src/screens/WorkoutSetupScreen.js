@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, Alert, Platform, TextInput,
 } from 'react-native';
+import { useSelector, useDispatch } from 'react-redux';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import workoutService from '../services/workoutService';
+import userService from '../services/userService';
+import { updateUser } from '../store/slices/authSlice';
+
+const PREFS_KEY = '@workout_setup_prefs';
 
 const EXERCISE_TYPES = [
   { key: 'GYM', label: '🏋️ Gym', desc: 'Weights & machines' },
@@ -14,10 +20,16 @@ const EXERCISE_TYPES = [
   { key: 'HOME', label: '🏠 Home', desc: 'Home workouts' },
 ];
 
-const GOALS = [
+const ALL_GOALS = [
   { key: 'MUSCLE_BUILDING', label: '💪 Muscle Building', duration: '12 weeks' },
   { key: 'SLIMMING', label: '🔥 Slimming', duration: '8 weeks' },
   { key: 'SLIMMING_PLUS_MUSCLE', label: '⚡ Slim + Muscle', duration: '12 weeks' },
+];
+
+// Running and Yoga can only slim — no muscle building
+const CARDIO_ONLY_TYPES = ['RUNNING', 'YOGA'];
+const CARDIO_GOALS = [
+  { key: 'SLIMMING', label: '🔥 Slimming', duration: '8 weeks' },
 ];
 
 const DIFFICULTIES = [
@@ -33,7 +45,23 @@ const CARDIO_TYPES = [
   { key: 'SKIPPING', label: '⏩ Skipping' },
 ];
 
+const GENDERS = [
+  { key: 'MALE', label: '👨 Male' },
+  { key: 'FEMALE', label: '👩 Female' },
+  { key: 'OTHER', label: '⚧ Other' },
+];
+
+const TIME_OPTIONS = [
+  '5:00 AM', '6:00 AM', '7:00 AM', '8:00 AM',
+  '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM',
+  '9:00 PM', '9:30 PM', '10:00 PM', '10:30 PM',
+];
+
 const WorkoutSetupScreen = ({ navigation }) => {
+  const dispatch = useDispatch();
+  const { user } = useSelector(state => state.auth);
+  const profileGender = user?.profile?.gender;
+
   const [exerciseType, setExerciseType] = useState(null);
   const [goal, setGoal] = useState(null);
   const [difficulty, setDifficulty] = useState('INTERMEDIATE');
@@ -44,7 +72,56 @@ const WorkoutSetupScreen = ({ navigation }) => {
   const [cardioType, setCardioType] = useState('RUNNING');
   const [cardioDuration, setCardioDuration] = useState(20);
   const [cardioSteps, setCardioSteps] = useState(0);
+  const [gender, setGender] = useState(profileGender || '');
   const [loading, setLoading] = useState(false);
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
+
+  // Determine whether gender is missing from profile
+  const needsGender = !profileGender;
+
+  // Load previous preferences
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(PREFS_KEY);
+        if (raw) {
+          const prefs = JSON.parse(raw);
+          if (prefs.exerciseType) setExerciseType(prefs.exerciseType);
+          if (prefs.goal) setGoal(prefs.goal);
+          if (prefs.difficulty) setDifficulty(prefs.difficulty);
+          if (prefs.daysPerWeek) setDaysPerWeek(prefs.daysPerWeek);
+          if (prefs.durationMinutes) setDurationMinutes(prefs.durationMinutes);
+          if (prefs.exerciseTime) setExerciseTime(prefs.exerciseTime);
+          if (prefs.includeCardio !== undefined) setIncludeCardio(prefs.includeCardio);
+          if (prefs.cardioType) setCardioType(prefs.cardioType);
+          if (prefs.cardioDuration) setCardioDuration(prefs.cardioDuration);
+          if (prefs.cardioSteps !== undefined) setCardioSteps(prefs.cardioSteps);
+        }
+      } catch (e) { /* ignore */ }
+      setPrefsLoaded(true);
+    })();
+  }, []);
+
+  // When exercise type changes, reset goal if it becomes invalid
+  useEffect(() => {
+    if (CARDIO_ONLY_TYPES.includes(exerciseType)) {
+      if (goal && goal !== 'SLIMMING') {
+        setGoal('SLIMMING');
+      }
+    }
+  }, [exerciseType]);
+
+  const availableGoals = CARDIO_ONLY_TYPES.includes(exerciseType) ? CARDIO_GOALS : ALL_GOALS;
+
+  // Persist preferences to AsyncStorage
+  const savePrefs = async () => {
+    try {
+      await AsyncStorage.setItem(PREFS_KEY, JSON.stringify({
+        exerciseType, goal, difficulty, daysPerWeek, durationMinutes,
+        exerciseTime, includeCardio, cardioType, cardioDuration, cardioSteps,
+      }));
+    } catch (e) { /* ignore */ }
+  };
 
   const handleGenerate = async () => {
     if (!exerciseType || !goal) {
@@ -52,8 +129,31 @@ const WorkoutSetupScreen = ({ navigation }) => {
       Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Info', msg);
       return;
     }
+    if (needsGender && !gender) {
+      const msg = 'Please select your gender to personalize your plan';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Info', msg);
+      return;
+    }
+
     setLoading(true);
     try {
+      // Save gender to profile if it was missing
+      if (needsGender && gender) {
+        try {
+          const updatedProfile = await userService.updateProfile({
+            ...user?.profile,
+            gender,
+          });
+          // Update local user state
+          dispatch(updateUser({ ...user, profile: { ...user?.profile, gender } }));
+        } catch (e) {
+          console.log('Failed to save gender to profile:', e.message);
+        }
+      }
+
+      // Save preferences for next time
+      await savePrefs();
+
       const request = {
         daysPerWeek,
         exerciseType,
@@ -125,6 +225,8 @@ const WorkoutSetupScreen = ({ navigation }) => {
     );
   }
 
+  const canGenerate = exerciseType && goal && (!needsGender || gender);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -136,13 +238,27 @@ const WorkoutSetupScreen = ({ navigation }) => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Gender — only show if not set in profile */}
+        {needsGender && (
+          <>
+            <Text style={styles.sectionTitle}>👤 Your Gender</Text>
+            <Text style={styles.sectionHint}>Required to personalize your workout plan</Text>
+            {renderRadioGroup(GENDERS, gender, setGender)}
+          </>
+        )}
+
         {/* Exercise Type */}
         <Text style={styles.sectionTitle}>🏋️ Exercise Type</Text>
         {renderRadioGroup(EXERCISE_TYPES, exerciseType, setExerciseType)}
 
-        {/* Goal */}
+        {/* Goal — filtered based on exercise type */}
         <Text style={styles.sectionTitle}>🎯 Your Goal</Text>
-        {renderRadioGroup(GOALS, goal, setGoal)}
+        {CARDIO_ONLY_TYPES.includes(exerciseType) && (
+          <Text style={styles.sectionHint}>
+            Running & Yoga focus on slimming and flexibility
+          </Text>
+        )}
+        {renderRadioGroup(availableGoals, goal, setGoal)}
 
         {/* Difficulty */}
         <Text style={styles.sectionTitle}>📊 Difficulty Level</Text>
@@ -154,11 +270,11 @@ const WorkoutSetupScreen = ({ navigation }) => {
         {/* Duration */}
         {renderNumberPicker('⏱️ Duration (minutes)', durationMinutes, setDurationMinutes, 15, 120, 15)}
 
-        {/* Exercise Time */}
+        {/* Exercise Time — extended to 10:30 PM */}
         <View style={styles.timeSection}>
           <Text style={styles.sectionTitle}>🕐 Workout Time</Text>
           <View style={styles.timeOptions}>
-            {['5:00 AM', '6:00 AM', '7:00 AM', '8:00 AM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM'].map(t => (
+            {TIME_OPTIONS.map(t => (
               <TouchableOpacity
                 key={t}
                 style={[styles.timeChip, exerciseTime === t && styles.timeChipSelected]}
@@ -195,9 +311,9 @@ const WorkoutSetupScreen = ({ navigation }) => {
 
         {/* Generate Button */}
         <TouchableOpacity
-          style={[styles.generateBtn, (!exerciseType || !goal) && styles.generateBtnDisabled]}
+          style={[styles.generateBtn, !canGenerate && styles.generateBtnDisabled]}
           onPress={handleGenerate}
-          disabled={!exerciseType || !goal}
+          disabled={!canGenerate}
         >
           <Text style={styles.generateBtnText}>🚀 Generate Workout Plan</Text>
         </TouchableOpacity>
@@ -222,6 +338,7 @@ const styles = StyleSheet.create({
   headerTitle: { ...typography.h3, color: colors.text.inverse },
   content: { flex: 1, padding: spacing.lg },
   sectionTitle: { ...typography.h3, color: colors.text.primary, marginTop: spacing.lg, marginBottom: spacing.sm },
+  sectionHint: { ...typography.caption, color: colors.text.secondary, marginBottom: spacing.sm, fontStyle: 'italic' },
   sectionSubtitle: { ...typography.body, fontWeight: '600', color: colors.text.primary, marginBottom: spacing.sm },
   radioGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   radioItem: {
