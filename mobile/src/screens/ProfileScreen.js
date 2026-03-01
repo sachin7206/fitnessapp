@@ -14,11 +14,13 @@ import { updateProfile, updateHealthMetrics, updateGoals, fetchProfile } from '.
 import { logout, updateUser } from '../store/slices/authSlice';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import { Picker } from '@react-native-picker/picker';
+import { useTranslation, LANGUAGES } from '../i18n';
 
 const ProfileScreen = () => {
   const dispatch = useDispatch();
   const { profile, isLoading } = useSelector((state) => state.user);
   const { user } = useSelector((state) => state.auth);
+  const { t, setLocale, locale } = useTranslation();
 
   const handleLogout = () => {
     if (Platform.OS === 'web') {
@@ -80,6 +82,10 @@ const ProfileScreen = () => {
           language: userData.profile.language || 'en',
           region: userData.profile.region || '',
         });
+        // Sync i18n locale with profile language
+        if (userData.profile.language && userData.profile.language !== locale) {
+          setLocale(userData.profile.language);
+        }
       }
       if (userData.healthMetrics) {
         setHealthData({
@@ -167,7 +173,7 @@ const ProfileScreen = () => {
           onPress={() => setActiveTab('personal')}
         >
           <Text style={[styles.tabText, activeTab === 'personal' && styles.activeTabText]}>
-            Personal
+            {t('profile.personalInfo')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -175,7 +181,7 @@ const ProfileScreen = () => {
           onPress={() => setActiveTab('health')}
         >
           <Text style={[styles.tabText, activeTab === 'health' && styles.activeTabText]}>
-            Health
+            {t('profile.healthMetrics')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -183,7 +189,7 @@ const ProfileScreen = () => {
           onPress={() => setActiveTab('goals')}
         >
           <Text style={[styles.tabText, activeTab === 'goals' && styles.activeTabText]}>
-            Goals
+            {t('profile.goals')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -191,7 +197,7 @@ const ProfileScreen = () => {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {activeTab === 'personal' && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Personal Information</Text>
+            <Text style={styles.sectionTitle}>{t('profile.personalInfo')}</Text>
 
             <View style={styles.row}>
               <View style={[styles.inputContainer, styles.halfWidth]}>
@@ -251,17 +257,19 @@ const ProfileScreen = () => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Language</Text>
+              <Text style={styles.label}>{t('profile.language')}</Text>
               <View style={styles.pickerContainer}>
                 <Picker
                   selectedValue={personalData.language}
-                  onValueChange={(value) => setPersonalData({ ...personalData, language: value })}
+                  onValueChange={(value) => {
+                    setPersonalData({ ...personalData, language: value });
+                    setLocale(value);
+                  }}
                   style={styles.picker}
                 >
-                  <Picker.Item label="English" value="en" />
-                  <Picker.Item label="हिंदी (Hindi)" value="hi" />
-                  <Picker.Item label="தமிழ் (Tamil)" value="ta" />
-                  <Picker.Item label="తెలుగు (Telugu)" value="te" />
+                  {LANGUAGES.map(lang => (
+                    <Picker.Item key={lang.code} label={`${lang.nativeName} (${lang.name})`} value={lang.code} />
+                  ))}
                 </Picker>
               </View>
             </View>

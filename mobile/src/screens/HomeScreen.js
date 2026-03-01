@@ -33,11 +33,13 @@ import {
 import workoutService from '../services/workoutService';
 import { Pedometer } from 'expo-sensors';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
+import { useTranslation } from '../i18n';
 
 const HomeScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const tracking = useSelector((state) => state.mealTracking);
+  const { t } = useTranslation();
   const workoutTracking = useSelector((state) => state.workoutTracking);
   const [now, setNow] = useState(new Date());
 
@@ -296,26 +298,26 @@ const HomeScreen = ({ navigation }) => {
 
   const cards = [
     {
-      title: 'My Workouts',
-      description: 'View your personalized workout plans',
+      title: t('home.myWorkout'),
+      description: t('home.trackWorkout'),
       icon: '💪',
       onPress: () => navigation.navigate('MyWorkout'),
     },
     {
-      title: 'Nutrition Plans',
-      description: 'Regional diet plans tailored for you',
+      title: t('home.myNutrition'),
+      description: t('home.viewPlan'),
       icon: '🥗',
       onPress: () => navigation.navigate('NutritionPlans'),
     },
     {
-      title: 'Progress Tracking',
-      description: 'Track your fitness journey',
+      title: t('home.progressTracking'),
+      description: t('home.trackProgress'),
       icon: '📊',
       onPress: () => navigation.navigate('ProgressDashboard'),
     },
     {
-      title: 'Yoga & Wellness',
-      description: 'Yoga, meditation & breathing',
+      title: t('home.yogaWellness'),
+      description: t('home.mindBody'),
       icon: '🧘',
       onPress: () => navigation.navigate('WellnessHome'),
     },
@@ -326,11 +328,11 @@ const HomeScreen = ({ navigation }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Namaste, {user?.profile?.firstName || 'User'}! 🙏</Text>
-          <Text style={styles.subtitle}>Ready to achieve your fitness goals?</Text>
+          <Text style={styles.greeting}>{t('home.greeting')}, {user?.profile?.firstName || 'User'}! 🙏</Text>
+          <Text style={styles.subtitle}>{t('auth.getStarted')}</Text>
         </View>
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <Text style={styles.logoutText}>Logout</Text>
+          <Text style={styles.logoutText}>{t('home.logout')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -341,7 +343,7 @@ const HomeScreen = ({ navigation }) => {
             <Text style={[styles.statValue, workoutTracking.workoutCount > 0 && styles.statValueHighlight]}>
               {workoutTracking.workoutCount || 0}
             </Text>
-            <Text style={styles.statLabel}>Workouts</Text>
+            <Text style={styles.statLabel}>{t('home.workoutCount')}</Text>
           </View>
           <TouchableOpacity
             style={[styles.statCard, workoutTracking.todaySteps > 0 && styles.statCardHighlight]}
@@ -351,16 +353,16 @@ const HomeScreen = ({ navigation }) => {
             <Text style={[styles.statValue, workoutTracking.todaySteps > 0 && styles.statValueHighlight]}>
               {(workoutTracking.todaySteps || 0).toLocaleString()}
             </Text>
-            <Text style={styles.statLabel}>👟 Steps</Text>
+            <Text style={styles.statLabel}>👟 {t('home.steps')}</Text>
             {workoutTracking.todaySteps > 0 && (
-              <Text style={styles.statSub}>🔥 {Math.round((workoutTracking.todaySteps || 0) * 0.04)} cal</Text>
+              <Text style={styles.statSub}>🔥 {Math.round((workoutTracking.todaySteps || 0) * 0.04)} {t('home.calories').toLowerCase()}</Text>
             )}
           </TouchableOpacity>
           <View style={[styles.statCard, tracking.consumedCalories > 0 && styles.statCardHighlight]}>
             <Text style={[styles.statValue, tracking.consumedCalories > 0 && styles.statValueHighlight]}>
               {tracking.consumedCalories || 0}
             </Text>
-            <Text style={styles.statLabel}>Calories</Text>
+            <Text style={styles.statLabel}>{t('home.calories')}</Text>
             {totalMealCalories > 0 && (
               <Text style={styles.statSub}>of {totalMealCalories}</Text>
             )}
