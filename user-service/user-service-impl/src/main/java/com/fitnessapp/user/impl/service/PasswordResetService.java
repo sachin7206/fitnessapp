@@ -7,20 +7,27 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class PasswordResetService {
 
     private final UserRepository userRepository;
     private final JavaMailSender mailSender;
     private final PasswordEncoder passwordEncoder;
+
+    public PasswordResetService(UserRepository userRepository,
+                                @org.springframework.beans.factory.annotation.Autowired(required = false) JavaMailSender mailSender,
+                                PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.mailSender = mailSender;
+        this.passwordEncoder = passwordEncoder;
+    }
 
     @Value("${app.password-reset.expiry-minutes:30}")
     private int expiryMinutes;
@@ -32,7 +39,8 @@ public class PasswordResetService {
     private String fromEmail;
 
     /**
-     * Generate a reset token, save it to the user, and send an email with the token.
+     * Generate a reset token, save it to the user, and attempt to send an email with the token.
+     * OTP is always saved to DB first. Email is sent best-effort (async).
      */
     public void sendPasswordResetEmail(String email) {
         User user = userRepository.findByEmail(email)
@@ -44,8 +52,29 @@ public class PasswordResetService {
         user.setPasswordResetExpiry(LocalDateTime.now().plusMinutes(expiryMinutes));
         userRepository.save(user);
 
-        sendResetEmail(user.getEmail(), token, user.getProfile() != null ? user.getProfile().getFirstName() : "User");
-        log.info("Password reset email sent to {}", email);
+        // Always log OTP for development/debugging (remove in production)
+        log.info("=== PASSWORD RESET OTP for {} : {} (valid for {} minutes) ===", email, token, expiryMinutes);
+
+        // Send email asynchronously (non-blocking)
+        sendEmailAsync(user.getEmail(), token,
+            user.getProfile() != null ? user.getProfile().getFirstName() : "User");
+    }
+
+    /**
+     * Send email in background thread — never blocks the main request.
+     */
+    @Async
+    public void sendEmailAsync(String toEmail, String token, String firstName) {
+        if (mailSender == null) {
+            log.warn("Mail sender not configured. OTP is logged above. Configure SMTP in application.yml to enable email.");
+            return;
+        }
+        try {
+            sendResetEmailSync(toEmail, token, firstName);
+            log.info("Password reset email sent successfully to {}", toEmail);
+        } catch (Exception e) {
+            log.warn("Could not send reset email to {} (OTP is still valid in DB): {}", toEmail, e.getMessage());
+        }
     }
 
     /**
@@ -96,25 +125,20 @@ public class PasswordResetService {
         }
     }
 
-    private void sendResetEmail(String toEmail, String token, String firstName) {
-        try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(toEmail);
-            message.setSubject("FitnessApp - Password Reset OTP");
-            message.setText(
-                "Hi " + firstName + ",\n\n" +
-                "You requested to reset your password for FitnessApp.\n\n" +
-                "Your OTP code is: " + token + "\n\n" +
-                "This code is valid for " + expiryMinutes + " minutes.\n\n" +
-                "If you did not request this, please ignore this email.\n\n" +
-                "— FitnessApp Team 💪"
-            );
-            mailSender.send(message);
-        } catch (Exception e) {
-            log.error("Failed to send reset email to {}: {}", toEmail, e.getMessage());
-            throw new RuntimeException("Failed to send reset email. Please try again later.");
-        }
+    private void sendResetEmailSync(String toEmail, String token, String firstName) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(toEmail);
+        message.setSubject("FitnessApp - Password Reset OTP");
+        message.setText(
+            "Hi " + firstName + ",\n\n" +
+            "You requested to reset your password for FitnessApp.\n\n" +
+            "Your OTP code is: " + token + "\n\n" +
+            "This code is valid for " + expiryMinutes + " minutes.\n\n" +
+            "If you did not request this, please ignore this email.\n\n" +
+            "— FitnessApp Team \uD83D\uDCAA"
+        );
+        mailSender.send(message);
     }
 }
 

@@ -32,10 +32,10 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
     setIsLoading(true);
     try {
-      await authService.forgotPassword(email);
+      const response = await authService.forgotPassword(email);
       Alert.alert(
-        'OTP Sent! ✉️',
-        'A password reset OTP has been sent to your email. Please check your inbox (and spam folder).',
+        'OTP Generated! ✉️',
+        'A password reset OTP has been generated for your account. If email is configured, check your inbox. Otherwise, check the server console logs for the OTP code.',
         [
           {
             text: 'Enter OTP',
@@ -44,8 +44,19 @@ const ForgotPasswordScreen = ({ navigation }) => {
         ]
       );
     } catch (error) {
-      const message = error.response?.data?.message || 'Failed to send reset email. Please try again.';
-      Alert.alert('Error', message);
+      const message = error.response?.data?.message || error.message || 'Failed to send reset email. Please try again.';
+      if (message.toLowerCase().includes('no account found')) {
+        Alert.alert(
+          'Account Not Found',
+          'No account found with this email. Please check the email or register a new account.',
+          [
+            { text: 'Register', onPress: () => navigation.navigate('Register') },
+            { text: 'Try Again', style: 'cancel' },
+          ]
+        );
+      } else {
+        Alert.alert('Error', message);
+      }
     } finally {
       setIsLoading(false);
     }
