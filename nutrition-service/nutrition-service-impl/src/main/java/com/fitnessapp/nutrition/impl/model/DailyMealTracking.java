@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "daily_meal_tracking",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"userEmail", "trackingDate", "mealId"}))
+       uniqueConstraints = @UniqueConstraint(columnNames = {"user_email", "tracking_date", "meal_id"}))
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -18,8 +18,13 @@ public class DailyMealTracking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "user_email")
     private String userEmail;
+
+    @Column(name = "tracking_date")
     private LocalDate trackingDate;
+
+    @Column(name = "meal_id")
     private Long mealId;
     private String mealName;
     private String mealType;

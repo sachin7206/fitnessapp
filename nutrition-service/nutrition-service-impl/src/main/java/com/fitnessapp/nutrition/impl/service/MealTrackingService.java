@@ -28,31 +28,53 @@ public class MealTrackingService implements MealTrackingOperations {
     public DailyNutritionSummaryDTO syncDailyTracking(String email, DailyTrackingSyncRequest request) {
         LocalDate today = LocalDate.now();
 
-        // Upsert each meal record
+        // Upsert each meal record (deduplicate by mealId — keep last occurrence)
         if (request.getMeals() != null) {
+            // Deduplicate: if same mealId appears multiple times, keep last
+            java.util.Map<Long, MealCompletionRequest> uniqueMeals = new java.util.LinkedHashMap<>();
             for (MealCompletionRequest mealReq : request.getMeals()) {
-                DailyMealTracking record = mealTrackingRepo
-                        .findByUserEmailAndTrackingDateAndMealId(email, today, mealReq.getMealId())
-                        .orElseGet(() -> {
-                            DailyMealTracking r = new DailyMealTracking();
-                            r.setUserEmail(email);
-                            r.setTrackingDate(today);
-                            r.setMealId(mealReq.getMealId());
-                            return r;
-                        });
-                record.setMealName(mealReq.getMealName());
-                record.setMealType(mealReq.getMealType());
-                record.setTimeOfDay(mealReq.getTimeOfDay());
-                record.setCompleted(mealReq.getCompleted() != null ? mealReq.getCompleted() : false);
-                record.setCompletedAt(mealReq.getCompletedAt() != null ? LocalDateTime.parse(mealReq.getCompletedAt()) : null);
-                record.setReplaced(mealReq.getReplaced() != null ? mealReq.getReplaced() : false);
-                record.setReplacedWith(mealReq.getReplacedWith());
-                record.setOriginalName(mealReq.getOriginalName());
-                record.setCalories(mealReq.getCalories() != null ? mealReq.getCalories() : 0);
-                record.setProteinGrams(mealReq.getProteinGrams() != null ? mealReq.getProteinGrams() : 0.0);
-                record.setCarbsGrams(mealReq.getCarbsGrams() != null ? mealReq.getCarbsGrams() : 0.0);
-                record.setFatGrams(mealReq.getFatGrams() != null ? mealReq.getFatGrams() : 0.0);
-                mealTrackingRepo.save(record);
+                if (mealReq.getMealId() != null) {
+                    uniqueMeals.put(mealReq.getMealId(), mealReq);
+                }
+            }
+
+            for (MealCompletionRequest mealReq : uniqueMeals.values()) {
+                try {
+                    DailyMealTracking record = mealTrackingRepo
+                            .findByUserEmailAndTrackingDateAndMealId(email, today, mealReq.getMealId())
+                            .orElseGet(() -> {
+                                DailyMealTracking r = new DailyMealTracking();
+                                r.setUserEmail(email);
+                                r.setTrackingDate(today);
+                                r.setMealId(mealReq.getMealId());
+                                return r;
+                            });
+                    record.setMealName(mealReq.getMealName());
+                    record.setMealType(mealReq.getMealType());
+                    record.setTimeOfDay(mealReq.getTimeOfDay());
+                    record.setCompleted(mealReq.getCompleted() != null ? mealReq.getCompleted() : false);
+                    record.setCompletedAt(mealReq.getCompletedAt() != null ? LocalDateTime.parse(mealReq.getCompletedAt()) : null);
+                    record.setReplaced(mealReq.getReplaced() != null ? mealReq.getReplaced() : false);
+                    record.setReplacedWith(mealReq.getReplacedWith());
+                    record.setOriginalName(mealReq.getOriginalName());
+                    record.setCalories(mealReq.getCalories() != null ? mealReq.getCalories() : 0);
+                    record.setProteinGrams(mealReq.getProteinGrams() != null ? mealReq.getProteinGrams() : 0.0);
+                    record.setCarbsGrams(mealReq.getCarbsGrams() != null ? mealReq.getCarbsGrams() : 0.0);
+                    record.setFatGrams(mealReq.getFatGrams() != null ? mealReq.getFatGrams() : 0.0);
+                    mealTrackingRepo.saveAndFlush(record);
+                } catch (Exception e) {
+                    // Duplicate key on concurrent requests — retry with find
+                    log.warn("Duplicate meal tracking entry for mealId={}, retrying update: {}", mealReq.getMealId(), e.getMessage());
+                    mealTrackingRepo.findByUserEmailAndTrackingDateAndMealId(email, today, mealReq.getMealId())
+                            .ifPresent(existing -> {
+                                existing.setCompleted(mealReq.getCompleted() != null ? mealReq.getCompleted() : false);
+                                existing.setCalories(mealReq.getCalories() != null ? mealReq.getCalories() : 0);
+                                existing.setProteinGrams(mealReq.getProteinGrams() != null ? mealReq.getProteinGrams() : 0.0);
+                                existing.setCarbsGrams(mealReq.getCarbsGrams() != null ? mealReq.getCarbsGrams() : 0.0);
+                                existing.setFatGrams(mealReq.getFatGrams() != null ? mealReq.getFatGrams() : 0.0);
+                                mealTrackingRepo.saveAndFlush(existing);
+                            });
+                }
             }
         }
 

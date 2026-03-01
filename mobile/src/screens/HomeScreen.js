@@ -16,6 +16,7 @@ import {
   uncompleteMeal,
   persistTracking,
   loadTrackingFromStorage,
+  loadTrackingLocal,
   getLocalDateString,
 } from '../store/slices/mealTrackingSlice';
 import {
@@ -25,6 +26,7 @@ import {
   setMotivationalQuote,
   persistWorkoutTracking,
   loadWorkoutTrackingFromStorage,
+  loadWorkoutTrackingLocal,
   updateSteps,
   setStepGoal,
 } from '../store/slices/workoutTrackingSlice';
@@ -39,7 +41,7 @@ const HomeScreen = ({ navigation }) => {
   const workoutTracking = useSelector((state) => state.workoutTracking);
   const [now, setNow] = useState(new Date());
 
-  // Load persisted tracking on mount
+  // Load persisted tracking on mount (with backend sync — one time only)
   useEffect(() => {
     dispatch(loadTrackingFromStorage());
     dispatch(loadWorkoutTrackingFromStorage());
@@ -54,22 +56,21 @@ const HomeScreen = ({ navigation }) => {
       setNow(current);
       const currentDate = getLocalDateString();
       if (currentDate !== lastDate) {
-        // Midnight crossed — reload tracking (will auto-reset)
+        // Midnight crossed — reload tracking (local only, fast)
         lastDate = currentDate;
-        dispatch(loadTrackingFromStorage());
-        dispatch(loadWorkoutTrackingFromStorage());
+        dispatch(loadTrackingLocal());
+        dispatch(loadWorkoutTrackingLocal());
       }
     }, 30000);
     return () => clearInterval(timer);
   }, []);
 
-  // Also refresh on focus
+  // Also refresh on focus (local only — no API calls)
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      dispatch(loadTrackingFromStorage());
-      dispatch(loadWorkoutTrackingFromStorage());
+      dispatch(loadTrackingLocal());
+      dispatch(loadWorkoutTrackingLocal());
       setNow(new Date());
-      fetchWorkoutData();
     });
     return unsubscribe;
   }, [navigation]);
@@ -84,10 +85,10 @@ const HomeScreen = ({ navigation }) => {
         if (cardioSteps && cardioSteps > 0) {
           dispatch(setStepGoal(cardioSteps));
         }
-        dispatch(persistWorkoutTracking());
         // Fetch motivational quote
         const quoteData = await workoutService.getMotivationalQuote();
         dispatch(setMotivationalQuote(quoteData.quote));
+        // Single persist after all data is loaded
         dispatch(persistWorkoutTracking());
       }
     } catch (e) { /* no active plan is fine */ }

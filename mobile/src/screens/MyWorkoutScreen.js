@@ -9,7 +9,7 @@ import { colors, spacing, typography, borderRadius, shadows } from '../config/th
 import workoutService from '../services/workoutService';
 import {
   setActivePlan, completeWorkout, uncompleteWorkout,
-  setMotivationalQuote, persistWorkoutTracking, loadWorkoutTrackingFromStorage,
+  setMotivationalQuote, persistWorkoutTracking, loadWorkoutTrackingLocal,
 } from '../store/slices/workoutTrackingSlice';
 
 const formatLabel = (str) => {
@@ -34,7 +34,7 @@ const MyWorkoutScreen = ({ navigation }) => {
   const [expandedDays, setExpandedDays] = useState({});
 
   useEffect(() => {
-    dispatch(loadWorkoutTrackingFromStorage());
+    dispatch(loadWorkoutTrackingLocal());
   }, []);
 
   useEffect(() => {

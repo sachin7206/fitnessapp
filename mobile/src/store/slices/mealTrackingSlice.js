@@ -163,7 +163,10 @@ export const { loadTracking, initMealsForToday, completeMeal, uncompleteMeal, re
 // Export the helper so screens can use the same local date logic
 export { getLocalDateString };
 
-// Persist to AsyncStorage + sync to backend
+// Debounce backend sync — max once per 60 seconds
+let lastMealSyncTime = 0;
+
+// Persist to AsyncStorage + sync to backend (debounced)
 export const persistTracking = () => async (dispatch, getState) => {
   const { mealTracking } = getState();
   const data = {
@@ -175,14 +178,18 @@ export const persistTracking = () => async (dispatch, getState) => {
     consumedFat: mealTracking.consumedFat,
   };
 
-  // 1. Save to AsyncStorage (instant, reliable)
+  // 1. Always save to AsyncStorage (instant)
   try {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (e) {
     console.log('Failed to persist meal tracking:', e.message);
   }
 
-  // 2. Sync to backend (fire-and-forget)
+  // 2. Debounce backend sync — max once per 60 seconds
+  const now = Date.now();
+  if (now - lastMealSyncTime < 60000) return;
+  lastMealSyncTime = now;
+
   if (mealTracking.meals.length > 0) {
     try {
       await nutritionService.syncDailyTracking({
@@ -212,7 +219,88 @@ export const persistTracking = () => async (dispatch, getState) => {
   }
 };
 
-// Load from AsyncStorage (instant), then merge with backend
+// Force sync to backend immediately (bypass debounce) — for meal complete/uncomplete
+export const persistTrackingNow = () => async (dispatch, getState) => {
+  const { mealTracking } = getState();
+
+  // Save to AsyncStorage
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({
+      trackingDate: mealTracking.trackingDate,
+      meals: mealTracking.meals,
+      consumedCalories: mealTracking.consumedCalories,
+      consumedProtein: mealTracking.consumedProtein,
+      consumedCarbs: mealTracking.consumedCarbs,
+      consumedFat: mealTracking.consumedFat,
+    }));
+  } catch (e) {
+    console.log('Failed to persist meal tracking:', e.message);
+  }
+
+  // Sync to backend immediately
+  lastMealSyncTime = Date.now();
+  if (mealTracking.meals.length > 0) {
+    try {
+      await nutritionService.syncDailyTracking({
+        meals: mealTracking.meals.map(m => ({
+          mealId: m.mealId,
+          mealName: m.replacedWith || m.name,
+          mealType: m.mealType,
+          timeOfDay: m.timeOfDay,
+          completed: m.completed || false,
+          completedAt: m.completedAt || null,
+          replaced: m.replaced || false,
+          replacedWith: m.replacedWith || null,
+          originalName: m.originalName || null,
+          calories: m.calories || 0,
+          proteinGrams: m.proteinGrams || 0,
+          carbsGrams: m.carbsGrams || 0,
+          fatGrams: m.fatGrams || 0,
+        })),
+        consumedCalories: mealTracking.consumedCalories || 0,
+        consumedProtein: mealTracking.consumedProtein || 0,
+        consumedCarbs: mealTracking.consumedCarbs || 0,
+        consumedFat: mealTracking.consumedFat || 0,
+      });
+    } catch (e) {
+      console.log('Meal tracking sync to backend failed:', e.message);
+    }
+  }
+};
+
+// Load from AsyncStorage only (no API calls) — for focus/timer refreshes
+export const loadTrackingLocal = () => async (dispatch) => {
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    const today = getLocalDateString();
+
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (data.trackingDate && data.trackingDate !== today) {
+        const resetData = {
+          trackingDate: today,
+          meals: (data.meals || []).map(m => ({
+            ...m,
+            completed: false, completedAt: null,
+            replaced: false, replacedWith: null, originalName: null,
+          })),
+          consumedCalories: 0, consumedProtein: 0, consumedCarbs: 0, consumedFat: 0,
+        };
+        dispatch(loadTracking(resetData));
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(resetData));
+      } else {
+        dispatch(loadTracking(data));
+      }
+    } else {
+      dispatch(loadTracking(null));
+    }
+  } catch (e) {
+    console.log('Failed to load meal tracking:', e.message);
+    dispatch(loadTracking(null));
+  }
+};
+
+// Load from AsyncStorage + sync from backend (API calls) — for initial mount only
 export const loadTrackingFromStorage = () => async (dispatch) => {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
@@ -221,21 +309,14 @@ export const loadTrackingFromStorage = () => async (dispatch) => {
     if (raw) {
       const data = JSON.parse(raw);
       if (data.trackingDate && data.trackingDate !== today) {
-        // New day — reset
         const resetData = {
           trackingDate: today,
           meals: (data.meals || []).map(m => ({
             ...m,
-            completed: false,
-            completedAt: null,
-            replaced: false,
-            replacedWith: null,
-            originalName: null,
+            completed: false, completedAt: null,
+            replaced: false, replacedWith: null, originalName: null,
           })),
-          consumedCalories: 0,
-          consumedProtein: 0,
-          consumedCarbs: 0,
-          consumedFat: 0,
+          consumedCalories: 0, consumedProtein: 0, consumedCarbs: 0, consumedFat: 0,
         };
         dispatch(loadTracking(resetData));
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(resetData));
@@ -255,7 +336,6 @@ export const loadTrackingFromStorage = () => async (dispatch) => {
         const localCompletedCount = localMeals.filter(m => m.completed).length;
         const backendCompletedCount = backendData.meals.filter(m => m.completed).length;
 
-        // If backend has more completed meals, it has more recent data — use it
         if (backendCompletedCount > localCompletedCount) {
           const restoredData = {
             trackingDate: today,

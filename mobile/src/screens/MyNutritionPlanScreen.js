@@ -23,6 +23,7 @@ import {
   replaceMeal,
   persistTracking,
   loadTrackingFromStorage,
+  loadTrackingLocal,
   getLocalDateString,
 } from '../store/slices/mealTrackingSlice';
 
@@ -56,7 +57,7 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
       const currentDate = getLocalDateString();
       if (currentDate !== lastDate) {
         lastDate = currentDate;
-        dispatch(loadTrackingFromStorage());
+        dispatch(loadTrackingLocal());
       }
     }, 30000);
     return () => clearInterval(timer);

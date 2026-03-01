@@ -158,12 +158,16 @@ export const {
 
 export { getLocalDateString };
 
-// Persist to AsyncStorage + sync steps to backend
+// Debounce backend sync — max once per 60 seconds
+let lastSyncTime = 0;
+
+// Persist to AsyncStorage + sync steps to backend (debounced)
 export const persistWorkoutTracking = () => async (dispatch, getState) => {
   const { workoutTracking } = getState();
   const todaySteps = typeof workoutTracking.todaySteps === 'number' ? workoutTracking.todaySteps : 0;
   const stepGoal = typeof workoutTracking.stepGoal === 'number' ? workoutTracking.stepGoal : 0;
 
+  // Always save to AsyncStorage (instant, local)
   try {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({
       trackingDate: workoutTracking.trackingDate || getLocalDateString(),
@@ -183,7 +187,11 @@ export const persistWorkoutTracking = () => async (dispatch, getState) => {
     console.log('Failed to persist workout tracking:', e.message);
   }
 
-  // Sync steps to backend (fire-and-forget)
+  // Debounce backend sync — max once per 60 seconds
+  const now = Date.now();
+  if (now - lastSyncTime < 60000) return;
+  lastSyncTime = now;
+
   if (todaySteps > 0 || stepGoal > 0) {
     try {
       await workoutService.syncSteps({
@@ -197,7 +205,22 @@ export const persistWorkoutTracking = () => async (dispatch, getState) => {
   }
 };
 
-// Load from AsyncStorage first (instant), then enrich with backend data
+// Load from AsyncStorage only (no API calls) — use for focus/timer refreshes
+export const loadWorkoutTrackingLocal = () => async (dispatch) => {
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      dispatch(loadWorkoutTracking(JSON.parse(raw)));
+    } else {
+      dispatch(loadWorkoutTracking(null));
+    }
+  } catch (e) {
+    console.log('Failed to load workout tracking:', e.message);
+    dispatch(loadWorkoutTracking(null));
+  }
+};
+
+// Load from AsyncStorage + sync from backend (API calls) — use only on initial mount
 export const loadWorkoutTrackingFromStorage = () => async (dispatch) => {
   try {
     // 1. Load from local cache (instant display)
@@ -208,14 +231,13 @@ export const loadWorkoutTrackingFromStorage = () => async (dispatch) => {
       dispatch(loadWorkoutTracking(null));
     }
 
-    // 2. Merge step history from backend (async, enriches local data)
+    // 2. Merge step history from backend (one-time on mount)
     try {
       const [todayData, historyData] = await Promise.all([
         workoutService.getTodaySteps(),
         workoutService.getStepHistory(90),
       ]);
 
-      // If backend has today's data with more steps, use it
       if (todayData && typeof todayData.steps === 'number' && todayData.steps > 0) {
         dispatch(updateSteps(todayData.steps));
         if (todayData.stepGoal > 0) {
@@ -223,7 +245,6 @@ export const loadWorkoutTrackingFromStorage = () => async (dispatch) => {
         }
       }
 
-      // Merge backend history into local stepHistory
       if (historyData && historyData.length > 0) {
         dispatch(mergeStepHistory(historyData.map(h => ({
           date: h.trackingDate,
