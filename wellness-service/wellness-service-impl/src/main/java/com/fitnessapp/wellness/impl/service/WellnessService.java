@@ -237,6 +237,18 @@ public class WellnessService implements WellnessOperations {
         return new WellnessStreakDTO(current, longest, (int) completionRepo.countByUserEmail(email), totalMins);
     }
 
+    @Override
+    public List<Map<String, Object>> getTodayCompletions(String email) {
+        var completions = completionRepo.findByUserEmailAndCompletedDate(email, LocalDate.now());
+        return completions.stream().map(c -> {
+            Map<String, Object> m = new java.util.HashMap<>();
+            m.put("sessionType", c.getSessionType());
+            m.put("sessionId", c.getSessionId());
+            m.put("durationMinutes", c.getDurationMinutes());
+            return m;
+        }).collect(Collectors.toList());
+    }
+
     private String formatLabel(String s) { return s == null ? "" : s.replace("_", " ").substring(0, 1) + s.replace("_", " ").substring(1).toLowerCase(); }
 
     private YogaPoseDTO toPoseDTO(YogaPose p) {

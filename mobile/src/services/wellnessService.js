@@ -39,6 +39,10 @@ const wellnessService = {
     const res = await apiClient.get('/wellness/streak');
     return res.data;
   },
+  getTodayCompletions: async () => {
+    const res = await apiClient.get('/wellness/completions/today');
+    return res.data;
+  },
 };
 
 export default wellnessService;

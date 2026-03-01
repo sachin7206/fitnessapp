@@ -24,6 +24,9 @@ const WellnessHomeScreen = ({ navigation }) => {
   const [generatedPlan, setGeneratedPlan] = useState(null);
   const [assigning, setAssigning] = useState(false);
   const [poseModal, setPoseModal] = useState(null);
+  const [completedToday, setCompletedToday] = useState(new Set());
+
+  const isCompleted = (sessionType, sessionId) => completedToday.has(`${sessionType}_${sessionId}`);
 
   const loadData = useCallback(async () => {
     try {
@@ -37,6 +40,15 @@ const WellnessHomeScreen = ({ navigation }) => {
       ]);
       setActivePlan(plan); setDailyTip(tip); setStreak(str);
       setYogaPoses(poses || []); setMeditations(meds || []); setBreathings(breaths || []);
+
+      // Load today's completions
+      try {
+        const todayCompletions = await wellnessService.getTodayCompletions();
+        if (todayCompletions && Array.isArray(todayCompletions)) {
+          const completed = new Set(todayCompletions.map(c => `${c.sessionType}_${c.sessionId}`));
+          setCompletedToday(completed);
+        }
+      } catch (e) { /* completions endpoint may not exist yet */ }
     } catch (e) { console.log('Failed:', e.message); }
     setLoading(false); setRefreshing(false);
   }, []);
@@ -67,8 +79,15 @@ const WellnessHomeScreen = ({ navigation }) => {
   };
 
   const handleComplete = async (sessionType, sessionId, duration) => {
+    const key = `${sessionType}_${sessionId}`;
+    if (isCompleted(sessionType, sessionId)) {
+      // Already completed — do nothing or show message
+      Platform.OS === 'web' ? window.alert('Already completed today! 🎉') : Alert.alert('Already Done', 'You already completed this session today!');
+      return;
+    }
     try {
       await wellnessService.completeSession({ sessionType, sessionId, durationMinutes: duration || 15 });
+      setCompletedToday(prev => new Set([...prev, key]));
       Platform.OS === 'web' ? window.alert('Session completed! 🎉') : Alert.alert('Well done! 🎉', 'Session completed!');
       loadData();
     } catch (e) { Platform.OS === 'web' ? window.alert('Failed') : Alert.alert('Error', 'Failed to mark complete'); }
@@ -183,38 +202,49 @@ const WellnessHomeScreen = ({ navigation }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🧘 Yoga Poses ({yogaPoses.length})</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {yogaPoses.slice(0, 8).map(p => (
-              <TouchableOpacity key={p.id} style={styles.poseCard} onPress={() => setPoseModal(p)}>
+            {yogaPoses.slice(0, 8).map(p => {
+              const done = isCompleted('YOGA', p.id);
+              return (
+              <TouchableOpacity key={p.id} style={[styles.poseCard, done && styles.poseCardDone]} onPress={() => setPoseModal(p)}>
                 <Text style={styles.poseEmoji}>{p.difficulty === 'BEGINNER' ? '🟢' : p.difficulty === 'INTERMEDIATE' ? '🟡' : '🔴'}</Text>
                 <Text style={styles.poseName} numberOfLines={1}>{p.name}</Text>
                 <Text style={styles.poseSanskrit} numberOfLines={1}>{p.sanskritName}</Text>
                 <Text style={styles.poseDuration}>{p.durationSeconds}s</Text>
-                <TouchableOpacity style={styles.completeSmBtn} onPress={() => handleComplete('YOGA', p.id, Math.ceil(p.durationSeconds / 60))}><Text style={styles.completeSmText}>✅ Done</Text></TouchableOpacity>
+                <TouchableOpacity style={[styles.completeSmBtn, done && styles.completeSmBtnDone]} onPress={(e) => { e.stopPropagation && e.stopPropagation(); handleComplete('YOGA', p.id, Math.ceil(p.durationSeconds / 60)); }}>
+                  <Text style={[styles.completeSmText, done && styles.completeSmTextDone]}>{done ? '✅ Done' : '○ Mark Done'}</Text>
+                </TouchableOpacity>
               </TouchableOpacity>
-            ))}
+              );
+            })}
           </ScrollView>
         </View>
 
         {/* Meditation */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🧠 Meditation ({meditations.length})</Text>
-          {meditations.slice(0, 4).map(m => (
-            <View key={m.id} style={styles.listItem}>
+          {meditations.slice(0, 4).map(m => {
+            const done = isCompleted('MEDITATION', m.id);
+            return (
+            <View key={m.id} style={[styles.listItem, done && styles.listItemDone]}>
               <View style={{ flex: 1 }}><Text style={styles.listName}>{m.name}</Text><Text style={styles.listDesc}>{m.description}</Text><Text style={styles.listMeta}>{m.durationMinutes} min • {formatLabel(m.type)} • {formatLabel(m.difficulty)}</Text></View>
-              <TouchableOpacity style={styles.completeMdBtn} onPress={() => handleComplete('MEDITATION', m.id, m.durationMinutes)}><Text style={styles.completeMdText}>✅</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.completeMdBtn} onPress={() => handleComplete('MEDITATION', m.id, m.durationMinutes)}><Text style={styles.completeMdText}>{done ? '✅' : '○'}</Text></TouchableOpacity>
             </View>
-          ))}
+            );
+          })}
         </View>
 
         {/* Breathing */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🌬️ Breathing Exercises ({breathings.length})</Text>
-          {breathings.map(b => (
-            <View key={b.id} style={styles.listItem}>
+          {breathings.map(b => {
+            const done = isCompleted('BREATHING', b.id);
+            return (
+            <View key={b.id} style={[styles.listItem, done && styles.listItemDone]}>
               <View style={{ flex: 1 }}><Text style={styles.listName}>{b.name} ({b.pattern})</Text><Text style={styles.listDesc}>{b.description}</Text><Text style={styles.listMeta}>{b.durationMinutes} min • {formatLabel(b.technique)}</Text></View>
-              <TouchableOpacity style={styles.completeMdBtn} onPress={() => handleComplete('BREATHING', b.id, b.durationMinutes)}><Text style={styles.completeMdText}>✅</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.completeMdBtn} onPress={() => handleComplete('BREATHING', b.id, b.durationMinutes)}><Text style={styles.completeMdText}>{done ? '✅' : '○'}</Text></TouchableOpacity>
             </View>
-          ))}
+            );
+          })}
         </View>
 
         <View style={{ height: 30 }} />
@@ -231,7 +261,7 @@ const WellnessHomeScreen = ({ navigation }) => {
               <Text style={styles.modalLabel}>Benefits</Text><Text style={styles.modalText}>{poseModal.benefits}</Text>
               <Text style={styles.modalLabel}>Instructions</Text><Text style={styles.modalText}>{poseModal.instructions}</Text>
               <View style={styles.modalMeta}><Text style={styles.modalTag}>{formatLabel(poseModal.difficulty)}</Text><Text style={styles.modalTag}>{poseModal.durationSeconds}s</Text><Text style={styles.modalTag}>{formatLabel(poseModal.category)}</Text></View>
-              <TouchableOpacity style={styles.assignBtn} onPress={() => { handleComplete('YOGA', poseModal.id, Math.ceil(poseModal.durationSeconds / 60)); setPoseModal(null); }}><Text style={styles.assignBtnText}>Mark as Done ✅</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.assignBtn, isCompleted('YOGA', poseModal.id) && styles.assignBtnDone]} onPress={() => { handleComplete('YOGA', poseModal.id, Math.ceil(poseModal.durationSeconds / 60)); setPoseModal(null); }}><Text style={styles.assignBtnText}>{isCompleted('YOGA', poseModal.id) ? 'Already Done ✅' : 'Mark as Done ○'}</Text></TouchableOpacity>
             </>)}
           </View>
         </View>
@@ -278,14 +308,19 @@ const styles = StyleSheet.create({
   sessionItem: { flexDirection: 'row', alignItems: 'center', padding: spacing.sm, backgroundColor: colors.background, borderRadius: borderRadius.md, marginBottom: spacing.xs },
   sessionDay: { fontWeight: '600', color: '#6b46c1', width: 80, fontSize: 11 }, sessionName: { fontWeight: '600', color: colors.text.primary }, sessionDesc: { ...typography.caption, color: colors.text.secondary },
   assignBtn: { backgroundColor: '#6b46c1', padding: spacing.md, borderRadius: borderRadius.md, alignItems: 'center', marginTop: spacing.md },
+  assignBtnDone: { backgroundColor: colors.success },
   assignBtnText: { color: '#fff', fontWeight: 'bold' },
   section: { marginBottom: spacing.md },
   poseCard: { width: 120, backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.sm, marginRight: spacing.sm, ...shadows.sm, alignItems: 'center' },
+  poseCardDone: { backgroundColor: colors.success + '10', borderWidth: 1, borderColor: colors.success + '40' },
   poseEmoji: { fontSize: 20, marginBottom: 4 }, poseName: { fontWeight: '600', fontSize: 12, color: colors.text.primary, textAlign: 'center' },
   poseSanskrit: { fontSize: 10, color: colors.text.secondary, fontStyle: 'italic' }, poseDuration: { fontSize: 10, color: '#6b46c1', marginTop: 2 },
-  completeSmBtn: { marginTop: 4, backgroundColor: colors.success + '20', paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: borderRadius.sm },
-  completeSmText: { fontSize: 10, color: colors.success },
+  completeSmBtn: { marginTop: 4, backgroundColor: colors.border + '60', paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: borderRadius.sm },
+  completeSmBtnDone: { backgroundColor: colors.success + '20' },
+  completeSmText: { fontSize: 10, color: colors.text.secondary },
+  completeSmTextDone: { color: colors.success },
   listItem: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.md, marginBottom: spacing.sm, ...shadows.sm, alignItems: 'center' },
+  listItemDone: { backgroundColor: colors.success + '10', borderWidth: 1, borderColor: colors.success + '40' },
   listName: { fontWeight: '600', color: colors.text.primary }, listDesc: { color: colors.text.secondary, fontSize: 12, marginTop: 2 },
   listMeta: { ...typography.caption, color: '#6b46c1', marginTop: 4 },
   completeMdBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }, completeMdText: { fontSize: 20 },

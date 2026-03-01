@@ -66,5 +66,10 @@ public class WellnessController {
     public ResponseEntity<WellnessStreakDTO> getStreak() {
         return ResponseEntity.ok(wellnessService.getStreak(getCurrentEmail()));
     }
+
+    @GetMapping("/completions/today")
+    public ResponseEntity<List<Map<String, Object>>> getTodayCompletions() {
+        return ResponseEntity.ok(wellnessService.getTodayCompletions(getCurrentEmail()));
+    }
 }
 

@@ -13,5 +13,6 @@ public interface WellnessOperations {
     UserWellnessPlanDTO completeSession(String email, String sessionType, Long sessionId, Integer durationMinutes);
     WellnessTipDTO getDailyTip();
     WellnessStreakDTO getStreak(String email);
+    List<Map<String, Object>> getTodayCompletions(String email);
 }
 
