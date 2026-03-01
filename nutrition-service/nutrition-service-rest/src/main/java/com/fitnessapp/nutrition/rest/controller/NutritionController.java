@@ -20,6 +20,7 @@ public class NutritionController {
     private final AIBasedNutritionOperations aiBasedNutritionService;
     private final FoodPreferenceOperations userFoodPreferenceService;
     private final NutritionProfileOperations nutritionProfileService;
+    private final MealTrackingOperations mealTrackingService;
 
     private String getCurrentEmail() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -101,5 +102,17 @@ public class NutritionController {
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok(aiBasedNutritionService.estimateFoodMacros(foodDescription.trim()));
+    }
+
+    // -------- Daily Meal Tracking --------
+
+    @PutMapping("/tracking/today")
+    public ResponseEntity<DailyNutritionSummaryDTO> syncDailyTracking(@RequestBody DailyTrackingSyncRequest request) {
+        return ResponseEntity.ok(mealTrackingService.syncDailyTracking(getCurrentEmail(), request));
+    }
+
+    @GetMapping("/tracking/today")
+    public ResponseEntity<DailyNutritionSummaryDTO> getTodayTracking() {
+        return ResponseEntity.ok(mealTrackingService.getTodayTracking(getCurrentEmail()));
     }
 }

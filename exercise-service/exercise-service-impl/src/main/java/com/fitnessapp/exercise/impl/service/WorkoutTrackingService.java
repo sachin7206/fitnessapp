@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service @RequiredArgsConstructor @Slf4j
@@ -17,6 +18,7 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
     private final UserWorkoutPlanRepository userPlanRepo;
     private final WorkoutPlanRepository workoutPlanRepo;
     private final WorkoutCompletionRepository completionRepo;
+    private final DailyStepTrackingRepository stepTrackingRepo;
 
     @Override
     public UserWorkoutPlanDTO getActiveWorkoutPlan(String email) {
@@ -97,6 +99,46 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
             plan.setStatus("CANCELLED");
             userPlanRepo.save(plan);
         });
+    }
+
+    // -------- Step Tracking --------
+
+    @Override
+    @Transactional
+    public DailyStepTrackingDTO syncSteps(String email, StepTrackingSyncRequest request) {
+        LocalDate today = LocalDate.now();
+        DailyStepTracking record = stepTrackingRepo.findByUserEmailAndTrackingDate(email, today)
+                .orElseGet(() -> {
+                    DailyStepTracking r = new DailyStepTracking();
+                    r.setUserEmail(email);
+                    r.setTrackingDate(today);
+                    return r;
+                });
+        record.setSteps(request.getSteps() != null ? request.getSteps() : 0);
+        record.setStepGoal(request.getStepGoal() != null ? request.getStepGoal() : 0);
+        record.setCaloriesBurned(Math.round((request.getSteps() != null ? request.getSteps() : 0) * 0.04f));
+        record.setGoalCompleted(request.getGoalCompleted() != null ? request.getGoalCompleted() : false);
+        return toStepDTO(stepTrackingRepo.save(record));
+    }
+
+    @Override
+    public DailyStepTrackingDTO getTodaySteps(String email) {
+        return stepTrackingRepo.findByUserEmailAndTrackingDate(email, LocalDate.now())
+                .map(this::toStepDTO)
+                .orElse(new DailyStepTrackingDTO(null, email, LocalDate.now(), 0, 0, 0, false));
+    }
+
+    @Override
+    public List<DailyStepTrackingDTO> getStepHistory(String email, int days) {
+        LocalDate end = LocalDate.now();
+        LocalDate start = end.minusDays(days);
+        return stepTrackingRepo.findByUserEmailAndTrackingDateBetweenOrderByTrackingDateDesc(email, start, end)
+                .stream().map(this::toStepDTO).collect(Collectors.toList());
+    }
+
+    private DailyStepTrackingDTO toStepDTO(DailyStepTracking e) {
+        return new DailyStepTrackingDTO(e.getId(), e.getUserEmail(), e.getTrackingDate(),
+                e.getSteps(), e.getStepGoal(), e.getCaloriesBurned(), e.getGoalCompleted());
     }
 
     private UserWorkoutPlanDTO toDTO(UserWorkoutPlan up) {

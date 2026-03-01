@@ -1,5 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import workoutService from '../../services/workoutService';
 
 const STORAGE_KEY = '@workout_tracking';
 
@@ -124,6 +125,21 @@ const workoutTrackingSlice = createSlice({
         state.stepGoalCompleted = false;
       }
     },
+
+    mergeStepHistory: (state, action) => {
+      const backendHistory = action.payload || [];
+      const localMap = {};
+      (state.stepHistory || []).forEach(h => { localMap[h.date] = h; });
+      // Merge: take higher step count for each date
+      backendHistory.forEach(h => {
+        if (!localMap[h.date] || h.steps > localMap[h.date].steps) {
+          localMap[h.date] = h;
+        }
+      });
+      state.stepHistory = Object.values(localMap)
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .slice(-90); // Keep last 90 days
+    },
   },
 });
 
@@ -137,13 +153,17 @@ export const {
   clearWorkoutPlan,
   updateSteps,
   setStepGoal,
+  mergeStepHistory,
 } = workoutTrackingSlice.actions;
 
 export { getLocalDateString };
 
-// Persist
+// Persist to AsyncStorage + sync steps to backend
 export const persistWorkoutTracking = () => async (dispatch, getState) => {
   const { workoutTracking } = getState();
+  const todaySteps = typeof workoutTracking.todaySteps === 'number' ? workoutTracking.todaySteps : 0;
+  const stepGoal = typeof workoutTracking.stepGoal === 'number' ? workoutTracking.stepGoal : 0;
+
   try {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({
       trackingDate: workoutTracking.trackingDate || getLocalDateString(),
@@ -152,8 +172,8 @@ export const persistWorkoutTracking = () => async (dispatch, getState) => {
       activePlan: workoutTracking.activePlan,
       workoutCount: workoutTracking.workoutCount,
       motivationalQuote: workoutTracking.motivationalQuote,
-      todaySteps: typeof workoutTracking.todaySteps === 'number' ? workoutTracking.todaySteps : 0,
-      stepGoal: typeof workoutTracking.stepGoal === 'number' ? workoutTracking.stepGoal : 0,
+      todaySteps,
+      stepGoal,
       stepGoalCompleted: workoutTracking.stepGoalCompleted,
       stepHistory: (workoutTracking.stepHistory || []).filter(
         h => h && typeof h.steps === 'number' && typeof h.date === 'string'
@@ -162,16 +182,57 @@ export const persistWorkoutTracking = () => async (dispatch, getState) => {
   } catch (e) {
     console.log('Failed to persist workout tracking:', e.message);
   }
+
+  // Sync steps to backend (fire-and-forget)
+  if (todaySteps > 0 || stepGoal > 0) {
+    try {
+      await workoutService.syncSteps({
+        steps: todaySteps,
+        stepGoal: stepGoal,
+        goalCompleted: workoutTracking.stepGoalCompleted || false,
+      });
+    } catch (e) {
+      console.log('Step sync to backend failed (will retry):', e.message);
+    }
+  }
 };
 
-// Load
+// Load from AsyncStorage first (instant), then enrich with backend data
 export const loadWorkoutTrackingFromStorage = () => async (dispatch) => {
   try {
+    // 1. Load from local cache (instant display)
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (raw) {
       dispatch(loadWorkoutTracking(JSON.parse(raw)));
     } else {
       dispatch(loadWorkoutTracking(null));
+    }
+
+    // 2. Merge step history from backend (async, enriches local data)
+    try {
+      const [todayData, historyData] = await Promise.all([
+        workoutService.getTodaySteps(),
+        workoutService.getStepHistory(90),
+      ]);
+
+      // If backend has today's data with more steps, use it
+      if (todayData && typeof todayData.steps === 'number' && todayData.steps > 0) {
+        dispatch(updateSteps(todayData.steps));
+        if (todayData.stepGoal > 0) {
+          dispatch(setStepGoal(todayData.stepGoal));
+        }
+      }
+
+      // Merge backend history into local stepHistory
+      if (historyData && historyData.length > 0) {
+        dispatch(mergeStepHistory(historyData.map(h => ({
+          date: h.trackingDate,
+          steps: h.steps,
+          caloriesBurned: h.caloriesBurned || Math.round(h.steps * 0.04),
+        }))));
+      }
+    } catch (e) {
+      console.log('Backend step data unavailable, using local cache:', e.message);
     }
   } catch (e) {
     console.log('Failed to load workout tracking:', e.message);

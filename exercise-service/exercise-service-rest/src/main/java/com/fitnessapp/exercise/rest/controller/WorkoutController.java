@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -56,6 +57,23 @@ public class WorkoutController {
     @GetMapping("/motivational-quote")
     public ResponseEntity<Map<String, String>> getMotivationalQuote() {
         return ResponseEntity.ok(Map.of("quote", aiWorkoutService.getMotivationalQuote(getCurrentEmail())));
+    }
+
+    // -------- Step Tracking --------
+
+    @PutMapping("/steps/today")
+    public ResponseEntity<DailyStepTrackingDTO> syncSteps(@RequestBody StepTrackingSyncRequest request) {
+        return ResponseEntity.ok(workoutTrackingService.syncSteps(getCurrentEmail(), request));
+    }
+
+    @GetMapping("/steps/today")
+    public ResponseEntity<DailyStepTrackingDTO> getTodaySteps() {
+        return ResponseEntity.ok(workoutTrackingService.getTodaySteps(getCurrentEmail()));
+    }
+
+    @GetMapping("/steps/history")
+    public ResponseEntity<List<DailyStepTrackingDTO>> getStepHistory(@RequestParam(defaultValue = "90") int days) {
+        return ResponseEntity.ok(workoutTrackingService.getStepHistory(getCurrentEmail(), days));
     }
 }
 

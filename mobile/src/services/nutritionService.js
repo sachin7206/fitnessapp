@@ -104,6 +104,18 @@ export const nutritionService = {
       };
     }
   },
+
+  // -------- Daily Meal Tracking --------
+
+  syncDailyTracking: async (request) => {
+    const response = await apiClient.put('/nutrition/tracking/today', request);
+    return response.data;
+  },
+
+  getTodayTracking: async () => {
+    const response = await apiClient.get('/nutrition/tracking/today');
+    return response.data;
+  },
 };
 
 export default nutritionService;

@@ -55,6 +55,23 @@ const workoutService = {
       return { quote: fallbackQuotes[idx] };
     }
   },
+
+  // -------- Step Tracking --------
+
+  syncSteps: async (request) => {
+    const response = await apiClient.put('/workouts/steps/today', request);
+    return response.data;
+  },
+
+  getTodaySteps: async () => {
+    const response = await apiClient.get('/workouts/steps/today');
+    return response.data;
+  },
+
+  getStepHistory: async (days = 90) => {
+    const response = await apiClient.get(`/workouts/steps/history?days=${days}`);
+    return response.data;
+  },
 };
 
 export default workoutService;

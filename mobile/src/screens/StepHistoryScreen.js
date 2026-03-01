@@ -1,8 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions,
 } from 'react-native';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { mergeStepHistory, persistWorkoutTracking } from '../store/slices/workoutTrackingSlice';
+import workoutService from '../services/workoutService';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -16,13 +18,34 @@ const getDateString = (d) => {
 };
 
 const StepHistoryScreen = ({ navigation }) => {
+  const dispatch = useDispatch();
   const { todaySteps: rawSteps, stepGoal: rawGoal, stepHistory: rawHistory } = useSelector(state => state.workoutTracking);
   // Sanitize values — guard against non-numeric data
   const todaySteps = (typeof rawSteps === 'number' && !isNaN(rawSteps)) ? rawSteps : 0;
   const stepGoal = (typeof rawGoal === 'number' && !isNaN(rawGoal)) ? rawGoal : 0;
   const stepHistory = Array.isArray(rawHistory) ? rawHistory.filter(h => h && typeof h.steps === 'number') : [];
-  const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, -1 = last week, etc.
+  const [weekOffset, setWeekOffset] = useState(0);
   const [selectedBar, setSelectedBar] = useState(null);
+
+  // Load step history from backend on mount
+  useEffect(() => {
+    const loadFromBackend = async () => {
+      try {
+        const historyData = await workoutService.getStepHistory(90);
+        if (historyData && historyData.length > 0) {
+          dispatch(mergeStepHistory(historyData.map(h => ({
+            date: h.trackingDate,
+            steps: h.steps,
+            caloriesBurned: h.caloriesBurned || Math.round(h.steps * 0.04),
+          }))));
+          dispatch(persistWorkoutTracking());
+        }
+      } catch (e) {
+        console.log('Could not load step history from backend:', e.message);
+      }
+    };
+    loadFromBackend();
+  }, []);
 
   // Build the 7 days for the selected week
   const weekData = useMemo(() => {

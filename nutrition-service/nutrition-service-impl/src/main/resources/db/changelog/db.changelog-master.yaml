@@ -14,4 +14,7 @@ databaseChangeLog:
   - include:
       file: changes/005-create-user-food-preferences-table.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/006-create-daily-meal-tracking-table.yaml
+      relativeToChangelogFile: true
 

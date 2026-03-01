@@ -8,5 +8,10 @@ public interface WorkoutTrackingOperations {
     UserWorkoutPlanDTO markWorkoutComplete(String email);
     Integer getWorkoutCount(String email);
     void cancelPlan(String email);
+
+    // Step tracking
+    DailyStepTrackingDTO syncSteps(String email, StepTrackingSyncRequest request);
+    DailyStepTrackingDTO getTodaySteps(String email);
+    List<DailyStepTrackingDTO> getStepHistory(String email, int days);
 }
 

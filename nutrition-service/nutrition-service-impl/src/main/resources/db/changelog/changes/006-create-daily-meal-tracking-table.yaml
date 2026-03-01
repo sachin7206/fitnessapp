@@ -1,0 +1,54 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-create-daily-meal-tracking
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: daily_meal_tracking
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_email, type: VARCHAR(255), constraints: { nullable: false } }
+              - column: { name: tracking_date, type: DATE, constraints: { nullable: false } }
+              - column: { name: meal_id, type: BIGINT }
+              - column: { name: meal_name, type: VARCHAR(255) }
+              - column: { name: meal_type, type: VARCHAR(50) }
+              - column: { name: time_of_day, type: VARCHAR(20) }
+              - column: { name: completed, type: BOOLEAN, defaultValueBoolean: false }
+              - column: { name: completed_at, type: DATETIME }
+              - column: { name: replaced, type: BOOLEAN, defaultValueBoolean: false }
+              - column: { name: replaced_with, type: VARCHAR(255) }
+              - column: { name: original_name, type: VARCHAR(255) }
+              - column: { name: calories, type: INT, defaultValueNumeric: 0 }
+              - column: { name: protein_grams, type: DOUBLE, defaultValueNumeric: 0 }
+              - column: { name: carbs_grams, type: DOUBLE, defaultValueNumeric: 0 }
+              - column: { name: fat_grams, type: DOUBLE, defaultValueNumeric: 0 }
+              - column: { name: created_at, type: DATETIME }
+              - column: { name: updated_at, type: DATETIME }
+        - addUniqueConstraint:
+            tableName: daily_meal_tracking
+            columnNames: user_email, tracking_date, meal_id
+            constraintName: uk_meal_tracking_user_date_meal
+
+  - changeSet:
+      id: 006-create-daily-nutrition-summary
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: daily_nutrition_summary
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_email, type: VARCHAR(255), constraints: { nullable: false } }
+              - column: { name: tracking_date, type: DATE, constraints: { nullable: false } }
+              - column: { name: consumed_calories, type: INT, defaultValueNumeric: 0 }
+              - column: { name: consumed_protein, type: DOUBLE, defaultValueNumeric: 0 }
+              - column: { name: consumed_carbs, type: DOUBLE, defaultValueNumeric: 0 }
+              - column: { name: consumed_fat, type: DOUBLE, defaultValueNumeric: 0 }
+              - column: { name: total_meals, type: INT, defaultValueNumeric: 0 }
+              - column: { name: completed_meals, type: INT, defaultValueNumeric: 0 }
+              - column: { name: created_at, type: DATETIME }
+              - column: { name: updated_at, type: DATETIME }
+        - addUniqueConstraint:
+            tableName: daily_nutrition_summary
+            columnNames: user_email, tracking_date
+            constraintName: uk_nutrition_summary_user_date
+
