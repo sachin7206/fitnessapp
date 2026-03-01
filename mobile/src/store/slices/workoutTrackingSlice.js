@@ -31,13 +31,17 @@ const workoutTrackingSlice = createSlice({
       const data = action.payload;
       if (data) {
         const today = getLocalDateString();
+        // Sanitize: ensure todaySteps is a number
+        const sanitizeSteps = (v) => (typeof v === 'number' && !isNaN(v)) ? v : 0;
+
         // Reset if it's a new day
         if (data.trackingDate !== today) {
           // Save yesterday's steps to history before resetting
           const history = data.stepHistory || [];
-          if (data.trackingDate && data.todaySteps > 0) {
-            const cal = Math.round(data.todaySteps * 0.04);
-            history.push({ date: data.trackingDate, steps: data.todaySteps, caloriesBurned: cal });
+          const prevSteps = sanitizeSteps(data.todaySteps);
+          if (data.trackingDate && prevSteps > 0) {
+            const cal = Math.round(prevSteps * 0.04);
+            history.push({ date: data.trackingDate, steps: prevSteps, caloriesBurned: cal });
             // Keep last 90 days
             while (history.length > 90) history.shift();
           }
@@ -48,7 +52,7 @@ const workoutTrackingSlice = createSlice({
           state.workoutCount = data.workoutCount || 0;
           state.motivationalQuote = null;
           state.todaySteps = 0;
-          state.stepGoal = data.stepGoal || 0;
+          state.stepGoal = sanitizeSteps(data.stepGoal);
           state.stepGoalCompleted = false;
           state.stepHistory = history;
         } else {
@@ -58,8 +62,8 @@ const workoutTrackingSlice = createSlice({
           state.activePlan = data.activePlan || null;
           state.workoutCount = data.workoutCount || 0;
           state.motivationalQuote = data.motivationalQuote || null;
-          state.todaySteps = data.todaySteps || 0;
-          state.stepGoal = data.stepGoal || 0;
+          state.todaySteps = sanitizeSteps(data.todaySteps);
+          state.stepGoal = sanitizeSteps(data.stepGoal);
           state.stepGoalCompleted = data.stepGoalCompleted || false;
           state.stepHistory = data.stepHistory || [];
         }
@@ -104,7 +108,8 @@ const workoutTrackingSlice = createSlice({
     },
 
     updateSteps: (state, action) => {
-      state.todaySteps = action.payload;
+      const steps = typeof action.payload === 'number' ? action.payload : 0;
+      state.todaySteps = steps;
       // Check goal completion
       if (state.stepGoal > 0 && state.todaySteps >= state.stepGoal && !state.stepGoalCompleted) {
         state.stepGoalCompleted = true;
@@ -147,10 +152,12 @@ export const persistWorkoutTracking = () => async (dispatch, getState) => {
       activePlan: workoutTracking.activePlan,
       workoutCount: workoutTracking.workoutCount,
       motivationalQuote: workoutTracking.motivationalQuote,
-      todaySteps: workoutTracking.todaySteps,
-      stepGoal: workoutTracking.stepGoal,
+      todaySteps: typeof workoutTracking.todaySteps === 'number' ? workoutTracking.todaySteps : 0,
+      stepGoal: typeof workoutTracking.stepGoal === 'number' ? workoutTracking.stepGoal : 0,
       stepGoalCompleted: workoutTracking.stepGoalCompleted,
-      stepHistory: workoutTracking.stepHistory,
+      stepHistory: (workoutTracking.stepHistory || []).filter(
+        h => h && typeof h.steps === 'number' && typeof h.date === 'string'
+      ),
     }));
   } catch (e) {
     console.log('Failed to persist workout tracking:', e.message);

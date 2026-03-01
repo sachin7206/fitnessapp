@@ -16,7 +16,11 @@ const getDateString = (d) => {
 };
 
 const StepHistoryScreen = ({ navigation }) => {
-  const { todaySteps, stepGoal, stepHistory } = useSelector(state => state.workoutTracking);
+  const { todaySteps: rawSteps, stepGoal: rawGoal, stepHistory: rawHistory } = useSelector(state => state.workoutTracking);
+  // Sanitize values — guard against non-numeric data
+  const todaySteps = (typeof rawSteps === 'number' && !isNaN(rawSteps)) ? rawSteps : 0;
+  const stepGoal = (typeof rawGoal === 'number' && !isNaN(rawGoal)) ? rawGoal : 0;
+  const stepHistory = Array.isArray(rawHistory) ? rawHistory.filter(h => h && typeof h.steps === 'number') : [];
   const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, -1 = last week, etc.
   const [selectedBar, setSelectedBar] = useState(null);
 

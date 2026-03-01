@@ -138,15 +138,8 @@ const HomeScreen = ({ navigation }) => {
             if (sub) sub.remove();
           };
         } else {
-          // On web or unsupported: simulate with random walk for demo
-          if (Platform.OS === 'web') {
-            const simInterval = setInterval(() => {
-              dispatch(updateSteps(prev => {
-                // Can't increment in reducer like this, we'll handle in reducer
-              }));
-            }, 30000);
-            return () => clearInterval(simInterval);
-          }
+          // Pedometer not available (web or unsupported device)
+          // Steps will remain at 0 — no simulation needed
         }
       } catch (e) {
         console.log('Pedometer error:', e.message);
