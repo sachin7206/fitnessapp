@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Modal,
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
@@ -109,14 +110,19 @@ const NutritionProfileSetupScreen = ({ navigation, route }) => {
     { label: 'Heart Health', value: 'HEART_HEALTHY', icon: '❤️' },
   ];
 
-  const healthConditionOptions = [
-    { label: 'Diabetes', value: 'DIABETES' },
-    { label: 'High Blood Pressure', value: 'HYPERTENSION' },
-    { label: 'Heart Disease', value: 'HEART_DISEASE' },
-    { label: 'Thyroid Issues', value: 'THYROID' },
-    { label: 'PCOS', value: 'PCOS' },
-    { label: 'None', value: 'NONE' },
+  const healthConditionExamples = [
+    { label: 'Diabetes', value: 'DIABETES', icon: '🩺' },
+    { label: 'High Blood Pressure', value: 'HYPERTENSION', icon: '💉' },
+    { label: 'Heart Disease', value: 'HEART_DISEASE', icon: '❤️‍🩹' },
+    { label: 'Thyroid Issues', value: 'THYROID', icon: '🦋' },
+    { label: 'PCOS', value: 'PCOS', icon: '🩻' },
+    { label: 'Cholesterol', value: 'CHOLESTEROL', icon: '🫀' },
+    { label: 'Asthma', value: 'ASTHMA', icon: '🫁' },
   ];
+
+  // Health condition popup state
+  const [showHealthModal, setShowHealthModal] = useState(false);
+  const [customHealthInput, setCustomHealthInput] = useState('');
 
   const steps = [
     { title: 'Personal Info', icon: '👤' },
@@ -140,33 +146,67 @@ const NutritionProfileSetupScreen = ({ navigation, route }) => {
 
   const toggleGoal = (goal) => {
     setFormData(prev => {
-      const goals = prev.goals.includes(goal)
-        ? prev.goals.filter(g => g !== goal)
-        : [...prev.goals, goal];
-      return { ...prev, goals };
+      // If already selected, just remove it
+      if (prev.goals.includes(goal)) {
+        return { ...prev, goals: prev.goals.filter(g => g !== goal) };
+      }
+
+      // Conflicting goal groups — only one from each group
+      const conflicting = {
+        'WEIGHT_LOSS': ['WEIGHT_GAIN', 'MAINTENANCE'],
+        'WEIGHT_GAIN': ['WEIGHT_LOSS', 'MAINTENANCE'],
+        'MAINTENANCE': ['WEIGHT_LOSS', 'WEIGHT_GAIN'],
+      };
+
+      let newGoals = [...prev.goals];
+
+      // Remove any conflicting goals
+      const conflicts = conflicting[goal] || [];
+      if (conflicts.length > 0) {
+        const removed = newGoals.filter(g => conflicts.includes(g));
+        newGoals = newGoals.filter(g => !conflicts.includes(g));
+        if (removed.length > 0) {
+          const conflictNames = removed.map(g => {
+            const opt = goalOptions.find(o => o.value === g);
+            return opt ? opt.label : g;
+          }).join(', ');
+          setTimeout(() => showAlert(
+            'Goal Updated',
+            `Removed "${conflictNames}" as it conflicts with your new selection.`
+          ), 100);
+        }
+      }
+
+      newGoals.push(goal);
+      return { ...prev, goals: newGoals };
     });
   };
 
-  const toggleHealthCondition = (condition) => {
-    if (condition === 'NONE') {
-      // Toggle None - if already selected (empty array), keep it; otherwise set to empty
+  const addHealthCondition = (condition) => {
+    if (!formData.healthConditions.includes(condition)) {
       setFormData(prev => ({
         ...prev,
-        healthConditions: prev.healthConditions.length === 0 ? [] : []
+        healthConditions: [...prev.healthConditions, condition],
       }));
-      return;
     }
-    // Selecting any other condition removes 'NONE' state
-    setFormData(prev => {
-      const conditions = prev.healthConditions.includes(condition)
-        ? prev.healthConditions.filter(c => c !== condition)
-        : [...prev.healthConditions.filter(c => c !== 'NONE'), condition];
-      return { ...prev, healthConditions: conditions };
-    });
   };
 
-  // Helper to check if "None" should appear selected (when no conditions are selected)
-  const isNoneSelected = () => formData.healthConditions.length === 0;
+  const removeHealthCondition = (condition) => {
+    setFormData(prev => ({
+      ...prev,
+      healthConditions: prev.healthConditions.filter(c => c !== condition),
+    }));
+  };
+
+  const addCustomHealthCondition = () => {
+    const trimmed = customHealthInput.trim();
+    if (!trimmed) return;
+    const value = trimmed.toUpperCase().replace(/\s+/g, '_');
+    if (!formData.healthConditions.includes(value)) {
+      addHealthCondition(value);
+    }
+    setCustomHealthInput('');
+  };
 
   const validateStep = () => {
     switch (currentStep) {
@@ -471,28 +511,41 @@ const NutritionProfileSetupScreen = ({ navigation, route }) => {
       ))}
 
       <Text style={[styles.label, { marginTop: spacing.lg }]}>Any health conditions?</Text>
-      <View style={styles.chipContainer}>
-        {healthConditionOptions.map((condition) => {
-          const isSelected = condition.value === 'NONE'
-            ? isNoneSelected()
-            : formData.healthConditions.includes(condition.value);
-          return (
-            <TouchableOpacity
-              key={condition.value}
-              style={[
-                styles.chip,
-                isSelected && styles.chipSelected,
-              ]}
-              onPress={() => toggleHealthCondition(condition.value)}
-            >
-              <Text style={[
-                styles.chipText,
-                isSelected && styles.chipTextSelected,
-              ]}>{condition.label}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <TouchableOpacity
+        style={styles.healthConditionBtn}
+        onPress={() => setShowHealthModal(true)}
+      >
+        <Text style={styles.healthConditionBtnIcon}>🩺</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.healthConditionBtnText}>
+            {formData.healthConditions.length > 0
+              ? `${formData.healthConditions.length} condition(s) added`
+              : 'Tap to add health conditions'}
+          </Text>
+          <Text style={styles.healthConditionBtnHint}>
+            {formData.healthConditions.length > 0
+              ? formData.healthConditions.map(c => c.replace(/_/g, ' ')).join(', ')
+              : 'Skip if none'}
+          </Text>
+        </View>
+        <Text style={{ fontSize: 16 }}>→</Text>
+      </TouchableOpacity>
+
+      {/* Display selected conditions as removable chips */}
+      {formData.healthConditions.length > 0 && (
+        <View style={styles.chipContainer}>
+          {formData.healthConditions.map((cond) => (
+            <View key={cond} style={[styles.chip, styles.chipSelected]}>
+              <Text style={styles.chipTextSelected}>
+                {cond.replace(/_/g, ' ')}
+              </Text>
+              <TouchableOpacity onPress={() => removeHealthCondition(cond)}>
+                <Text style={styles.chipRemove}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 
@@ -578,6 +631,80 @@ const NutritionProfileSetupScreen = ({ navigation, route }) => {
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Health Condition Modal */}
+      <Modal
+        visible={showHealthModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowHealthModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>🩺 Health Conditions</Text>
+            <Text style={styles.modalSubtitle}>Add any health conditions for personalized diet</Text>
+
+            {/* Custom input */}
+            <View style={styles.modalInputRow}>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Type a health condition..."
+                placeholderTextColor={colors.text.secondary}
+                value={customHealthInput}
+                onChangeText={setCustomHealthInput}
+                onSubmitEditing={addCustomHealthCondition}
+              />
+              <TouchableOpacity
+                style={styles.modalAddBtn}
+                onPress={addCustomHealthCondition}
+              >
+                <Text style={styles.modalAddBtnText}>Add</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Selected conditions */}
+            {formData.healthConditions.length > 0 && (
+              <View style={styles.modalSelectedSection}>
+                <Text style={styles.modalSectionLabel}>Selected:</Text>
+                <View style={styles.modalChipRow}>
+                  {formData.healthConditions.map((cond) => (
+                    <View key={cond} style={styles.modalChipSelected}>
+                      <Text style={styles.modalChipSelectedText}>{cond.replace(/_/g, ' ')}</Text>
+                      <TouchableOpacity onPress={() => removeHealthCondition(cond)}>
+                        <Text style={styles.modalChipRemove}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Example suggestions */}
+            <Text style={styles.modalSectionLabel}>Common conditions (tap to add):</Text>
+            <View style={styles.modalChipRow}>
+              {healthConditionExamples
+                .filter(ex => !formData.healthConditions.includes(ex.value))
+                .map((ex) => (
+                  <TouchableOpacity
+                    key={ex.value}
+                    style={styles.modalChipExample}
+                    onPress={() => addHealthCondition(ex.value)}
+                  >
+                    <Text style={styles.modalChipExampleText}>{ex.icon} {ex.label}</Text>
+                  </TouchableOpacity>
+                ))}
+            </View>
+
+            {/* Done button */}
+            <TouchableOpacity
+              style={styles.modalDoneBtn}
+              onPress={() => setShowHealthModal(false)}
+            >
+              <Text style={styles.modalDoneBtnText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -858,6 +985,60 @@ const styles = StyleSheet.create({
     color: colors.text.inverse,
     fontWeight: 'bold',
   },
+  // Health condition button
+  healthConditionBtn: {
+    flexDirection: 'row', alignItems: 'center', padding: spacing.md,
+    backgroundColor: colors.surface, borderRadius: borderRadius.md,
+    borderWidth: 1, borderColor: colors.border, marginTop: spacing.sm, ...shadows.sm,
+  },
+  healthConditionBtnIcon: { fontSize: 24, marginRight: spacing.sm },
+  healthConditionBtnText: { ...typography.body, fontWeight: '600', color: colors.text.primary },
+  healthConditionBtnHint: { ...typography.caption, color: colors.text.secondary, marginTop: 2 },
+  chipRemove: { color: colors.primary, fontWeight: '700', fontSize: 14, marginLeft: 6 },
+  // Modal styles
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.surface, borderTopLeftRadius: borderRadius.xl || 20,
+    borderTopRightRadius: borderRadius.xl || 20, padding: spacing.lg,
+    maxHeight: '80%',
+  },
+  modalTitle: { ...typography.h3, color: colors.text.primary, marginBottom: spacing.xs },
+  modalSubtitle: { ...typography.caption, color: colors.text.secondary, marginBottom: spacing.md },
+  modalInputRow: { flexDirection: 'row', marginBottom: spacing.md },
+  modalInput: {
+    flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, ...typography.body,
+    color: colors.text.primary, backgroundColor: colors.background,
+  },
+  modalAddBtn: {
+    marginLeft: spacing.sm, backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg, justifyContent: 'center',
+    borderRadius: borderRadius.md,
+  },
+  modalAddBtnText: { ...typography.body, color: colors.text.inverse, fontWeight: '600' },
+  modalSelectedSection: { marginBottom: spacing.md },
+  modalSectionLabel: { ...typography.bodySmall, fontWeight: '600', color: colors.text.primary, marginBottom: spacing.sm },
+  modalChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  modalChipSelected: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary + '15',
+    borderRadius: borderRadius.full || 20, paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
+    borderWidth: 1, borderColor: colors.primary,
+  },
+  modalChipSelectedText: { ...typography.bodySmall, color: colors.primary, fontWeight: '600' },
+  modalChipRemove: { color: colors.primary, fontWeight: '700', fontSize: 14, marginLeft: 6 },
+  modalChipExample: {
+    backgroundColor: colors.background, borderRadius: borderRadius.full || 20,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  modalChipExampleText: { ...typography.bodySmall, color: colors.text.primary },
+  modalDoneBtn: {
+    backgroundColor: colors.primary, padding: spacing.md,
+    borderRadius: borderRadius.md, alignItems: 'center', marginTop: spacing.lg,
+  },
+  modalDoneBtnText: { ...typography.body, color: colors.text.inverse, fontWeight: '700' },
 });
 
 export default NutritionProfileSetupScreen;

@@ -614,608 +614,176 @@ const FoodPreferencesScreen = ({ navigation, route }) => {
     );
   };
 
-  const renderFoodItemsStep = () => (
-    <View style={styles.stepContent}>
-      <Text style={styles.stepTitle}>Select Your Food Preferences 🍽️</Text>
-      <Text style={styles.stepSubtitle}>
-        Based on your {dietType.toLowerCase().replace('_', ' ')} diet
-      </Text>
+  const renderFoodItemsStep = () => {
+    // Quick-pick examples per category (2-3 items each)
+    const proteinExamples = isNonVeg
+      ? [
+          { key: 'includeChicken', label: '🍗 Chicken' },
+          { key: 'includeFish', label: '🐟 Fish' },
+          { key: 'includeSoyaChunks', label: '🫘 Soya Chunks' },
+        ]
+      : [
+          { key: 'includeSoyaChunks', label: '🫘 Soya Chunks' },
+          { key: 'includeTofu', label: '🧊 Tofu' },
+          { key: 'includeLegumes', label: '🫛 Legumes' },
+        ];
 
-      {/* PROTEIN SOURCES */}
+    const carbExamples = [
+      { key: 'includeRice', label: '🍚 Rice' },
+      { key: 'includeRoti', label: '🫓 Roti/Chapati' },
+      { key: 'includeOats', label: '🥣 Oats' },
+    ];
+
+    const dairyExamples = isVegan ? [] : [
+      { key: 'includeMilk', label: '🥛 Milk' },
+      { key: 'includePaneer', label: '🧀 Paneer' },
+      { key: 'includeCurd', label: '🥄 Curd/Yogurt' },
+    ];
+
+    const vegExamples = [
+      { key: 'includeSpinach', label: '🥬 Spinach' },
+      { key: 'includeBroccoli', label: '🥦 Broccoli' },
+      { key: 'includeCucumber', label: '🥒 Cucumber' },
+    ];
+
+    const renderSection = (title, examples, category) => (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🥩 Protein Sources</Text>
+        <Text style={styles.sectionTitle}>{title}</Text>
 
-        {isNonVeg && (
-          <>
-            <View style={styles.toggleRow}>
-              <View style={styles.toggleInfo}>
-                <Text style={styles.toggleLabel}>🍗 Chicken</Text>
-                <Text style={styles.toggleDesc}>Lean protein, versatile</Text>
-              </View>
-              <Switch
-                value={preferences.includeChicken}
-                onValueChange={() => togglePreference('includeChicken')}
-                trackColor={{ false: colors.border, true: colors.primary }}
-              />
-            </View>
-
-            <View style={styles.toggleRow}>
-              <View style={styles.toggleInfo}>
-                <Text style={styles.toggleLabel}>🐟 Fish</Text>
-                <Text style={styles.toggleDesc}>Rich in Omega-3</Text>
-              </View>
-              <Switch
-                value={preferences.includeFish}
-                onValueChange={() => togglePreference('includeFish')}
-                trackColor={{ false: colors.border, true: colors.primary }}
-              />
-            </View>
-
-            <View style={styles.toggleRow}>
-              <View style={styles.toggleInfo}>
-                <Text style={styles.toggleLabel}>🦐 Prawns/Shrimp</Text>
-                <Text style={styles.toggleDesc}>Low fat, high protein</Text>
-              </View>
-              <Switch
-                value={preferences.includePrawns}
-                onValueChange={() => togglePreference('includePrawns')}
-                trackColor={{ false: colors.border, true: colors.primary }}
-              />
-            </View>
-
-            <View style={styles.toggleRow}>
-              <View style={styles.toggleInfo}>
-                <Text style={styles.toggleLabel}>🥩 Red Meat</Text>
-                <Text style={styles.toggleDesc}>Mutton/Lamb/Beef</Text>
-              </View>
-              <Switch
-                value={preferences.includeRedMeat}
-                onValueChange={() => togglePreference('includeRedMeat')}
-                trackColor={{ false: colors.border, true: colors.primary }}
-              />
-            </View>
-
-            <View style={styles.toggleRow}>
-              <View style={styles.toggleInfo}>
-                <Text style={styles.toggleLabel}>🦃 Turkey</Text>
-                <Text style={styles.toggleDesc}>Lean meat option</Text>
-              </View>
-              <Switch
-                value={preferences.includeTurkey}
-                onValueChange={() => togglePreference('includeTurkey')}
-                trackColor={{ false: colors.border, true: colors.primary }}
-              />
-            </View>
-          </>
-        )}
-
-        {/* Vegetarian protein options */}
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🫘 Soya Chunks</Text>
-            <Text style={styles.toggleDesc}>Plant-based protein</Text>
-          </View>
-          <Switch
-            value={preferences.includeSoyaChunks}
-            onValueChange={() => togglePreference('includeSoyaChunks')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
+        {/* Quick-select example chips */}
+        <View style={styles.quickSelectRow}>
+          {examples.map((item) => (
+            <TouchableOpacity
+              key={item.key}
+              style={[
+                styles.quickChip,
+                preferences[item.key] && styles.quickChipSelected,
+              ]}
+              onPress={() => togglePreference(item.key)}
+            >
+              <Text style={[
+                styles.quickChipText,
+                preferences[item.key] && styles.quickChipTextSelected,
+              ]}>{item.label}</Text>
+              {preferences[item.key] && <Text style={styles.quickChipCheck}>✓</Text>}
+            </TouchableOpacity>
+          ))}
         </View>
 
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🧊 Tofu</Text>
-            <Text style={styles.toggleDesc}>Soy-based protein</Text>
-          </View>
-          <Switch
-            value={preferences.includeTofu}
-            onValueChange={() => togglePreference('includeTofu')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
+        {/* Custom items display */}
+        {renderCustomItems(category)}
 
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🫛 Legumes/Beans</Text>
-            <Text style={styles.toggleDesc}>Rajma, Chana, etc.</Text>
-          </View>
-          <Switch
-            value={preferences.includeLegumes}
-            onValueChange={() => togglePreference('includeLegumes')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🥜 Nuts & Seeds</Text>
-            <Text style={styles.toggleDesc}>Almonds, Peanuts, etc.</Text>
-          </View>
-          <Switch
-            value={preferences.includeNuts}
-            onValueChange={() => togglePreference('includeNuts')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        {renderCustomItems('proteins')}
-
+        {/* Add custom button */}
         <TouchableOpacity
           style={styles.addCustomButton}
-          onPress={() => setShowCustomInput('proteins')}
+          onPress={() => setShowCustomInput(category)}
         >
-          <Text style={styles.addCustomButtonText}>+ Add Custom Protein Source</Text>
+          <Text style={styles.addCustomButtonText}>+ Add your own {category}</Text>
         </TouchableOpacity>
       </View>
+    );
 
-      {/* EGGS SECTION */}
-      {(isNonVeg || isEggetarian) && (
+    return (
+      <View style={styles.stepContent}>
+        <Text style={styles.stepTitle}>Your Food Preferences 🍽️</Text>
+        <Text style={styles.stepSubtitle}>
+          Select items you like or add your own. Based on your {dietType.toLowerCase().replace(/_/g, ' ')} diet.
+        </Text>
+
+        {/* PROTEIN */}
+        {renderSection('🥩 Protein Sources', proteinExamples, 'proteins')}
+
+        {/* EGGS */}
+        {(isNonVeg || isEggetarian) && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>🥚 Eggs Per Day</Text>
+            <View style={styles.eggSelector}>
+              {eggOptions.map((num) => (
+                <TouchableOpacity
+                  key={num}
+                  style={[
+                    styles.eggOption,
+                    preferences.eggsPerDay === num && styles.eggOptionSelected,
+                  ]}
+                  onPress={() => setPreferences(prev => ({ ...prev, eggsPerDay: num }))}
+                >
+                  <Text style={[
+                    styles.eggOptionText,
+                    preferences.eggsPerDay === num && styles.eggOptionTextSelected,
+                  ]}>{num}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* CARBS */}
+        {renderSection('🌾 Carb Sources', carbExamples, 'carbs')}
+
+        {/* DAIRY */}
+        {!isVegan && renderSection('🥛 Dairy Products', dairyExamples, 'dairy')}
+
+        {/* VEGETABLES / SALADS */}
+        {renderSection('🥗 Vegetables & Salads', vegExamples, 'salads')}
+
+        {/* COOKING OIL */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🥚 Eggs Per Day</Text>
-          <View style={styles.eggSelector}>
-            {eggOptions.map((num) => (
+          <Text style={styles.sectionTitle}>🫒 Cooking Oil</Text>
+          <View style={styles.quickSelectRow}>
+            {oilOptions.map((oil) => (
               <TouchableOpacity
-                key={num}
+                key={oil.value}
                 style={[
-                  styles.eggOption,
-                  preferences.eggsPerDay === num && styles.eggOptionSelected,
+                  styles.quickChip,
+                  preferences.cookingOilPreference === oil.value && styles.quickChipSelected,
                 ]}
-                onPress={() => setPreferences(prev => ({ ...prev, eggsPerDay: num }))}
+                onPress={() => setPreferences(prev => ({ ...prev, cookingOilPreference: oil.value }))}
               >
                 <Text style={[
-                  styles.eggOptionText,
-                  preferences.eggsPerDay === num && styles.eggOptionTextSelected,
-                ]}>{num}</Text>
+                  styles.quickChipText,
+                  preferences.cookingOilPreference === oil.value && styles.quickChipTextSelected,
+                ]}>{oil.icon} {oil.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
-      )}
 
-      {/* CARB SOURCES */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🌾 Carb Sources</Text>
-
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🍚 Rice</Text>
-            <Text style={styles.toggleDesc}>White/Brown rice</Text>
-          </View>
-          <Switch
-            value={preferences.includeRice}
-            onValueChange={() => togglePreference('includeRice')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🫓 Roti/Chapati</Text>
-            <Text style={styles.toggleDesc}>Whole wheat flatbread</Text>
-          </View>
-          <Switch
-            value={preferences.includeRoti}
-            onValueChange={() => togglePreference('includeRoti')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        {!isJain && (
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleInfo}>
-              <Text style={styles.toggleLabel}>🥣 Dal/Lentils</Text>
-              <Text style={styles.toggleDesc}>Protein + Carbs</Text>
-            </View>
-            <Switch
-              value={preferences.includeDal}
-              onValueChange={() => togglePreference('includeDal')}
-              trackColor={{ false: colors.border, true: colors.primary }}
-            />
-          </View>
-        )}
-
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🥣 Oats</Text>
-            <Text style={styles.toggleDesc}>High fiber, filling</Text>
-          </View>
-          <Switch
-            value={preferences.includeOats}
-            onValueChange={() => togglePreference('includeOats')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🌾 Quinoa</Text>
-            <Text style={styles.toggleDesc}>Complete protein grain</Text>
-          </View>
-          <Switch
-            value={preferences.includeQuinoa}
-            onValueChange={() => togglePreference('includeQuinoa')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🍚 Poha</Text>
-            <Text style={styles.toggleDesc}>Flattened rice</Text>
-          </View>
-          <Switch
-            value={preferences.includePoha}
-            onValueChange={() => togglePreference('includePoha')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🍚 Upma</Text>
-            <Text style={styles.toggleDesc}>Semolina dish</Text>
-          </View>
-          <Switch
-            value={preferences.includeUpma}
-            onValueChange={() => togglePreference('includeUpma')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🍞 Bread</Text>
-            <Text style={styles.toggleDesc}>Whole wheat/Multigrain</Text>
-          </View>
-          <Switch
-            value={preferences.includeBread}
-            onValueChange={() => togglePreference('includeBread')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🍝 Pasta</Text>
-            <Text style={styles.toggleDesc}>Whole wheat pasta</Text>
-          </View>
-          <Switch
-            value={preferences.includePasta}
-            onValueChange={() => togglePreference('includePasta')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🍠 Sweet Potato</Text>
-            <Text style={styles.toggleDesc}>Complex carbs, fiber</Text>
-          </View>
-          <Switch
-            value={preferences.includeSweet_potato}
-            onValueChange={() => togglePreference('includeSweet_potato')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🥔 Regular Potato</Text>
-            <Text style={styles.toggleDesc}>Versatile carb source</Text>
-          </View>
-          <Switch
-            value={preferences.includeRegular_potato}
-            onValueChange={() => togglePreference('includeRegular_potato')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        {renderCustomItems('carbs')}
-
+        {/* HOME COOKED */}
         <TouchableOpacity
-          style={styles.addCustomButton}
-          onPress={() => setShowCustomInput('carbs')}
+          style={[styles.homeToggle, preferences.preferHomemade && styles.homeToggleActive]}
+          onPress={() => togglePreference('preferHomemade')}
         >
-          <Text style={styles.addCustomButtonText}>+ Add Custom Carb Source</Text>
+          <Text style={styles.homeToggleText}>
+            {preferences.preferHomemade ? '✅' : '⬜'} Prefer Homemade Food
+          </Text>
         </TouchableOpacity>
-      </View>
 
-      {/* DAIRY PRODUCTS */}
-      {!isVegan && (
+        {/* ALLERGIES */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🥛 Dairy Products</Text>
-
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleInfo}>
-              <Text style={styles.toggleLabel}>🥛 Milk</Text>
-              <Text style={styles.toggleDesc}>Full fat/Toned/Skimmed</Text>
-            </View>
-            <Switch
-              value={preferences.includeMilk}
-              onValueChange={() => togglePreference('includeMilk')}
-              trackColor={{ false: colors.border, true: colors.primary }}
-            />
+          <Text style={styles.sectionTitle}>⚠️ Allergies</Text>
+          <View style={styles.chipContainer}>
+            {allergyOptions.map((allergy) => (
+              <TouchableOpacity
+                key={allergy.value}
+                style={[
+                  styles.chip,
+                  preferences.allergies.includes(allergy.value) && styles.chipSelected,
+                ]}
+                onPress={() => toggleAllergy(allergy.value)}
+              >
+                <Text style={[
+                  styles.chipText,
+                  preferences.allergies.includes(allergy.value) && styles.chipTextSelected,
+                ]}>{allergy.label}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
-
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleInfo}>
-              <Text style={styles.toggleLabel}>🧀 Paneer</Text>
-              <Text style={styles.toggleDesc}>Indian cottage cheese</Text>
-            </View>
-            <Switch
-              value={preferences.includePaneer}
-              onValueChange={() => togglePreference('includePaneer')}
-              trackColor={{ false: colors.border, true: colors.primary }}
-            />
-          </View>
-
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleInfo}>
-              <Text style={styles.toggleLabel}>🥄 Curd/Yogurt</Text>
-              <Text style={styles.toggleDesc}>Probiotic rich</Text>
-            </View>
-            <Switch
-              value={preferences.includeCurd}
-              onValueChange={() => togglePreference('includeCurd')}
-              trackColor={{ false: colors.border, true: colors.primary }}
-            />
-          </View>
-
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleInfo}>
-              <Text style={styles.toggleLabel}>🧀 Cheese</Text>
-              <Text style={styles.toggleDesc}>Processed/Mozzarella</Text>
-            </View>
-            <Switch
-              value={preferences.includeCheese}
-              onValueChange={() => togglePreference('includeCheese')}
-              trackColor={{ false: colors.border, true: colors.primary }}
-            />
-          </View>
-
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleInfo}>
-              <Text style={styles.toggleLabel}>🥛 Buttermilk</Text>
-              <Text style={styles.toggleDesc}>Chaas - digestive aid</Text>
-            </View>
-            <Switch
-              value={preferences.includeButtermilk}
-              onValueChange={() => togglePreference('includeButtermilk')}
-              trackColor={{ false: colors.border, true: colors.primary }}
-            />
-          </View>
-
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleInfo}>
-              <Text style={styles.toggleLabel}>🧈 Ghee</Text>
-              <Text style={styles.toggleDesc}>Clarified butter</Text>
-            </View>
-            <Switch
-              value={preferences.includeGhee}
-              onValueChange={() => togglePreference('includeGhee')}
-              trackColor={{ false: colors.border, true: colors.primary }}
-            />
-          </View>
-
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleInfo}>
-              <Text style={styles.toggleLabel}>🥄 Greek Yogurt</Text>
-              <Text style={styles.toggleDesc}>High protein yogurt</Text>
-            </View>
-            <Switch
-              value={preferences.includeGreekYogurt}
-              onValueChange={() => togglePreference('includeGreekYogurt')}
-              trackColor={{ false: colors.border, true: colors.primary }}
-            />
-          </View>
-
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleInfo}>
-              <Text style={styles.toggleLabel}>🧀 Cottage Cheese</Text>
-              <Text style={styles.toggleDesc}>Low fat, high protein</Text>
-            </View>
-            <Switch
-              value={preferences.includeCottageCheese}
-              onValueChange={() => togglePreference('includeCottageCheese')}
-              trackColor={{ false: colors.border, true: colors.primary }}
-            />
-          </View>
-
-          {renderCustomItems('dairy')}
-
-          <TouchableOpacity
-            style={styles.addCustomButton}
-            onPress={() => setShowCustomInput('dairy')}
-          >
-            <Text style={styles.addCustomButtonText}>+ Add Custom Dairy Product</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* SALADS & VEGETABLES */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🥗 Salads & Vegetables</Text>
-
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🥒 Cucumber</Text>
-            <Text style={styles.toggleDesc}>Hydrating, low calorie</Text>
-          </View>
-          <Switch
-            value={preferences.includeCucumber}
-            onValueChange={() => togglePreference('includeCucumber')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
         </View>
 
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🍅 Tomato</Text>
-            <Text style={styles.toggleDesc}>Rich in lycopene</Text>
-          </View>
-          <Switch
-            value={preferences.includeTomato}
-            onValueChange={() => togglePreference('includeTomato')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🥕 Carrot</Text>
-            <Text style={styles.toggleDesc}>Beta-carotene rich</Text>
-          </View>
-          <Switch
-            value={preferences.includeCarrot}
-            onValueChange={() => togglePreference('includeCarrot')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        {!isJain && (
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleInfo}>
-              <Text style={styles.toggleLabel}>🧅 Onion</Text>
-              <Text style={styles.toggleDesc}>Flavor & nutrients</Text>
-            </View>
-            <Switch
-              value={preferences.includeOnion}
-              onValueChange={() => togglePreference('includeOnion')}
-              trackColor={{ false: colors.border, true: colors.primary }}
-            />
-          </View>
-        )}
-
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🫒 Beetroot</Text>
-            <Text style={styles.toggleDesc}>Iron rich, earthy</Text>
-          </View>
-          <Switch
-            value={preferences.includeBeetroot}
-            onValueChange={() => togglePreference('includeBeetroot')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🥬 Spinach</Text>
-            <Text style={styles.toggleDesc}>Iron & vitamins</Text>
-          </View>
-          <Switch
-            value={preferences.includeSpinach}
-            onValueChange={() => togglePreference('includeSpinach')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🥬 Lettuce</Text>
-            <Text style={styles.toggleDesc}>Crunchy, low calorie</Text>
-          </View>
-          <Switch
-            value={preferences.includeLettuce}
-            onValueChange={() => togglePreference('includeLettuce')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🥬 Cabbage</Text>
-            <Text style={styles.toggleDesc}>Fiber rich, crunchy</Text>
-          </View>
-          <Switch
-            value={preferences.includeCabbage}
-            onValueChange={() => togglePreference('includeCabbage')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🫑 Bell Pepper</Text>
-            <Text style={styles.toggleDesc}>Vitamin C rich</Text>
-          </View>
-          <Switch
-            value={preferences.includeBellPepper}
-            onValueChange={() => togglePreference('includeBellPepper')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🥦 Broccoli</Text>
-            <Text style={styles.toggleDesc}>Superfood, fiber rich</Text>
-          </View>
-          <Switch
-            value={preferences.includeBroccoli}
-            onValueChange={() => togglePreference('includeBroccoli')}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        {renderCustomItems('salads')}
-
-        <TouchableOpacity
-          style={styles.addCustomButton}
-          onPress={() => setShowCustomInput('salads')}
-        >
-          <Text style={styles.addCustomButtonText}>+ Add Custom Vegetable/Salad</Text>
-        </TouchableOpacity>
+        {renderCustomInputModal()}
       </View>
-
-      {/* COOKING OIL */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🫒 Cooking Oil</Text>
-        <View style={styles.oilSelector}>
-          {oilOptions.map((oil) => (
-            <TouchableOpacity
-              key={oil.value}
-              style={[
-                styles.oilOption,
-                preferences.cookingOilPreference === oil.value && styles.oilOptionSelected,
-              ]}
-              onPress={() => setPreferences(prev => ({ ...prev, cookingOilPreference: oil.value }))}
-            >
-              <Text style={styles.oilIcon}>{oil.icon}</Text>
-              <Text style={[
-                styles.oilLabel,
-                preferences.cookingOilPreference === oil.value && styles.oilLabelSelected,
-              ]}>{oil.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* ALLERGIES */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>⚠️ Allergies</Text>
-        <View style={styles.chipContainer}>
-          {allergyOptions.map((allergy) => (
-            <TouchableOpacity
-              key={allergy.value}
-              style={[
-                styles.chip,
-                preferences.allergies.includes(allergy.value) && styles.chipSelected,
-              ]}
-              onPress={() => toggleAllergy(allergy.value)}
-            >
-              <Text style={[
-                styles.chipText,
-                preferences.allergies.includes(allergy.value) && styles.chipTextSelected,
-              ]}>{allergy.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {renderCustomInputModal()}
-    </View>
-  );
+    );
+  };
 
   const renderMealsStep = () => (
     <View style={styles.stepContent}>
@@ -1979,6 +1547,39 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.text.inverse,
     fontWeight: '600',
+  },
+  // Simplified food preferences styles
+  quickSelectRow: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm,
+  },
+  quickChip: {
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm, borderRadius: borderRadius.full || 20,
+    backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border,
+    ...shadows.sm,
+  },
+  quickChipSelected: {
+    backgroundColor: colors.primary + '12', borderColor: colors.primary,
+  },
+  quickChipText: {
+    ...typography.bodySmall, color: colors.text.primary, fontWeight: '500',
+  },
+  quickChipTextSelected: {
+    color: colors.primary, fontWeight: '700',
+  },
+  quickChipCheck: {
+    color: colors.primary, fontWeight: '700', fontSize: 12, marginLeft: 4,
+  },
+  homeToggle: {
+    flexDirection: 'row', alignItems: 'center', padding: spacing.md,
+    backgroundColor: colors.surface, borderRadius: borderRadius.md,
+    marginTop: spacing.md, marginBottom: spacing.md, ...shadows.sm,
+  },
+  homeToggleActive: {
+    backgroundColor: colors.primary + '10', borderWidth: 1, borderColor: colors.primary,
+  },
+  homeToggleText: {
+    ...typography.body, fontWeight: '600', color: colors.text.primary,
   },
 });
 
