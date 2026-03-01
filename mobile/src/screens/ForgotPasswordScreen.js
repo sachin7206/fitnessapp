@@ -9,30 +9,45 @@ import {
   Platform,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { login, clearError } from '../store/slices/authSlice';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
-import { useTranslation } from '../i18n';
+import authService from '../services/authService';
 
-const LoginScreen = ({ navigation }) => {
+const ForgotPasswordScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const { t } = useTranslation();
-  const dispatch = useDispatch();
-  const { isLoading, error } = useSelector((state) => state.auth);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+  const handleSendOTP = async () => {
+    if (!email) {
+      Alert.alert('Error', 'Please enter your email address');
       return;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      await dispatch(login({ email, password })).unwrap();
-      // Navigation is handled automatically after successful login
-    } catch (err) {
-      Alert.alert('Login Failed', err || 'Invalid credentials');
+      await authService.forgotPassword(email);
+      Alert.alert(
+        'OTP Sent! ✉️',
+        'A password reset OTP has been sent to your email. Please check your inbox (and spam folder).',
+        [
+          {
+            text: 'Enter OTP',
+            onPress: () => navigation.navigate('ResetPassword', { email }),
+          },
+        ]
+      );
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to send reset email. Please try again.';
+      Alert.alert('Error', message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -43,57 +58,44 @@ const LoginScreen = ({ navigation }) => {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.title}>{t('auth.welcomeBack')}</Text>
-          <Text style={styles.subtitle}>{t('auth.getStarted')}</Text>
+          <Text style={styles.emoji}>🔒</Text>
+          <Text style={styles.title}>Forgot Password?</Text>
+          <Text style={styles.subtitle}>
+            Enter your registered email address and we'll send you an OTP to reset your password.
+          </Text>
         </View>
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>{t('auth.email')}</Text>
+            <Text style={styles.label}>Email Address</Text>
             <TextInput
               style={styles.input}
-              placeholder={t('auth.email')}
+              placeholder="Enter your registered email"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              editable={!isLoading}
             />
           </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>{t('auth.password')}</Text>
-            <TextInput
-              style={styles.input}
-              placeholder={t('auth.password')}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-          </View>
-
-          <TouchableOpacity
-            style={styles.forgotPassword}
-            onPress={() => navigation.navigate('ForgotPassword')}
-          >
-            <Text style={styles.forgotPasswordText}>{t('auth.forgotPassword')}</Text>
-          </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.button, isLoading && styles.buttonDisabled]}
-            onPress={handleLogin}
+            onPress={handleSendOTP}
             disabled={isLoading}
           >
-            <Text style={styles.buttonText}>
-              {isLoading ? t('common.loading') : t('auth.login')}
-            </Text>
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Send Reset OTP</Text>
+            )}
           </TouchableOpacity>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>{t('auth.noAccount')} </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.linkText}>{t('auth.signUp')}</Text>
+            <Text style={styles.footerText}>Remember your password? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+              <Text style={styles.linkText}>Login</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -116,6 +118,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xl,
   },
+  emoji: {
+    fontSize: 60,
+    marginBottom: spacing.md,
+  },
   title: {
     ...typography.h1,
     color: colors.text.primary,
@@ -125,12 +131,14 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.text.secondary,
     textAlign: 'center',
+    paddingHorizontal: spacing.lg,
+    lineHeight: 22,
   },
   form: {
     width: '100%',
   },
   inputContainer: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   label: {
     ...typography.bodySmall,
@@ -146,14 +154,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
     ...shadows.sm,
-  },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: spacing.lg,
-  },
-  forgotPasswordText: {
-    ...typography.bodySmall,
-    color: colors.primary,
   },
   button: {
     backgroundColor: colors.primary,
@@ -186,5 +186,5 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LoginScreen;
+export default ForgotPasswordScreen;
 

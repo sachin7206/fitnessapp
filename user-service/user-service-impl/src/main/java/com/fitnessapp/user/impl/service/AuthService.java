@@ -22,10 +22,14 @@ public class AuthService implements AuthOperations {
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
     private final UserService userService;
+    private final PasswordResetService passwordResetService;
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail()))
-            throw new RuntimeException("Email already registered");
+            throw new RuntimeException("You are already registered. Please login. If you forgot your password, please reset your password.");
+
+        // Validate password strength
+        validatePasswordStrength(request.getPassword());
 
         User user = new User();
         user.setEmail(request.getEmail());
@@ -65,6 +69,34 @@ public class AuthService implements AuthOperations {
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return new AuthResponse(jwtTokenProvider.generateAccessToken(ud),
                 refreshToken, userService.convertToDto(user));
+    }
+
+    @Override
+    public void forgotPassword(ForgotPasswordRequest request) {
+        passwordResetService.sendPasswordResetEmail(request.getEmail());
+    }
+
+    @Override
+    public void resetPassword(ResetPasswordRequest request) {
+        passwordResetService.resetPassword(request.getToken(), request.getNewPassword());
+    }
+
+    private void validatePasswordStrength(String password) {
+        if (password == null || password.length() < 8) {
+            throw new RuntimeException("Password must be at least 8 characters long");
+        }
+        if (!password.matches(".*[A-Z].*")) {
+            throw new RuntimeException("Password must contain at least one uppercase letter");
+        }
+        if (!password.matches(".*[a-z].*")) {
+            throw new RuntimeException("Password must contain at least one lowercase letter");
+        }
+        if (!password.matches(".*[0-9].*")) {
+            throw new RuntimeException("Password must contain at least one number");
+        }
+        if (!password.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?].*")) {
+            throw new RuntimeException("Password must contain at least one special character (!@#$%^&*...)");
+        }
     }
 }
 

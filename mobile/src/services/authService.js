@@ -71,6 +71,16 @@ export const authService = {
   updateCachedUser: async (userData) => {
     await AsyncStorage.setItem('user', JSON.stringify(userData));
   },
+
+  forgotPassword: async (email) => {
+    const response = await apiClient.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+
+  resetPassword: async (token, newPassword) => {
+    const response = await apiClient.post('/auth/reset-password', { token, newPassword });
+    return response.data;
+  },
 };
 
 export default authService;

@@ -14,4 +14,7 @@ databaseChangeLog:
   - include:
       file: changes/005-create-user-dietary-preferences-table.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/006-add-password-reset-columns.yaml
+      relativeToChangelogFile: true
 

@@ -122,10 +122,30 @@ const RegisterScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { isLoading } = useSelector((state) => state.auth);
 
+  // Password criteria validation
+  const password = formData.password;
+  const hasMinLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+  const allCriteriaMet = hasMinLength && hasUppercase && hasLowercase && hasNumber && hasSpecial;
+
   const handleRegister = async () => {
     // Validation
     if (!formData.email || !formData.password || !formData.firstName || !formData.lastName) {
       Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    if (!allCriteriaMet) {
+      Alert.alert('Error', 'Please ensure your password meets all the criteria listed below the password field');
       return;
     }
 
@@ -134,17 +154,26 @@ const RegisterScreen = ({ navigation }) => {
       return;
     }
 
-    if (formData.password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
-      return;
-    }
-
     try {
       const { confirmPassword, ...registrationData } = formData;
       await dispatch(register(registrationData)).unwrap();
       // Navigation handled automatically after registration
     } catch (err) {
-      Alert.alert('Registration Failed', err || 'Something went wrong');
+      const errorMessage = err || 'Something went wrong';
+      // Check if the error is about existing email
+      if (errorMessage.toLowerCase().includes('already registered') || errorMessage.toLowerCase().includes('already exist')) {
+        Alert.alert(
+          'Already Registered',
+          'You are already registered. Please login. If you forgot your password, please reset your password.',
+          [
+            { text: 'Login', onPress: () => navigation.navigate('Login') },
+            { text: 'Reset Password', onPress: () => navigation.navigate('ForgotPassword') },
+            { text: 'Cancel', style: 'cancel' },
+          ]
+        );
+      } else {
+        Alert.alert('Registration Failed', errorMessage);
+      }
     }
   };
 
@@ -214,12 +243,38 @@ const RegisterScreen = ({ navigation }) => {
             <Text style={styles.label}>Password *</Text>
             <TextInput
               style={styles.input}
-              placeholder="Create a password (min 6 characters)"
+              placeholder="Create a strong password"
               value={formData.password}
               onChangeText={(text) => updateFormData('password', text)}
               secureTextEntry
               autoCapitalize="none"
             />
+            {/* Password Criteria Checklist */}
+            {password.length > 0 && (
+              <View style={styles.criteriaBox}>
+                <Text style={styles.criteriaTitle}>Password Requirements:</Text>
+                <View style={styles.criteriaRow}>
+                  <Text style={styles.criteriaIcon}>{hasMinLength ? '✅' : '⬜'}</Text>
+                  <Text style={[styles.criteriaText, hasMinLength && styles.criteriaMet]}>At least 8 characters</Text>
+                </View>
+                <View style={styles.criteriaRow}>
+                  <Text style={styles.criteriaIcon}>{hasUppercase ? '✅' : '⬜'}</Text>
+                  <Text style={[styles.criteriaText, hasUppercase && styles.criteriaMet]}>One uppercase letter (A-Z)</Text>
+                </View>
+                <View style={styles.criteriaRow}>
+                  <Text style={styles.criteriaIcon}>{hasLowercase ? '✅' : '⬜'}</Text>
+                  <Text style={[styles.criteriaText, hasLowercase && styles.criteriaMet]}>One lowercase letter (a-z)</Text>
+                </View>
+                <View style={styles.criteriaRow}>
+                  <Text style={styles.criteriaIcon}>{hasNumber ? '✅' : '⬜'}</Text>
+                  <Text style={[styles.criteriaText, hasNumber && styles.criteriaMet]}>One number (0-9)</Text>
+                </View>
+                <View style={styles.criteriaRow}>
+                  <Text style={styles.criteriaIcon}>{hasSpecial ? '✅' : '⬜'}</Text>
+                  <Text style={[styles.criteriaText, hasSpecial && styles.criteriaMet]}>One special character (!@#$%...)</Text>
+                </View>
+              </View>
+            )}
           </View>
 
           <View style={styles.inputContainer}>
@@ -232,6 +287,14 @@ const RegisterScreen = ({ navigation }) => {
               secureTextEntry
               autoCapitalize="none"
             />
+            {formData.confirmPassword.length > 0 && (
+              <Text style={[
+                styles.matchText,
+                formData.password === formData.confirmPassword ? styles.matchSuccess : styles.matchError
+              ]}>
+                {formData.password === formData.confirmPassword ? '✅ Passwords match' : '❌ Passwords do not match'}
+              </Text>
+            )}
           </View>
 
           <View style={styles.inputContainer}>
@@ -329,6 +392,48 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
     ...shadows.sm,
+  },
+  criteriaBox: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: borderRadius.sm,
+    padding: spacing.sm,
+    marginTop: spacing.xs,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  criteriaTitle: {
+    ...typography.bodySmall,
+    fontWeight: '700',
+    color: colors.text.primary,
+    marginBottom: 4,
+  },
+  criteriaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  criteriaIcon: {
+    fontSize: 12,
+    marginRight: 6,
+  },
+  criteriaText: {
+    ...typography.bodySmall,
+    color: colors.text.secondary,
+    fontSize: 12,
+  },
+  criteriaMet: {
+    color: '#2E7D32',
+  },
+  matchText: {
+    ...typography.bodySmall,
+    marginTop: 4,
+    fontSize: 12,
+  },
+  matchSuccess: {
+    color: '#2E7D32',
+  },
+  matchError: {
+    color: '#D32F2F',
   },
   customPickerButton: {
     backgroundColor: colors.surface,

@@ -53,6 +53,9 @@ public class User {
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
+    private String passwordResetToken;
+    private LocalDateTime passwordResetExpiry;
+
     @Embeddable
     @Data @NoArgsConstructor @AllArgsConstructor
     public static class Profile {
