@@ -38,12 +38,26 @@ fitnessapp/
 │   ├── nutrition-service-rest/
 │   └── nutrition-service-impl/
 │
-└── exercise-service/                  # Exercise domain (port 8083) — independent multi-module
+├── exercise-service/                  # Exercise domain (port 8083) — independent multi-module
+│   ├── build.gradle / settings.gradle / gradlew
+│   ├── api/exercise-service-api.yaml
+│   ├── exercise-service-common/
+│   ├── exercise-service-rest/
+│   └── exercise-service-impl/
+│
+├── progress-service/                  # Progress tracking (port 8084) — independent multi-module
+│   ├── build.gradle / settings.gradle / gradlew
+│   ├── api/progress-service-api.yaml
+│   ├── progress-service-common/
+│   ├── progress-service-rest/
+│   └── progress-service-impl/
+│
+└── wellness-service/                  # Yoga & Wellness (port 8085) — independent multi-module
     ├── build.gradle / settings.gradle / gradlew
-    ├── api/exercise-service-api.yaml
-    ├── exercise-service-common/
-    ├── exercise-service-rest/
-    └── exercise-service-impl/
+    ├── api/wellness-service-api.yaml
+    ├── wellness-service-common/
+    ├── wellness-service-rest/
+    └── wellness-service-impl/
 ```
 
 ## Each Service is Independently Deployable
@@ -63,6 +77,8 @@ cd service-registry && ./gradlew build -x test
 cd api-gateway && ./gradlew build -x test
 cd nutrition-service && ./gradlew build -x test
 cd exercise-service && ./gradlew build -x test
+cd progress-service && ./gradlew build -x test
+cd wellness-service && ./gradlew build -x test
 ```
 
 ## Module Dependency Flow
@@ -108,6 +124,8 @@ Controllers in `rest` depend only on interfaces defined in `common`. Implementat
 | user-service      | fitnessapp_users        | 8081 |
 | nutrition-service | fitnessapp_nutrition    | 8082 |
 | exercise-service  | fitnessapp_exercises    | 8083 |
+| progress-service  | fitnessapp_progress     | 8084 |
+| wellness-service  | fitnessapp_wellness     | 8085 |
 
 ## How to Run
 
@@ -123,7 +141,7 @@ cd exercise-service && ./gradlew :exercise-service-impl:bootRun
 cd api-gateway && ./gradlew bootRun
 ```
 
-Start order: Service Registry → User → Nutrition → Exercise → API Gateway
+Start order: Service Registry → User → Nutrition → Exercise → Progress → Wellness → API Gateway
 
 ## Service Endpoints (via API Gateway on :8080)
 
@@ -133,6 +151,9 @@ Start order: Service Registry → User → Nutrition → Exercise → API Gatewa
 | `/api/users/**`         | user-service       |
 | `/api/nutrition/**`     | nutrition-service   |
 | `/api/exercises/**`     | exercise-service    |
+| `/api/workouts/**`      | exercise-service    |
+| `/api/progress/**`      | progress-service    |
+| `/api/wellness/**`      | wellness-service    |
 
 ## Mobile App
 

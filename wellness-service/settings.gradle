@@ -1,0 +1,6 @@
+rootProject.name = 'wellness-service'
+
+include 'wellness-service-common'
+include 'wellness-service-rest'
+include 'wellness-service-impl'
+

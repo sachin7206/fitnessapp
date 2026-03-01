@@ -1,0 +1,8 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changes/001-create-daily-progress-table.yaml
+  - include:
+      file: db/changelog/changes/002-create-body-measurements-table.yaml
+  - include:
+      file: db/changelog/changes/003-create-progress-goals-table.yaml
+

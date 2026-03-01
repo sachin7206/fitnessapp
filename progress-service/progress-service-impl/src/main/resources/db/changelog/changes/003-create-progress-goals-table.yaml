@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-progress-goals-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: progress_goals
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true } }
+              - column: { name: user_email, type: VARCHAR(255), constraints: { nullable: false } }
+              - column: { name: goal_type, type: VARCHAR(50), constraints: { nullable: false } }
+              - column: { name: target_value, type: DOUBLE }
+              - column: { name: current_value, type: DOUBLE }
+              - column: { name: start_value, type: DOUBLE }
+              - column: { name: start_date, type: DATE }
+              - column: { name: target_date, type: DATE }
+              - column: { name: unit, type: VARCHAR(20) }
+              - column: { name: is_active, type: BOOLEAN, defaultValueBoolean: true }
+              - column: { name: created_at, type: DATETIME }
+              - column: { name: updated_at, type: DATETIME }
+

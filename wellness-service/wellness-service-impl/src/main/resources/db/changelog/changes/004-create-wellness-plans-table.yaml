@@ -1,0 +1,19 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-create-wellness-plans-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: wellness_plans
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true } }
+              - column: { name: plan_name, type: VARCHAR(300) }
+              - column: { name: type, type: VARCHAR(30) }
+              - column: { name: level, type: VARCHAR(20) }
+              - column: { name: duration_weeks, type: INT }
+              - column: { name: sessions_per_week, type: INT }
+              - column: { name: session_duration_minutes, type: INT }
+              - column: { name: description, type: VARCHAR(1000) }
+              - column: { name: sessions_json, type: TEXT }
+              - column: { name: total_calories_burned, type: INT }
+

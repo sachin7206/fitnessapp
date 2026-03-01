@@ -1,0 +1,127 @@
+openapi: 3.0.3
+info:
+  title: Progress Service API
+  version: 1.0.0
+  description: API for tracking fitness progress - weight, measurements, goals
+paths:
+  /progress/weight:
+    post:
+      operationId: logWeight
+      summary: Log a weight entry
+      tags: [Progress]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WeightEntryRequest'
+      responses:
+        '200':
+          description: Weight logged
+    get:
+      operationId: getWeightEntries
+      summary: Get weight history
+      tags: [Progress]
+      parameters:
+        - name: days
+          in: query
+          schema: { type: integer, default: 90 }
+      responses:
+        '200':
+          description: Weight entries
+  /progress/measurements:
+    post:
+      operationId: logMeasurements
+      summary: Log body measurements
+      tags: [Progress]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BodyMeasurementRequest'
+      responses:
+        '200':
+          description: Measurements logged
+    get:
+      operationId: getMeasurements
+      summary: Get measurements history
+      tags: [Progress]
+      parameters:
+        - name: days
+          in: query
+          schema: { type: integer, default: 90 }
+      responses:
+        '200':
+          description: Measurements
+  /progress/goals:
+    post:
+      operationId: setGoal
+      summary: Set a progress goal
+      tags: [Progress]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProgressGoalRequest'
+      responses:
+        '200':
+          description: Goal set
+    get:
+      operationId: getGoals
+      summary: Get active goals
+      tags: [Progress]
+      responses:
+        '200':
+          description: Goals
+  /progress/summary:
+    get:
+      operationId: getSummary
+      summary: Get progress summary
+      tags: [Progress]
+      parameters:
+        - name: period
+          in: query
+          schema: { type: string, default: monthly }
+      responses:
+        '200':
+          description: Summary
+  /progress/trends:
+    get:
+      operationId: getTrends
+      summary: Get trend data for charts
+      tags: [Progress]
+      parameters:
+        - name: days
+          in: query
+          schema: { type: integer, default: 30 }
+      responses:
+        '200':
+          description: Trends
+
+components:
+  schemas:
+    WeightEntryRequest:
+      type: object
+      properties:
+        weight: { type: number, format: double }
+        unit: { type: string, default: kg }
+        notes: { type: string }
+    BodyMeasurementRequest:
+      type: object
+      properties:
+        chest: { type: number, format: double }
+        waist: { type: number, format: double }
+        hips: { type: number, format: double }
+        leftArm: { type: number, format: double }
+        rightArm: { type: number, format: double }
+        leftThigh: { type: number, format: double }
+        rightThigh: { type: number, format: double }
+        neck: { type: number, format: double }
+        unit: { type: string, default: cm }
+    ProgressGoalRequest:
+      type: object
+      properties:
+        goalType: { type: string }
+        targetValue: { type: number, format: double }
+        targetDate: { type: string, format: date }
+        unit: { type: string }
+

@@ -21,6 +21,8 @@ import WorkoutSetupScreen from '../screens/WorkoutSetupScreen';
 import GeneratedWorkoutPlanViewScreen from '../screens/GeneratedWorkoutPlanViewScreen';
 import MyWorkoutScreen from '../screens/MyWorkoutScreen';
 import StepHistoryScreen from '../screens/StepHistoryScreen';
+import ProgressDashboardScreen from '../screens/ProgressDashboardScreen';
+import WellnessHomeScreen from '../screens/WellnessHomeScreen';
 
 import { colors, spacing } from '../config/theme';
 
@@ -95,6 +97,8 @@ const MainStack = () => (
     <Stack.Screen name="GeneratedWorkoutPlanView" component={GeneratedWorkoutPlanViewScreen} />
     <Stack.Screen name="MyWorkout" component={MyWorkoutScreen} />
     <Stack.Screen name="StepHistory" component={StepHistoryScreen} />
+    <Stack.Screen name="ProgressDashboard" component={ProgressDashboardScreen} />
+    <Stack.Screen name="WellnessHome" component={WellnessHomeScreen} />
   </Stack.Navigator>
 );
 

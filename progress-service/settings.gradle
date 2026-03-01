@@ -1,0 +1,6 @@
+rootProject.name = 'progress-service'
+
+include 'progress-service-common'
+include 'progress-service-rest'
+include 'progress-service-impl'
+

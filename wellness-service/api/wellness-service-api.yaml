@@ -1,0 +1,127 @@
+openapi: 3.0.3
+info:
+  title: Wellness Service API
+  version: 1.0.0
+  description: API for yoga, meditation, breathing exercises and wellness plans
+paths:
+  /wellness/yoga/poses:
+    get:
+      operationId: getYogaPoses
+      summary: List yoga poses
+      tags: [Wellness]
+      parameters:
+        - name: difficulty
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Yoga poses
+  /wellness/yoga/sessions:
+    get:
+      operationId: getYogaSessions
+      summary: List yoga sessions
+      tags: [Wellness]
+      responses:
+        '200':
+          description: Yoga sessions
+  /wellness/meditation/sessions:
+    get:
+      operationId: getMeditationSessions
+      summary: List meditation sessions
+      tags: [Wellness]
+      parameters:
+        - name: type
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Meditation sessions
+  /wellness/breathing/exercises:
+    get:
+      operationId: getBreathingExercises
+      summary: List breathing exercises
+      tags: [Wellness]
+      responses:
+        '200':
+          description: Breathing exercises
+  /wellness/generate-plan:
+    post:
+      operationId: generatePlan
+      summary: Generate AI wellness plan
+      tags: [Wellness]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateWellnessPlanRequest'
+      responses:
+        '200':
+          description: Generated plan
+  /wellness/plans/{planId}/assign:
+    post:
+      operationId: assignPlan
+      summary: Assign plan to user
+      tags: [Wellness]
+      parameters:
+        - name: planId
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: Plan assigned
+  /wellness/my-plan:
+    get:
+      operationId: getMyPlan
+      summary: Get active wellness plan
+      tags: [Wellness]
+      responses:
+        '200':
+          description: Active plan
+  /wellness/my-plan/complete-session:
+    post:
+      operationId: completeSession
+      summary: Mark session complete
+      tags: [Wellness]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteSessionRequest'
+      responses:
+        '200':
+          description: Session completed
+  /wellness/tips/daily:
+    get:
+      operationId: getDailyTip
+      summary: Get daily wellness tip
+      tags: [Wellness]
+      responses:
+        '200':
+          description: Daily tip
+  /wellness/streak:
+    get:
+      operationId: getStreak
+      summary: Get wellness streak
+      tags: [Wellness]
+      responses:
+        '200':
+          description: Streak data
+components:
+  schemas:
+    GenerateWellnessPlanRequest:
+      type: object
+      properties:
+        type: { type: string, description: 'YOGA, MEDITATION, MIXED' }
+        level: { type: string, description: 'BEGINNER, INTERMEDIATE, ADVANCED' }
+        durationWeeks: { type: integer }
+        sessionsPerWeek: { type: integer }
+        focusAreas: { type: array, items: { type: string } }
+        sessionDurationMinutes: { type: integer }
+    CompleteSessionRequest:
+      type: object
+      properties:
+        sessionType: { type: string }
+        sessionId: { type: integer, format: int64 }
+        durationMinutes: { type: integer }
+

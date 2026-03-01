@@ -33,6 +33,20 @@ spring:
           filters:
             - StripPrefix=1
 
+        - id: progress-service
+          uri: lb://progress-service
+          predicates:
+            - Path=/api/progress/**
+          filters:
+            - StripPrefix=1
+
+        - id: wellness-service
+          uri: lb://wellness-service
+          predicates:
+            - Path=/api/wellness/**
+          filters:
+            - StripPrefix=1
+
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
 

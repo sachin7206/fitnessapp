@@ -311,13 +311,13 @@ const HomeScreen = ({ navigation }) => {
       title: 'Progress Tracking',
       description: 'Track your fitness journey',
       icon: '📊',
-      onPress: () => showComingSoon('Progress tracking'),
+      onPress: () => navigation.navigate('ProgressDashboard'),
     },
     {
       title: 'Yoga & Wellness',
-      description: 'Traditional Indian fitness practices',
+      description: 'Yoga, meditation & breathing',
       icon: '🧘',
-      onPress: () => showComingSoon('Wellness modules'),
+      onPress: () => navigation.navigate('WellnessHome'),
     },
   ];
 

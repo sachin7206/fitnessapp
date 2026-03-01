@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changes/001-create-yoga-poses-table.yaml
+  - include:
+      file: db/changelog/changes/002-create-meditation-sessions-table.yaml
+  - include:
+      file: db/changelog/changes/003-create-breathing-exercises-table.yaml
+  - include:
+      file: db/changelog/changes/004-create-wellness-plans-table.yaml
+  - include:
+      file: db/changelog/changes/005-create-user-wellness-plans-table.yaml
+  - include:
+      file: db/changelog/changes/006-create-session-completions-table.yaml
+  - include:
+      file: db/changelog/changes/007-create-wellness-tips-table.yaml
+

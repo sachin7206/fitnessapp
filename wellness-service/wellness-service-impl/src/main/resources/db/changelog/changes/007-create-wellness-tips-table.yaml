@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - changeSet:
+      id: 007-create-wellness-tips-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: wellness_tips
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true } }
+              - column: { name: content, type: VARCHAR(1000) }
+              - column: { name: category, type: VARCHAR(30) }
+              - column: { name: day_number, type: INT }
+
