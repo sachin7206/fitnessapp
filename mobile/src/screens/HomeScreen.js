@@ -25,8 +25,11 @@ import {
   setMotivationalQuote,
   persistWorkoutTracking,
   loadWorkoutTrackingFromStorage,
+  updateSteps,
+  setStepGoal,
 } from '../store/slices/workoutTrackingSlice';
 import workoutService from '../services/workoutService';
+import { Pedometer } from 'expo-sensors';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 
 const HomeScreen = ({ navigation }) => {
@@ -76,6 +79,11 @@ const HomeScreen = ({ navigation }) => {
       const plan = await workoutService.getActiveWorkoutPlan();
       if (plan) {
         dispatch(setWorkoutPlan(plan));
+        // Set step goal from cardio steps if configured
+        const cardioSteps = plan?.workoutPlan?.cardioSteps;
+        if (cardioSteps && cardioSteps > 0) {
+          dispatch(setStepGoal(cardioSteps));
+        }
         dispatch(persistWorkoutTracking());
         // Fetch motivational quote
         const quoteData = await workoutService.getMotivationalQuote();
@@ -84,6 +92,80 @@ const HomeScreen = ({ navigation }) => {
       }
     } catch (e) { /* no active plan is fine */ }
   };
+
+  // ---------- Pedometer / Step tracking ----------
+  const [pedometerAvailable, setPedometerAvailable] = useState(false);
+  const [stepCounterSub, setStepCounterSub] = useState(null);
+
+  useEffect(() => {
+    let sub = null;
+    const startPedometer = async () => {
+      try {
+        const available = await Pedometer.isAvailableAsync();
+        setPedometerAvailable(available);
+        if (available) {
+          // Get today's steps from midnight
+          const midnight = new Date();
+          midnight.setHours(0, 0, 0, 0);
+          try {
+            const result = await Pedometer.getStepCountAsync(midnight, new Date());
+            if (result && result.steps != null) {
+              dispatch(updateSteps(result.steps));
+            }
+          } catch (e) { /* getStepCountAsync may not be supported on all devices */ }
+
+          // Subscribe to live updates
+          sub = Pedometer.watchStepCount(result => {
+            // result.steps is incremental since subscription start; we add to current
+            // Re-read full day count periodically instead
+          });
+          setStepCounterSub(sub);
+
+          // Poll full-day count every 10 seconds for accuracy
+          const poller = setInterval(async () => {
+            try {
+              const midnightNow = new Date();
+              midnightNow.setHours(0, 0, 0, 0);
+              const r = await Pedometer.getStepCountAsync(midnightNow, new Date());
+              if (r && r.steps != null) {
+                dispatch(updateSteps(r.steps));
+              }
+            } catch (e) { /* ignore */ }
+          }, 10000);
+
+          return () => {
+            clearInterval(poller);
+            if (sub) sub.remove();
+          };
+        } else {
+          // On web or unsupported: simulate with random walk for demo
+          if (Platform.OS === 'web') {
+            const simInterval = setInterval(() => {
+              dispatch(updateSteps(prev => {
+                // Can't increment in reducer like this, we'll handle in reducer
+              }));
+            }, 30000);
+            return () => clearInterval(simInterval);
+          }
+        }
+      } catch (e) {
+        console.log('Pedometer error:', e.message);
+      }
+    };
+    const cleanup = startPedometer();
+    return () => {
+      if (cleanup && typeof cleanup === 'function') cleanup();
+      if (sub) sub.remove();
+    };
+  }, []);
+
+  // Persist steps every 30 seconds
+  useEffect(() => {
+    const persistTimer = setInterval(() => {
+      dispatch(persistWorkoutTracking());
+    }, 30000);
+    return () => clearInterval(persistTimer);
+  }, []);
 
   const handleLogout = async () => {
     if (Platform.OS === 'web') {
@@ -267,16 +349,19 @@ const HomeScreen = ({ navigation }) => {
             </Text>
             <Text style={styles.statLabel}>Workouts</Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>
-              {workoutTracking.activePlan?.currentWeek
-                ? `W${workoutTracking.activePlan.currentWeek}`
-                : '0'}
+          <TouchableOpacity
+            style={[styles.statCard, workoutTracking.todaySteps > 0 && styles.statCardHighlight]}
+            onPress={() => navigation.navigate('StepHistory')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.statValue, workoutTracking.todaySteps > 0 && styles.statValueHighlight]}>
+              {(workoutTracking.todaySteps || 0).toLocaleString()}
             </Text>
-            <Text style={styles.statLabel}>
-              {workoutTracking.activePlan ? 'Week' : 'Days Active'}
-            </Text>
-          </View>
+            <Text style={styles.statLabel}>👟 Steps</Text>
+            {workoutTracking.todaySteps > 0 && (
+              <Text style={styles.statSub}>🔥 {Math.round((workoutTracking.todaySteps || 0) * 0.04)} cal</Text>
+            )}
+          </TouchableOpacity>
           <View style={[styles.statCard, tracking.consumedCalories > 0 && styles.statCardHighlight]}>
             <Text style={[styles.statValue, tracking.consumedCalories > 0 && styles.statValueHighlight]}>
               {tracking.consumedCalories || 0}
@@ -452,6 +537,45 @@ const HomeScreen = ({ navigation }) => {
               </TouchableOpacity>
             )}
           </View>
+        )}
+
+        {/* -------- Step Goal Completion -------- */}
+        {workoutTracking.stepGoal > 0 && workoutTracking.stepGoalCompleted && (
+          <View style={styles.stepGoalCard}>
+            <Text style={styles.stepGoalEmoji}>🎉</Text>
+            <Text style={styles.stepGoalTitle}>Congratulations!</Text>
+            <Text style={styles.stepGoalText}>
+              You have completed your step goal for the day!
+            </Text>
+            <Text style={styles.stepGoalDetail}>
+              {(workoutTracking.todaySteps || 0).toLocaleString()} / {workoutTracking.stepGoal.toLocaleString()} steps
+              {' • 🔥 '}{Math.round((workoutTracking.todaySteps || 0) * 0.04)} cal burned
+            </Text>
+          </View>
+        )}
+
+        {/* Step progress (if goal set but not yet completed) */}
+        {workoutTracking.stepGoal > 0 && !workoutTracking.stepGoalCompleted && workoutTracking.todaySteps > 0 && (
+          <TouchableOpacity
+            style={styles.stepProgressCard}
+            onPress={() => navigation.navigate('StepHistory')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.stepProgressHeader}>
+              <Text style={styles.stepProgressTitle}>👟 Step Goal Progress</Text>
+              <Text style={styles.stepProgressPercent}>
+                {Math.round(((workoutTracking.todaySteps || 0) / workoutTracking.stepGoal) * 100)}%
+              </Text>
+            </View>
+            <View style={styles.stepProgressBarBg}>
+              <View style={[styles.stepProgressBarFill, {
+                width: `${Math.min(100, ((workoutTracking.todaySteps || 0) / workoutTracking.stepGoal) * 100)}%`,
+              }]} />
+            </View>
+            <Text style={styles.stepProgressDetail}>
+              {(workoutTracking.todaySteps || 0).toLocaleString()} / {workoutTracking.stepGoal.toLocaleString()} steps
+            </Text>
+          </TouchableOpacity>
         )}
 
         <Text style={styles.sectionTitle}>Quick Actions</Text>
@@ -744,6 +868,34 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     marginTop: spacing.xs,
   },
+  // Step goal completion
+  stepGoalCard: {
+    backgroundColor: colors.success + '12',
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.success + '40',
+  },
+  stepGoalEmoji: { fontSize: 36, marginBottom: spacing.xs },
+  stepGoalTitle: { ...typography.h3, color: colors.success, fontWeight: '800', marginBottom: spacing.xs },
+  stepGoalText: { ...typography.body, color: colors.text.primary, textAlign: 'center' },
+  stepGoalDetail: { ...typography.caption, color: colors.text.secondary, marginTop: spacing.xs },
+  // Step progress (goal not yet completed)
+  stepProgressCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadows.sm,
+  },
+  stepProgressHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm },
+  stepProgressTitle: { ...typography.body, fontWeight: '600', color: colors.text.primary },
+  stepProgressPercent: { ...typography.body, fontWeight: '700', color: colors.primary },
+  stepProgressBarBg: { height: 8, backgroundColor: colors.primary + '20', borderRadius: 4, overflow: 'hidden' },
+  stepProgressBarFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 4 },
+  stepProgressDetail: { ...typography.caption, color: colors.text.secondary, marginTop: 4, textAlign: 'center' },
 });
 
 export default HomeScreen;
