@@ -6,8 +6,8 @@ spring:
     name: progress-service
   datasource:
     url: jdbc:mysql://localhost:3306/fitnessapp_progress?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: root
-    password: infa@1234
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -21,7 +21,7 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.yaml
 
 jwt:
-  secret: YourSuperSecretKeyForJWTTokenGenerationPleaseChangeInProduction2024FitnessApp
+  secret: ${JWT_SECRET:change-me-in-production-use-env-variable}
 
 eureka:
   client:

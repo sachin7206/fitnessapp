@@ -7,6 +7,15 @@ echo "=========================================="
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PIDS=()
 
+# Load environment variables from .env if it exists
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    echo "Loading environment variables from .env..."
+    source "$SCRIPT_DIR/.env"
+else
+    echo "WARNING: .env file not found! Copy .env.example to .env and fill in your values."
+    echo "  cp .env.example .env"
+fi
+
 # Fix macOS + Java 21 Tomcat socket issue (SocketException: Invalid argument)
 JVM_OPTS="-Djava.net.preferIPv4Stack=true -Djdk.net.usePlainSocketImpl=true"
 

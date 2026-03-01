@@ -54,7 +54,7 @@ spring:
     web-application-type: reactive
 
 jwt:
-  secret: YourSuperSecretKeyForJWTTokenGenerationPleaseChangeInProduction2024FitnessApp
+  secret: ${JWT_SECRET:change-me-in-production-use-env-variable}
 
 eureka:
   client:

@@ -6,8 +6,8 @@ spring:
     name: user-service
   datasource:
     url: jdbc:mysql://localhost:3306/fitnessapp_users?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: root
-    password: infa@1234
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -20,10 +20,10 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${MAIL_USERNAME:your-email@gmail.com}
-    password: ${MAIL_PASSWORD:your-app-password}
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -41,7 +41,7 @@ app:
     base-url: http://localhost:19006
 
 jwt:
-  secret: YourSuperSecretKeyForJWTTokenGenerationPleaseChangeInProduction2024FitnessApp
+  secret: ${JWT_SECRET:change-me-in-production-use-env-variable}
   expiration: 86400000
   refresh-expiration: 604800000
 
