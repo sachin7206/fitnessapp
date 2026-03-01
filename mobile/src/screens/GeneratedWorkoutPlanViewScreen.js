@@ -54,12 +54,23 @@ const GeneratedWorkoutPlanViewScreen = ({ navigation, route }) => {
   const handleAssign = async () => {
     setAssigning(true);
     try {
-      await workoutService.assignWorkoutPlan(plan.id);
-      const msg = 'Your workout plan has been assigned! Let\'s crush it! 💪';
-      if (Platform.OS === 'web') {
-        window.alert(msg);
+      const result = await workoutService.assignWorkoutPlan(plan.id);
+      const isScheduled = result?.scheduledForTomorrow;
+
+      if (isScheduled) {
+        const msg = 'Your new workout plan will start from tomorrow! 🌅\n\nYour current plan remains active until midnight tonight. Get ready for a fresh start!';
+        if (Platform.OS === 'web') {
+          window.alert('Plan Scheduled! 📅\n\n' + msg);
+        } else {
+          Alert.alert('Plan Scheduled! 📅', msg);
+        }
       } else {
-        Alert.alert('Plan Assigned! 🎉', msg);
+        const msg = 'Your workout plan has been assigned! Let\'s crush it! 💪';
+        if (Platform.OS === 'web') {
+          window.alert(msg);
+        } else {
+          Alert.alert('Plan Assigned! 🎉', msg);
+        }
       }
       navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }, { name: 'MyWorkout' }] });
     } catch (error) {

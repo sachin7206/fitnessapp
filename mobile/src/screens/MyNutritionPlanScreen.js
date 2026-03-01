@@ -155,13 +155,13 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
 
   const handleCreateNewPlan = () => {
     if (Platform.OS === 'web') {
-      if (window.confirm('Create a new nutrition plan? This will replace your current plan.')) {
+      if (window.confirm('Create a new nutrition plan? Your current plan will stay active until midnight, and the new plan will start tomorrow.')) {
         navigation.navigate('NutritionProfileSetup');
       }
     } else {
       Alert.alert(
         'Create New Plan',
-        'This will replace your current plan. Continue?',
+        'Your current plan will stay active until midnight, and the new plan will start tomorrow. Continue?',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Continue', onPress: () => navigation.navigate('NutritionProfileSetup') },

@@ -52,20 +52,70 @@ public class NutritionService implements NutritionOperations {
     public UserNutritionPlanDTO enrollInPlan(String email, Long planId) {
         UserDto user = userServiceSalClient.getUserByEmail(email);
         NutritionPlan plan = nutritionPlanRepository.findById(planId).orElseThrow(() -> new RuntimeException("Nutrition plan not found"));
-        userNutritionPlanRepository.deactivateAllActiveForUser(user.getId());
+        int durationDays = plan.getDurationDays() != null ? plan.getDurationDays() : 30;
+
+        boolean hasActivePlan = userNutritionPlanRepository.findActiveByUserId(user.getId()).isPresent();
+        LocalDate startDate;
+
+        if (hasActivePlan) {
+            // Mark current plan as ending today instead of cancelling
+            userNutritionPlanRepository.markActiveAsEndingToday(user.getId());
+            // Cancel any previously scheduled plan
+            userNutritionPlanRepository.cancelScheduledForUser(user.getId());
+            // New plan starts tomorrow
+            startDate = LocalDate.now().plusDays(1);
+        } else {
+            // Cancel any previously scheduled plan
+            userNutritionPlanRepository.cancelScheduledForUser(user.getId());
+            // Check if there's an ENDING_TODAY plan (created earlier today)
+            boolean hasEndingToday = userNutritionPlanRepository.findEndingTodayByUserId(user.getId()).isPresent();
+            startDate = hasEndingToday ? LocalDate.now().plusDays(1) : LocalDate.now();
+        }
+
         UserNutritionPlan userPlan = new UserNutritionPlan();
         userPlan.setUserId(user.getId());
         userPlan.setNutritionPlan(plan);
-        userPlan.setStartDate(LocalDate.now());
-        userPlan.setEndDate(LocalDate.now().plusDays(plan.getDurationDays() != null ? plan.getDurationDays() : 30));
-        userPlan.setStatus("ACTIVE"); userPlan.setCurrentDay(1);
-        userPlan.setTotalMeals(plan.getMeals() != null ? plan.getMeals().size() * (plan.getDurationDays() != null ? plan.getDurationDays() : 30) : 0);
-        return convertUserPlanToDTO(userNutritionPlanRepository.save(userPlan));
+        userPlan.setStartDate(startDate);
+        userPlan.setEndDate(startDate.plusDays(durationDays));
+        userPlan.setStatus(startDate.isAfter(LocalDate.now()) ? "SCHEDULED" : "ACTIVE");
+        userPlan.setCurrentDay(1);
+        userPlan.setTotalMeals(plan.getMeals() != null ? plan.getMeals().size() * durationDays : 0);
+
+        UserNutritionPlanDTO dto = convertUserPlanToDTO(userNutritionPlanRepository.save(userPlan));
+        dto.setScheduledForTomorrow(startDate.isAfter(LocalDate.now()));
+        return dto;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public UserNutritionPlanDTO getActivePlan(String email) {
         UserDto user = userServiceSalClient.getUserByEmail(email);
+        LocalDate today = LocalDate.now();
+
+        // 1. Complete ENDING_TODAY plans whose endDate has passed
+        userNutritionPlanRepository.findEndingTodayByUserId(user.getId()).ifPresent(ending -> {
+            if (ending.getEndDate() != null && ending.getEndDate().isBefore(today)) {
+                ending.setStatus("COMPLETED");
+                userNutritionPlanRepository.save(ending);
+            }
+        });
+
+        // 2. Activate SCHEDULED plans whose startDate is today or earlier
+        userNutritionPlanRepository.findScheduledByUserId(user.getId()).ifPresent(scheduled -> {
+            if (!scheduled.getStartDate().isAfter(today)) {
+                scheduled.setStatus("ACTIVE");
+                userNutritionPlanRepository.save(scheduled);
+            }
+        });
+
+        // 3. If ENDING_TODAY plan exists (still valid for today), return it
+        var endingToday = userNutritionPlanRepository.findEndingTodayByUserId(user.getId());
+        if (endingToday.isPresent()) {
+            UserNutritionPlan up = endingToday.get();
+            nutritionPlanRepository.findByIdWithMealsAndFoodItems(up.getNutritionPlan().getId()).ifPresent(up::setNutritionPlan);
+            return convertUserPlanToDTO(up);
+        }
+
+        // 4. Return ACTIVE plan
         return userNutritionPlanRepository.findActiveByUserId(user.getId()).map(up -> {
             nutritionPlanRepository.findByIdWithMealsAndFoodItems(up.getNutritionPlan().getId()).ifPresent(up::setNutritionPlan);
             return convertUserPlanToDTO(up);

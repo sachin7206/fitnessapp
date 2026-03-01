@@ -172,7 +172,7 @@ const NutritionPlansScreen = ({ navigation }) => {
     if (activePlan) {
       showAlert(
         'Active Plan Exists',
-        'You already have an active plan. Enrolling in a new plan will pause your current one. Continue?',
+        'You already have an active plan. The new plan will start from tomorrow, and your current plan will remain active until midnight tonight. Continue?',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Continue', onPress: () => enrollInPlan() },
@@ -189,7 +189,15 @@ const NutritionPlansScreen = ({ navigation }) => {
       const userPlan = await nutritionService.enrollInPlan(selectedPlan.id);
       setActivePlan(userPlan);
       setModalVisible(false);
-      showAlert('Success! 🎉', `You are now enrolled in "${selectedPlan.name}"`);
+
+      if (userPlan?.scheduledForTomorrow) {
+        showAlert(
+          'Plan Scheduled! 📅',
+          `Your new plan "${selectedPlan.name}" will start from tomorrow! 🌅\n\nYour current plan remains active until midnight tonight.`
+        );
+      } else {
+        showAlert('Success! 🎉', `You are now enrolled in "${selectedPlan.name}"`);
+      }
     } catch (error) {
       showAlert('Error', error.response?.data?.message || 'Failed to enroll in plan');
     } finally {

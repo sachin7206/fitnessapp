@@ -17,11 +17,25 @@ public interface UserNutritionPlanRepository extends JpaRepository<UserNutrition
     @Query("SELECT unp FROM UserNutritionPlan unp JOIN FETCH unp.nutritionPlan WHERE unp.userId = :userId AND unp.status = 'ACTIVE' ORDER BY unp.enrolledAt DESC LIMIT 1")
     Optional<UserNutritionPlan> findActiveByUserId(@Param("userId") Long userId);
 
+    @Query("SELECT unp FROM UserNutritionPlan unp JOIN FETCH unp.nutritionPlan WHERE unp.userId = :userId AND unp.status = 'ENDING_TODAY' ORDER BY unp.enrolledAt DESC LIMIT 1")
+    Optional<UserNutritionPlan> findEndingTodayByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT unp FROM UserNutritionPlan unp JOIN FETCH unp.nutritionPlan WHERE unp.userId = :userId AND unp.status = 'SCHEDULED' ORDER BY unp.enrolledAt DESC LIMIT 1")
+    Optional<UserNutritionPlan> findScheduledByUserId(@Param("userId") Long userId);
+
     @Query("SELECT unp FROM UserNutritionPlan unp JOIN FETCH unp.nutritionPlan WHERE unp.id = :id")
     Optional<UserNutritionPlan> findByIdWithPlan(@Param("id") Long id);
 
     @Modifying
     @Query("UPDATE UserNutritionPlan unp SET unp.status = 'CANCELLED' WHERE unp.userId = :userId AND unp.status = 'ACTIVE'")
     void deactivateAllActiveForUser(@Param("userId") Long userId);
+
+    @Modifying
+    @Query("UPDATE UserNutritionPlan unp SET unp.status = 'CANCELLED' WHERE unp.userId = :userId AND unp.status = 'SCHEDULED'")
+    void cancelScheduledForUser(@Param("userId") Long userId);
+
+    @Modifying
+    @Query("UPDATE UserNutritionPlan unp SET unp.status = 'ENDING_TODAY', unp.endDate = CURRENT_DATE WHERE unp.userId = :userId AND unp.status = 'ACTIVE'")
+    void markActiveAsEndingToday(@Param("userId") Long userId);
 }
 

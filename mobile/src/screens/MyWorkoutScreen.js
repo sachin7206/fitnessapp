@@ -135,9 +135,9 @@ const MyWorkoutScreen = ({ navigation }) => {
   const handleNewPlan = () => {
     const doNav = () => navigation.navigate('WorkoutSetup');
     if (Platform.OS === 'web') {
-      if (window.confirm('Create a new workout plan? This will replace your current plan.')) doNav();
+      if (window.confirm('Create a new workout plan? Your current plan will stay active until midnight, and the new plan will start tomorrow.')) doNav();
     } else {
-      Alert.alert('Create New Plan', 'This will replace your current plan. Continue?', [
+      Alert.alert('Create New Plan', 'Your current plan will stay active until midnight, and the new plan will start tomorrow. Continue?', [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Continue', onPress: doNav },
       ]);

@@ -20,5 +20,6 @@ public class UserNutritionPlanDTO {
     private Double adherencePercentage;
     private String notes;
     private LocalDateTime enrolledAt;
+    private Boolean scheduledForTomorrow;
 }
 

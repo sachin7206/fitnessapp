@@ -21,7 +21,33 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
     private final DailyStepTrackingRepository stepTrackingRepo;
 
     @Override
+    @Transactional
     public UserWorkoutPlanDTO getActiveWorkoutPlan(String email) {
+        LocalDate today = LocalDate.now();
+
+        // 1. Check ENDING_TODAY plans — if their endDate has passed, mark COMPLETED
+        userPlanRepo.findByUserEmailAndStatus(email, "ENDING_TODAY").ifPresent(ending -> {
+            if (!ending.getEndDate().isAfter(today.minusDays(1))) {
+                ending.setStatus("COMPLETED");
+                userPlanRepo.save(ending);
+            }
+        });
+
+        // 2. Check SCHEDULED plans — if startDate is today or past, activate it
+        userPlanRepo.findByUserEmailAndStatus(email, "SCHEDULED").ifPresent(scheduled -> {
+            if (!scheduled.getStartDate().isAfter(today)) {
+                scheduled.setStatus("ACTIVE");
+                userPlanRepo.save(scheduled);
+            }
+        });
+
+        // 3. If there's an ENDING_TODAY plan, it's still active for today — return it
+        var endingToday = userPlanRepo.findByUserEmailAndStatus(email, "ENDING_TODAY");
+        if (endingToday.isPresent()) {
+            return toDTO(endingToday.get());
+        }
+
+        // 4. Return ACTIVE plan
         return userPlanRepo.findByUserEmailAndStatus(email, "ACTIVE")
                 .map(this::toDTO)
                 .orElse(null);
@@ -30,29 +56,58 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
     @Override
     @Transactional
     public UserWorkoutPlanDTO assignWorkoutPlan(String email, Long planId) {
-        // Deactivate any existing active plan
-        userPlanRepo.findByUserEmailAndStatus(email, "ACTIVE").ifPresent(existing -> {
-            existing.setStatus("CANCELLED");
-            userPlanRepo.save(existing);
-        });
-
         WorkoutPlan plan = workoutPlanRepo.findById(planId)
                 .orElseThrow(() -> new RuntimeException("Workout plan not found: " + planId));
 
         int durationWeeks = plan.getDurationWeeks() != null ? plan.getDurationWeeks() : 8;
         int daysPerWeek = plan.getDaysPerWeek() != null ? plan.getDaysPerWeek() : 4;
 
+        var existingActive = userPlanRepo.findByUserEmailAndStatus(email, "ACTIVE");
+        LocalDate startDate;
+
+        if (existingActive.isPresent()) {
+            // Old plan stays active for today — mark it to end at midnight
+            UserWorkoutPlan oldPlan = existingActive.get();
+            oldPlan.setStatus("ENDING_TODAY");
+            oldPlan.setEndDate(LocalDate.now());
+            userPlanRepo.save(oldPlan);
+
+            // Cancel any previously scheduled plan
+            userPlanRepo.findByUserEmailAndStatus(email, "SCHEDULED").ifPresent(scheduled -> {
+                scheduled.setStatus("CANCELLED");
+                userPlanRepo.save(scheduled);
+            });
+
+            // New plan starts tomorrow
+            startDate = LocalDate.now().plusDays(1);
+        } else {
+            // Cancel any previously scheduled plan
+            userPlanRepo.findByUserEmailAndStatus(email, "SCHEDULED").ifPresent(scheduled -> {
+                scheduled.setStatus("CANCELLED");
+                userPlanRepo.save(scheduled);
+            });
+
+            // Also check ENDING_TODAY (created earlier today)
+            userPlanRepo.findByUserEmailAndStatus(email, "ENDING_TODAY").ifPresent(endingToday -> {
+                // Already has an ending-today plan, new plan starts tomorrow
+            });
+
+            startDate = LocalDate.now();
+        }
+
         UserWorkoutPlan userPlan = new UserWorkoutPlan();
         userPlan.setUserEmail(email);
         userPlan.setWorkoutPlan(plan);
-        userPlan.setStartDate(LocalDate.now());
-        userPlan.setEndDate(LocalDate.now().plusWeeks(durationWeeks));
-        userPlan.setStatus("ACTIVE");
+        userPlan.setStartDate(startDate);
+        userPlan.setEndDate(startDate.plusWeeks(durationWeeks));
+        userPlan.setStatus(startDate.isAfter(LocalDate.now()) ? "SCHEDULED" : "ACTIVE");
         userPlan.setCompletedWorkouts(0);
         userPlan.setTotalWorkouts(durationWeeks * daysPerWeek);
         userPlan.setCurrentWeek(1);
 
-        return toDTO(userPlanRepo.save(userPlan));
+        UserWorkoutPlanDTO dto = toDTO(userPlanRepo.save(userPlan));
+        dto.setScheduledForTomorrow(startDate.isAfter(LocalDate.now()));
+        return dto;
     }
 
     @Override

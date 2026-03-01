@@ -18,5 +18,6 @@ public class UserWorkoutPlanDTO {
     private Integer completedWorkouts;
     private Integer totalWorkouts;
     private Integer currentWeek;
+    private Boolean scheduledForTomorrow;
 }
 
