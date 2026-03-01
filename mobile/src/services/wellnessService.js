@@ -1,4 +1,4 @@
-import apiClient from '../config/api';
+import apiClient from './apiClient';
 
 const wellnessService = {
   getYogaPoses: async (difficulty) => {
