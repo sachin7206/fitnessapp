@@ -12,6 +12,8 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { updateProfile, updateHealthMetrics, updateGoals, fetchProfile } from '../store/slices/userSlice';
 import { logout, updateUser } from '../store/slices/authSlice';
+import { clearTracking } from '../store/slices/mealTrackingSlice';
+import { clearWorkoutTracking } from '../store/slices/workoutTrackingSlice';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import { Picker } from '@react-native-picker/picker';
 import { useTranslation, LANGUAGES } from '../i18n';
@@ -23,9 +25,14 @@ const ProfileScreen = () => {
   const { t, setLocale, locale } = useTranslation();
 
   const handleLogout = () => {
+    const doLogout = () => {
+      dispatch(clearTracking());
+      dispatch(clearWorkoutTracking());
+      dispatch(logout());
+    };
     if (Platform.OS === 'web') {
       if (window.confirm('Are you sure you want to logout?')) {
-        dispatch(logout());
+        doLogout();
       }
     } else {
       Alert.alert(
@@ -33,7 +40,7 @@ const ProfileScreen = () => {
         'Are you sure you want to logout?',
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Logout', style: 'destructive', onPress: () => dispatch(logout()) },
+          { text: 'Logout', style: 'destructive', onPress: doLogout },
         ]
       );
     }

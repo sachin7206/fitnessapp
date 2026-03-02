@@ -146,11 +146,25 @@ service-name/
 - Node.js 18+
 - Expo CLI (`npm install -g expo-cli`)
 
+### Environment Setup (Required)
+```bash
+# Copy the environment template and fill in your values
+cp .env.example .env
+
+# Edit .env with your credentials:
+# - DB_USERNAME / DB_PASSWORD (MySQL)
+# - JWT_SECRET (any long random string)
+# - MAIL_USERNAME / MAIL_PASSWORD (Gmail App Password for password reset emails)
+# - GEMINI_API_KEYS (Google Gemini API keys for AI features)
+```
+
+> ⚠️ **Never commit `.env`** — it's gitignored. Only `.env.example` (with placeholder values) is tracked.
+
 ### Start All Backend Services
 ```bash
 ./start-microservices.sh
 ```
-This starts (in order): Service Registry → User → Nutrition → Exercise → Progress → Wellness → API Gateway
+This loads `.env` automatically, then starts (in order): Service Registry → User → Nutrition → Exercise → Progress → Wellness → API Gateway
 
 ### Start Mobile App
 ```bash

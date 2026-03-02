@@ -43,13 +43,30 @@ const ProgressDashboardScreen = ({ navigation }) => {
     setSaving(false);
   };
 
+  const getCurrentValueForGoalType = (type) => {
+    if (type === 'WEIGHT') return summary?.currentWeight || 0;
+    if (type === 'BODY_FAT') return summary?.bmi || 0;
+    if (type === 'WAIST') return summary?.latestMeasurements?.waist || 0;
+    return 0;
+  };
+
+  const getUnitForGoalType = (type) => {
+    if (type === 'WEIGHT') return 'kg';
+    if (type === 'BODY_FAT') return '%';
+    if (type === 'WAIST') return 'cm';
+    return 'kg';
+  };
+
   const handleSetGoal = async () => {
     if (!goalTarget) return;
     setSaving(true);
     try {
       const targetDate = new Date(); targetDate.setMonth(targetDate.getMonth() + 3);
-      await progressService.setGoal({ goalType, targetValue: parseFloat(goalTarget), currentValue: summary?.currentWeight || 0, targetDate: targetDate.toISOString().split('T')[0], unit: goalType === 'WEIGHT' ? 'kg' : '%' });
-      setShowGoalForm(false); setGoalTarget(''); loadData();
+      const currentValue = getCurrentValueForGoalType(goalType);
+      const unit = getUnitForGoalType(goalType);
+      await progressService.setGoal({ goalType, targetValue: parseFloat(goalTarget), currentValue, targetDate: targetDate.toISOString().split('T')[0], unit });
+      setShowGoalForm(false); setGoalTarget(''); setGoalType('WEIGHT');
+      await loadData();
       Platform.OS === 'web' ? window.alert('Goal set! 🎯') : Alert.alert('Success', 'Goal set! 🎯');
     } catch (e) { Platform.OS === 'web' ? window.alert('Failed to set goal') : Alert.alert('Error', 'Failed to set goal'); }
     setSaving(false);
@@ -132,13 +149,29 @@ const ProgressDashboardScreen = ({ navigation }) => {
           <View style={styles.formCard}>
             <Text style={styles.formTitle}>Set a Goal</Text>
             <View style={styles.goalTypes}>
-              {['WEIGHT', 'BODY_FAT', 'WAIST'].map(t => (
-                <TouchableOpacity key={t} style={[styles.goalTypeBtn, goalType === t && styles.goalTypeBtnActive]} onPress={() => setGoalType(t)}>
-                  <Text style={[styles.goalTypeText, goalType === t && styles.goalTypeTextActive]}>{t === 'WEIGHT' ? '⚖️ Weight' : t === 'BODY_FAT' ? '📊 Body Fat' : '📏 Waist'}</Text>
-                </TouchableOpacity>
-              ))}
+              {['WEIGHT', 'BODY_FAT', 'WAIST'].map(t => {
+                const hasExisting = summary?.activeGoals?.some(g => g.goalType === t);
+                return (
+                  <TouchableOpacity key={t} style={[styles.goalTypeBtn, goalType === t && styles.goalTypeBtnActive]} onPress={() => { setGoalType(t); setGoalTarget(''); }}>
+                    <Text style={[styles.goalTypeText, goalType === t && styles.goalTypeTextActive]}>
+                      {t === 'WEIGHT' ? '⚖️ Weight' : t === 'BODY_FAT' ? '📊 Body Fat' : '📏 Waist'}
+                      {hasExisting ? ' ✓' : ''}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-            <TextInput style={styles.input} placeholder={`Target (${goalType === 'BODY_FAT' ? '%' : goalType === 'WAIST' ? 'cm' : 'kg'})`} keyboardType="numeric" value={goalTarget} onChangeText={setGoalTarget} placeholderTextColor={colors.text.secondary} />
+            {summary?.activeGoals?.some(g => g.goalType === goalType) && (
+              <Text style={{ ...typography.caption, color: colors.warning || '#f59e0b', marginBottom: spacing.xs }}>
+                ⚠️ This will replace your existing {goalType === 'WEIGHT' ? 'weight' : goalType === 'BODY_FAT' ? 'body fat' : 'waist'} goal
+              </Text>
+            )}
+            {getCurrentValueForGoalType(goalType) > 0 && (
+              <Text style={{ ...typography.caption, color: colors.text.secondary, marginBottom: spacing.sm }}>
+                Current {goalType === 'WEIGHT' ? 'weight' : goalType === 'BODY_FAT' ? 'body fat' : 'waist'}: {getCurrentValueForGoalType(goalType)} {getUnitForGoalType(goalType)}
+              </Text>
+            )}
+            <TextInput style={styles.input} placeholder={`Target ${goalType === 'WEIGHT' ? 'weight' : goalType === 'BODY_FAT' ? 'body fat' : 'waist'} (${getUnitForGoalType(goalType)})`} keyboardType="numeric" value={goalTarget} onChangeText={setGoalTarget} placeholderTextColor={colors.text.secondary} />
             <View style={styles.formActions}>
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowGoalForm(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
               <TouchableOpacity style={styles.saveBtn} onPress={handleSetGoal} disabled={saving}>{saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Set Goal</Text>}</TouchableOpacity>
@@ -169,7 +202,7 @@ const ProgressDashboardScreen = ({ navigation }) => {
                 <View key={i} style={styles.trendPoint}>
                   <Text style={styles.trendValue}>{p.value?.toFixed(1)}</Text>
                   <View style={[styles.trendBar, { height: Math.max(20, (p.value - (trends.weightTrend.reduce((min, x) => Math.min(min, x.value), 999)) + 1) * 10) }]} />
-                  <Text style={styles.trendDate}>{new Date(p.date).getDate()}/{new Date(p.date).getMonth()+1}</Text>
+                  <Text style={styles.trendDate}>{new Date(p.date).getDate()} {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][new Date(p.date).getMonth()]}</Text>
                 </View>
               ))}
             </View>

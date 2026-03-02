@@ -2,7 +2,9 @@ import { createSlice } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import workoutService from '../../services/workoutService';
 
-const STORAGE_KEY = '@workout_tracking';
+const STORAGE_KEY_PREFIX = '@workout_tracking_';
+
+const getStorageKey = (email) => email ? `${STORAGE_KEY_PREFIX}${email}` : '@workout_tracking_guest';
 
 const getLocalDateString = () => {
   const d = new Date();
@@ -68,6 +70,18 @@ const workoutTrackingSlice = createSlice({
           state.stepGoalCompleted = data.stepGoalCompleted || false;
           state.stepHistory = data.stepHistory || [];
         }
+      } else {
+        // No data — reset everything (new user or no cached data)
+        state.trackingDate = null;
+        state.activePlan = null;
+        state.todayCompleted = false;
+        state.completedAt = null;
+        state.workoutCount = 0;
+        state.motivationalQuote = null;
+        state.todaySteps = 0;
+        state.stepGoal = 0;
+        state.stepGoalCompleted = false;
+        state.stepHistory = [];
       }
       state.loaded = true;
     },
@@ -140,6 +154,20 @@ const workoutTrackingSlice = createSlice({
         .sort((a, b) => a.date.localeCompare(b.date))
         .slice(-90); // Keep last 90 days
     },
+
+    clearWorkoutTracking: (state) => {
+      state.trackingDate = null;
+      state.activePlan = null;
+      state.todayCompleted = false;
+      state.completedAt = null;
+      state.workoutCount = 0;
+      state.motivationalQuote = null;
+      state.loaded = false;
+      state.todaySteps = 0;
+      state.stepGoal = 0;
+      state.stepGoalCompleted = false;
+      state.stepHistory = [];
+    },
   },
 });
 
@@ -154,6 +182,7 @@ export const {
   updateSteps,
   setStepGoal,
   mergeStepHistory,
+  clearWorkoutTracking,
 } = workoutTrackingSlice.actions;
 
 export { getLocalDateString };
@@ -163,13 +192,15 @@ let lastSyncTime = 0;
 
 // Persist to AsyncStorage + sync steps to backend (debounced)
 export const persistWorkoutTracking = () => async (dispatch, getState) => {
-  const { workoutTracking } = getState();
+  const { workoutTracking, auth } = getState();
+  const userEmail = auth?.user?.email;
+  const storageKey = getStorageKey(userEmail);
   const todaySteps = typeof workoutTracking.todaySteps === 'number' ? workoutTracking.todaySteps : 0;
   const stepGoal = typeof workoutTracking.stepGoal === 'number' ? workoutTracking.stepGoal : 0;
 
   // Always save to AsyncStorage (instant, local)
   try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({
+    await AsyncStorage.setItem(storageKey, JSON.stringify({
       trackingDate: workoutTracking.trackingDate || getLocalDateString(),
       todayCompleted: workoutTracking.todayCompleted,
       completedAt: workoutTracking.completedAt,
@@ -206,9 +237,12 @@ export const persistWorkoutTracking = () => async (dispatch, getState) => {
 };
 
 // Load from AsyncStorage only (no API calls) — use for focus/timer refreshes
-export const loadWorkoutTrackingLocal = () => async (dispatch) => {
+export const loadWorkoutTrackingLocal = () => async (dispatch, getState) => {
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    const { auth } = getState();
+    const userEmail = auth?.user?.email;
+    const storageKey = getStorageKey(userEmail);
+    const raw = await AsyncStorage.getItem(storageKey);
     if (raw) {
       dispatch(loadWorkoutTracking(JSON.parse(raw)));
     } else {
@@ -221,10 +255,13 @@ export const loadWorkoutTrackingLocal = () => async (dispatch) => {
 };
 
 // Load from AsyncStorage + sync from backend (API calls) — use only on initial mount
-export const loadWorkoutTrackingFromStorage = () => async (dispatch) => {
+export const loadWorkoutTrackingFromStorage = () => async (dispatch, getState) => {
   try {
     // 1. Load from local cache (instant display)
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    const { auth } = getState();
+    const userEmail = auth?.user?.email;
+    const storageKey = getStorageKey(userEmail);
+    const raw = await AsyncStorage.getItem(storageKey);
     if (raw) {
       dispatch(loadWorkoutTracking(JSON.parse(raw)));
     } else {

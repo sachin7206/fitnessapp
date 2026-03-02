@@ -18,6 +18,7 @@ import {
   loadTrackingFromStorage,
   loadTrackingLocal,
   getLocalDateString,
+  clearTracking,
 } from '../store/slices/mealTrackingSlice';
 import {
   completeWorkout,
@@ -29,6 +30,7 @@ import {
   loadWorkoutTrackingLocal,
   updateSteps,
   setStepGoal,
+  clearWorkoutTracking,
 } from '../store/slices/workoutTrackingSlice';
 import workoutService from '../services/workoutService';
 import { Pedometer } from 'expo-sensors';
@@ -164,9 +166,14 @@ const HomeScreen = ({ navigation }) => {
   }, []);
 
   const handleLogout = async () => {
+    const doLogout = () => {
+      dispatch(clearTracking());
+      dispatch(clearWorkoutTracking());
+      dispatch(logout());
+    };
     if (Platform.OS === 'web') {
       if (window.confirm('Are you sure you want to logout?')) {
-        dispatch(logout());
+        doLogout();
       }
     } else {
       Alert.alert(
@@ -177,7 +184,7 @@ const HomeScreen = ({ navigation }) => {
           {
             text: 'Logout',
             style: 'destructive',
-            onPress: () => dispatch(logout()),
+            onPress: doLogout,
           },
         ]
       );

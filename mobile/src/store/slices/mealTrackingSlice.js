@@ -2,7 +2,10 @@ import { createSlice } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import nutritionService from '../../services/nutritionService';
 
-const STORAGE_KEY = '@meal_tracking';
+const STORAGE_KEY_PREFIX = '@meal_tracking_';
+
+// Get user-specific storage key
+const getStorageKey = (email) => email ? `${STORAGE_KEY_PREFIX}${email}` : '@meal_tracking_guest';
 
 // Use local timezone date, NOT UTC — "2026-03-01" in IST even if UTC is still Feb 28
 const getLocalDateString = () => {
@@ -155,10 +158,20 @@ const mealTrackingSlice = createSlice({
         meal.fatGrams = fatGrams;
       }
     },
+
+    clearTracking: (state) => {
+      state.trackingDate = null;
+      state.meals = [];
+      state.consumedCalories = 0;
+      state.consumedProtein = 0;
+      state.consumedCarbs = 0;
+      state.consumedFat = 0;
+      state.loaded = false;
+    },
   },
 });
 
-export const { loadTracking, initMealsForToday, completeMeal, uncompleteMeal, replaceMeal } = mealTrackingSlice.actions;
+export const { loadTracking, initMealsForToday, completeMeal, uncompleteMeal, replaceMeal, clearTracking } = mealTrackingSlice.actions;
 
 // Export the helper so screens can use the same local date logic
 export { getLocalDateString };
@@ -168,7 +181,9 @@ let lastMealSyncTime = 0;
 
 // Persist to AsyncStorage + sync to backend (debounced)
 export const persistTracking = () => async (dispatch, getState) => {
-  const { mealTracking } = getState();
+  const { mealTracking, auth } = getState();
+  const userEmail = auth?.user?.email;
+  const storageKey = getStorageKey(userEmail);
   const data = {
     trackingDate: mealTracking.trackingDate,
     meals: mealTracking.meals,
@@ -180,7 +195,7 @@ export const persistTracking = () => async (dispatch, getState) => {
 
   // 1. Always save to AsyncStorage (instant)
   try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    await AsyncStorage.setItem(storageKey, JSON.stringify(data));
   } catch (e) {
     console.log('Failed to persist meal tracking:', e.message);
   }
@@ -221,11 +236,13 @@ export const persistTracking = () => async (dispatch, getState) => {
 
 // Force sync to backend immediately (bypass debounce) — for meal complete/uncomplete
 export const persistTrackingNow = () => async (dispatch, getState) => {
-  const { mealTracking } = getState();
+  const { mealTracking, auth } = getState();
+  const userEmail = auth?.user?.email;
+  const storageKey = getStorageKey(userEmail);
 
   // Save to AsyncStorage
   try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({
+    await AsyncStorage.setItem(storageKey, JSON.stringify({
       trackingDate: mealTracking.trackingDate,
       meals: mealTracking.meals,
       consumedCalories: mealTracking.consumedCalories,
@@ -269,9 +286,12 @@ export const persistTrackingNow = () => async (dispatch, getState) => {
 };
 
 // Load from AsyncStorage only (no API calls) — for focus/timer refreshes
-export const loadTrackingLocal = () => async (dispatch) => {
+export const loadTrackingLocal = () => async (dispatch, getState) => {
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    const { auth } = getState();
+    const userEmail = auth?.user?.email;
+    const storageKey = getStorageKey(userEmail);
+    const raw = await AsyncStorage.getItem(storageKey);
     const today = getLocalDateString();
 
     if (raw) {
@@ -287,7 +307,7 @@ export const loadTrackingLocal = () => async (dispatch) => {
           consumedCalories: 0, consumedProtein: 0, consumedCarbs: 0, consumedFat: 0,
         };
         dispatch(loadTracking(resetData));
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(resetData));
+        await AsyncStorage.setItem(storageKey, JSON.stringify(resetData));
       } else {
         dispatch(loadTracking(data));
       }
@@ -301,9 +321,12 @@ export const loadTrackingLocal = () => async (dispatch) => {
 };
 
 // Load from AsyncStorage + sync from backend (API calls) — for initial mount only
-export const loadTrackingFromStorage = () => async (dispatch) => {
+export const loadTrackingFromStorage = () => async (dispatch, getState) => {
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    const { auth } = getState();
+    const userEmail = auth?.user?.email;
+    const storageKey = getStorageKey(userEmail);
+    const raw = await AsyncStorage.getItem(storageKey);
     const today = getLocalDateString();
 
     if (raw) {
@@ -319,7 +342,7 @@ export const loadTrackingFromStorage = () => async (dispatch) => {
           consumedCalories: 0, consumedProtein: 0, consumedCarbs: 0, consumedFat: 0,
         };
         dispatch(loadTracking(resetData));
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(resetData));
+        await AsyncStorage.setItem(storageKey, JSON.stringify(resetData));
       } else {
         dispatch(loadTracking(data));
       }
@@ -360,7 +383,7 @@ export const loadTrackingFromStorage = () => async (dispatch) => {
             consumedFat: backendData.consumedFat || 0,
           };
           dispatch(loadTracking(restoredData));
-          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(restoredData));
+          await AsyncStorage.setItem(storageKey, JSON.stringify(restoredData));
         }
       }
     } catch (e) {

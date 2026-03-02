@@ -153,13 +153,13 @@ public class AIBasedNutritionService implements AIBasedNutritionOperations {
         } else {
             // No template found at all, generate basic meals
             meals.add(generateMealFromPreferences(
-                new GenerateNutritionPlanRequest.CustomMeal(1, "Breakfast", "BREAKFAST", "8:00 AM", true),
+                new GenerateNutritionPlanRequest.CustomMeal(1L, "Breakfast", "BREAKFAST", "8:00 AM", true),
                 foodPrefs, dietType, region, targetCalories / 3));
             meals.add(generateMealFromPreferences(
-                new GenerateNutritionPlanRequest.CustomMeal(2, "Lunch", "LUNCH", "1:00 PM", true),
+                new GenerateNutritionPlanRequest.CustomMeal(2L, "Lunch", "LUNCH", "1:00 PM", true),
                 foodPrefs, dietType, region, targetCalories / 3));
             meals.add(generateMealFromPreferences(
-                new GenerateNutritionPlanRequest.CustomMeal(3, "Dinner", "DINNER", "8:00 PM", true),
+                new GenerateNutritionPlanRequest.CustomMeal(3L, "Dinner", "DINNER", "8:00 PM", true),
                 foodPrefs, dietType, region, targetCalories / 3));
         }
 

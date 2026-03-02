@@ -40,7 +40,12 @@ const GeneratedPlanViewScreen = ({ navigation, route }) => {
     try {
       const request = {
         region,
-        customMeals: customMeals || [],
+        customMeals: (customMeals || []).map(m => ({
+          name: m.name,
+          type: m.type,
+          time: m.time,
+          enabled: m.enabled,
+        })),
         includePreWorkoutMeal: workoutMeals?.includePreWorkout,
         preWorkoutTime: workoutMeals?.preWorkoutTime,
         includePostWorkoutMeal: workoutMeals?.includePostWorkout,

@@ -30,7 +30,7 @@ public class GenerateNutritionPlanRequest {
 
     @Data @NoArgsConstructor @AllArgsConstructor
     public static class CustomMeal {
-        private Integer id;
+        private Long id;
         private String name;
         private String type; // BREAKFAST, LUNCH, DINNER, SNACK, etc.
         private String time;

@@ -288,7 +288,7 @@ const FoodPreferencesScreen = ({ navigation, route }) => {
     const mealInfo = availableMealTypes.find(m => m.type === mealType);
     if (mealInfo && !customMeals.find(m => m.type === mealType)) {
       setCustomMeals(prev => [...prev, {
-        id: Date.now(),
+        id: Math.max(0, ...prev.map(m => m.id)) + 1,
         name: mealInfo.name,
         type: mealType,
         time: mealInfo.defaultTime,

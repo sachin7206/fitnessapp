@@ -2,16 +2,16 @@ package com.fitnessapp.user.impl.service;
 
 import com.fitnessapp.user.impl.model.User;
 import com.fitnessapp.user.impl.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @Slf4j
@@ -22,59 +22,50 @@ public class PasswordResetService {
     private final PasswordEncoder passwordEncoder;
 
     public PasswordResetService(UserRepository userRepository,
-                                @org.springframework.beans.factory.annotation.Autowired(required = false) JavaMailSender mailSender,
+                                @Autowired(required = false) JavaMailSender mailSender,
                                 PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.mailSender = mailSender;
         this.passwordEncoder = passwordEncoder;
+        if (mailSender == null) {
+            log.warn("JavaMailSender not available. Password reset emails will NOT be sent. OTP will be logged to console only.");
+        }
     }
 
     @Value("${app.password-reset.expiry-minutes:30}")
     private int expiryMinutes;
 
-    @Value("${app.password-reset.base-url:http://localhost:19006}")
-    private String baseUrl;
-
-    @Value("${spring.mail.username:fitnessapp@gmail.com}")
+    @Value("${spring.mail.username:}")
     private String fromEmail;
 
     /**
-     * Generate a reset token, save it to the user, and attempt to send an email with the token.
-     * OTP is always saved to DB first. Email is sent best-effort (async).
+     * Generate OTP, save to DB, return immediately, send email in background thread.
      */
     public void sendPasswordResetEmail(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("No account found with email: " + email));
 
-        // Generate a 6-digit OTP-style token for mobile-friendly reset
         String token = generateOTP();
         user.setPasswordResetToken(token);
         user.setPasswordResetExpiry(LocalDateTime.now().plusMinutes(expiryMinutes));
         userRepository.save(user);
 
-        // Always log OTP for development/debugging (remove in production)
-        log.info("=== PASSWORD RESET OTP for {} : {} (valid for {} minutes) ===", email, token, expiryMinutes);
+        log.info("========================================");
+        log.info("  PASSWORD RESET OTP for {}", email);
+        log.info("  OTP: {}", token);
+        log.info("  Valid for {} minutes", expiryMinutes);
+        log.info("========================================");
 
-        // Send email asynchronously (non-blocking)
-        sendEmailAsync(user.getEmail(), token,
-            user.getProfile() != null ? user.getProfile().getFirstName() : "User");
-    }
-
-    /**
-     * Send email in background thread — never blocks the main request.
-     */
-    @Async
-    public void sendEmailAsync(String toEmail, String token, String firstName) {
-        if (mailSender == null) {
-            log.warn("Mail sender not configured. OTP is logged above. Configure SMTP in application.yml to enable email.");
-            return;
-        }
-        try {
-            sendResetEmailSync(toEmail, token, firstName);
-            log.info("Password reset email sent successfully to {}", toEmail);
-        } catch (Exception e) {
-            log.warn("Could not send reset email to {} (OTP is still valid in DB): {}", toEmail, e.getMessage());
-        }
+        // Fire-and-forget: send email in a separate thread so HTTP response returns immediately
+        String firstName = (user.getProfile() != null && user.getProfile().getFirstName() != null)
+                ? user.getProfile().getFirstName() : "User";
+        CompletableFuture.runAsync(() -> {
+            try {
+                sendEmail(email, token, firstName);
+            } catch (Exception e) {
+                log.warn("Email send failed for {} (OTP still valid in DB): {}", email, e.getMessage());
+            }
+        });
     }
 
     /**
@@ -87,7 +78,6 @@ public class PasswordResetService {
                 .orElseThrow(() -> new RuntimeException("Invalid or expired reset token"));
 
         if (user.getPasswordResetExpiry() == null || user.getPasswordResetExpiry().isBefore(LocalDateTime.now())) {
-            // Clear expired token
             user.setPasswordResetToken(null);
             user.setPasswordResetExpiry(null);
             userRepository.save(user);
@@ -102,7 +92,6 @@ public class PasswordResetService {
     }
 
     private String generateOTP() {
-        // 6-digit numeric OTP
         int otp = 100000 + (int) (Math.random() * 900000);
         return String.valueOf(otp);
     }
@@ -125,7 +114,11 @@ public class PasswordResetService {
         }
     }
 
-    private void sendResetEmailSync(String toEmail, String token, String firstName) {
+    private void sendEmail(String toEmail, String token, String firstName) {
+        if (mailSender == null || fromEmail == null || fromEmail.isBlank()) {
+            log.info("Mail not configured — skipping email send. Use OTP from console log above.");
+            return;
+        }
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromEmail);
         message.setTo(toEmail);
@@ -136,9 +129,10 @@ public class PasswordResetService {
             "Your OTP code is: " + token + "\n\n" +
             "This code is valid for " + expiryMinutes + " minutes.\n\n" +
             "If you did not request this, please ignore this email.\n\n" +
-            "— FitnessApp Team \uD83D\uDCAA"
+            "— FitnessApp Team"
         );
         mailSender.send(message);
+        log.info("Password reset email sent successfully to {}", toEmail);
     }
 }
 
