@@ -1,11 +1,24 @@
 FROM gradle:8-jdk17 AS build
 WORKDIR /app
+
+# Copy and publish common-lib
 COPY common-lib/ common-lib/
-RUN cd common-lib && gradle publishToMavenLocal -x test
+WORKDIR /app/common-lib
+RUN chmod +x gradlew && ./gradlew publishToMavenLocal -x test
+WORKDIR /app
+
+# Copy and publish ai-service shared modules
 COPY ai-service/ ai-service/
-RUN cd ai-service && gradle :ai-service-common:publishToMavenLocal :ai-service-sal:publishToMavenLocal -x test
+WORKDIR /app/ai-service
+RUN chmod +x gradlew && ./gradlew :ai-service-common:publishToMavenLocal :ai-service-sal:publishToMavenLocal -x test
+WORKDIR /app
+
+# Copy and build progress-service
 COPY progress-service/ progress-service/
-RUN cd progress-service && gradle :progress-service-impl:bootJar -x test
+WORKDIR /app/progress-service
+RUN chmod +x gradlew && ./gradlew :progress-service-impl:bootJar -x test
+WORKDIR /app
+
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 COPY --from=build /app/progress-service/progress-service-impl/build/libs/progress-service-impl-1.0.0.jar app.jar
@@ -13,4 +26,3 @@ EXPOSE 8084
 ENV SPRING_PROFILES_ACTIVE=prod
 ENV JAVA_OPTS="-Xmx256m -Xms128m"
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
-

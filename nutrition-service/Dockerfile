@@ -1,13 +1,30 @@
 FROM gradle:8-jdk17 AS build
 WORKDIR /app
+
+# Copy and publish common-lib
 COPY common-lib/ common-lib/
-RUN cd common-lib && gradle publishToMavenLocal -x test
+WORKDIR /app/common-lib
+RUN chmod +x gradlew && ./gradlew publishToMavenLocal -x test
+WORKDIR /app
+
+# Copy and publish ai-service shared modules
 COPY ai-service/ ai-service/
-RUN cd ai-service && gradle :ai-service-common:publishToMavenLocal :ai-service-sal:publishToMavenLocal -x test
+WORKDIR /app/ai-service
+RUN chmod +x gradlew && ./gradlew :ai-service-common:publishToMavenLocal :ai-service-sal:publishToMavenLocal -x test
+WORKDIR /app
+
+# Copy and publish user-service shared modules
 COPY user-service/ user-service/
-RUN cd user-service && gradle :user-service-common:publishToMavenLocal :user-service-sal:publishToMavenLocal -x test
+WORKDIR /app/user-service
+RUN chmod +x gradlew && ./gradlew :user-service-common:publishToMavenLocal :user-service-sal:publishToMavenLocal -x test
+WORKDIR /app
+
+# Copy and build nutrition-service
 COPY nutrition-service/ nutrition-service/
-RUN cd nutrition-service && gradle :nutrition-service-impl:bootJar -x test
+WORKDIR /app/nutrition-service
+RUN chmod +x gradlew && ./gradlew :nutrition-service-impl:bootJar -x test
+WORKDIR /app
+
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 COPY --from=build /app/nutrition-service/nutrition-service-impl/build/libs/nutrition-service-impl-1.0.0.jar app.jar
@@ -15,4 +32,3 @@ EXPOSE 8082
 ENV SPRING_PROFILES_ACTIVE=prod
 ENV JAVA_OPTS="-Xmx256m -Xms128m"
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
-
