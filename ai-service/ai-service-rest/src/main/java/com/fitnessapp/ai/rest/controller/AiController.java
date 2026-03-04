@@ -5,6 +5,7 @@ import com.fitnessapp.ai.rest.api.AiNutritionApi;
 import com.fitnessapp.ai.rest.api.AiWorkoutApi;
 import com.fitnessapp.ai.rest.api.AiWellnessApi;
 import com.fitnessapp.ai.rest.api.AiTextApi;
+import com.fitnessapp.ai.rest.api.AiProgressApi;
 import com.fitnessapp.ai.rest.api.HealthApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +18,7 @@ import java.util.Map;
  */
 @RestController
 @RequiredArgsConstructor
-public class AiController implements AiNutritionApi, AiWorkoutApi, AiWellnessApi, AiTextApi, HealthApi {
+public class AiController implements AiNutritionApi, AiWorkoutApi, AiWellnessApi, AiTextApi, AiProgressApi, HealthApi {
 
     private final AiOperations aiOperations;
 
@@ -32,6 +33,21 @@ public class AiController implements AiNutritionApi, AiWorkoutApi, AiWellnessApi
     }
 
     @Override
+    public ResponseEntity<AiFoodPhotoAnalysisResponse> analyzeFoodPhoto(AiFoodPhotoAnalysisRequest request) {
+        return ResponseEntity.ok(aiOperations.analyzeFoodPhoto(request));
+    }
+
+    @Override
+    public ResponseEntity<AiMealSwapResponse> suggestMealSwap(AiMealSwapRequest request) {
+        return ResponseEntity.ok(aiOperations.suggestMealSwap(request));
+    }
+
+    @Override
+    public ResponseEntity<AiGroceryListResponse> generateGroceryList(AiGroceryListRequest request) {
+        return ResponseEntity.ok(aiOperations.generateGroceryList(request));
+    }
+
+    @Override
     public ResponseEntity<AiWorkoutPlanResponse> generateWorkoutPlan(AiWorkoutPlanRequest request) {
         return ResponseEntity.ok(aiOperations.generateWorkoutPlan(request));
     }
@@ -42,8 +58,33 @@ public class AiController implements AiNutritionApi, AiWorkoutApi, AiWellnessApi
     }
 
     @Override
+    public ResponseEntity<AiExerciseSubstitutionResponse> suggestExerciseSubstitutes(AiExerciseSubstitutionRequest request) {
+        return ResponseEntity.ok(aiOperations.suggestExerciseSubstitutes(request));
+    }
+
+    @Override
+    public ResponseEntity<AiWorkoutAdjustResponse> adjustWorkoutProgression(AiWorkoutAdjustRequest request) {
+        return ResponseEntity.ok(aiOperations.adjustWorkoutProgression(request));
+    }
+
+    @Override
     public ResponseEntity<AiWellnessPlanResponse> generateWellnessPlan(AiWellnessPlanRequest request) {
         return ResponseEntity.ok(aiOperations.generateWellnessPlan(request));
+    }
+
+    @Override
+    public ResponseEntity<AiRestDayResponse> analyzeRestDay(AiRestDayRequest request) {
+        return ResponseEntity.ok(aiOperations.analyzeRestDay(request));
+    }
+
+    @Override
+    public ResponseEntity<AiWeeklyReportResponse> generateWeeklyReport(AiWeeklyReportRequest request) {
+        return ResponseEntity.ok(aiOperations.generateWeeklyReport(request));
+    }
+
+    @Override
+    public ResponseEntity<AiPlateauDetectionResponse> detectPlateau(AiPlateauDetectionRequest request) {
+        return ResponseEntity.ok(aiOperations.detectPlateau(request));
     }
 
     @Override

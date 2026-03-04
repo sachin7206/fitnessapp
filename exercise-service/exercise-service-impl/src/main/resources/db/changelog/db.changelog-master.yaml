@@ -17,4 +17,7 @@ databaseChangeLog:
   - include:
       file: changes/006-create-daily-step-tracking-table.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/007-create-workout-feedback-table.yaml
+      relativeToChangelogFile: true
 

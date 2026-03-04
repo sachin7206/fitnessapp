@@ -50,7 +50,13 @@ openApiGenerate {
         "DailyNutritionSummaryDTO"    : "DailyNutritionSummaryDTO",
         "DailyMealTrackingDTO"        : "DailyMealTrackingDTO",
         "MealCompletionRequest"       : "MealCompletionRequest",
-        "DailyTrackingSyncRequest"    : "DailyTrackingSyncRequest"
+        "DailyTrackingSyncRequest"    : "DailyTrackingSyncRequest",
+        "FoodPhotoLogRequest"         : "FoodPhotoLogRequest",
+        "FoodLogDTO"                  : "FoodLogDTO",
+        "MealSwapRequestDTO"          : "MealSwapRequestDTO",
+        "MealSwapResponseDTO"         : "MealSwapResponseDTO",
+        "ApplyMealSwapRequest"        : "ApplyMealSwapRequest",
+        "GroceryListResponseDTO"      : "GroceryListResponseDTO"
     ])
     importMappings.set([
         "NutritionPlanDTO"            : "com.fitnessapp.nutrition.common.dto.NutritionPlanDTO",
@@ -63,7 +69,13 @@ openApiGenerate {
         "DailyNutritionSummaryDTO"    : "com.fitnessapp.nutrition.common.dto.DailyNutritionSummaryDTO",
         "DailyMealTrackingDTO"        : "com.fitnessapp.nutrition.common.dto.DailyMealTrackingDTO",
         "MealCompletionRequest"       : "com.fitnessapp.nutrition.common.dto.MealCompletionRequest",
-        "DailyTrackingSyncRequest"    : "com.fitnessapp.nutrition.common.dto.DailyTrackingSyncRequest"
+        "DailyTrackingSyncRequest"    : "com.fitnessapp.nutrition.common.dto.DailyTrackingSyncRequest",
+        "FoodPhotoLogRequest"         : "com.fitnessapp.nutrition.common.dto.FoodPhotoLogRequest",
+        "FoodLogDTO"                  : "com.fitnessapp.nutrition.common.dto.FoodLogDTO",
+        "MealSwapRequestDTO"          : "com.fitnessapp.nutrition.common.dto.MealSwapRequestDTO",
+        "MealSwapResponseDTO"         : "com.fitnessapp.nutrition.common.dto.MealSwapResponseDTO",
+        "ApplyMealSwapRequest"        : "com.fitnessapp.nutrition.common.dto.ApplyMealSwapRequest",
+        "GroceryListResponseDTO"      : "com.fitnessapp.nutrition.common.dto.GroceryListResponseDTO"
     ])
 }
 

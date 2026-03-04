@@ -126,6 +126,160 @@ paths:
               schema:
                 type: object
 
+  # ========== NEW FEATURE ENDPOINTS ==========
+
+  /ai/nutrition/analyze-food-photo:
+    post:
+      tags: [AiNutrition]
+      operationId: analyzeFoodPhoto
+      summary: Analyze food photo to estimate calories and macros
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiFoodPhotoAnalysisRequest'
+      responses:
+        '200':
+          description: Food photo analysis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiFoodPhotoAnalysisResponse'
+
+  /ai/nutrition/suggest-meal-swap:
+    post:
+      tags: [AiNutrition]
+      operationId: suggestMealSwap
+      summary: Suggest meal alternatives with matching macros
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiMealSwapRequest'
+      responses:
+        '200':
+          description: Meal swap suggestions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiMealSwapResponse'
+
+  /ai/nutrition/generate-grocery-list:
+    post:
+      tags: [AiNutrition]
+      operationId: generateGroceryList
+      summary: Generate grocery list from meal plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiGroceryListRequest'
+      responses:
+        '200':
+          description: Grocery list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiGroceryListResponse'
+
+  /ai/workout/suggest-substitutes:
+    post:
+      tags: [AiWorkout]
+      operationId: suggestExerciseSubstitutes
+      summary: Suggest exercise substitutions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiExerciseSubstitutionRequest'
+      responses:
+        '200':
+          description: Exercise alternatives
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiExerciseSubstitutionResponse'
+
+  /ai/workout/adjust-progression:
+    post:
+      tags: [AiWorkout]
+      operationId: adjustWorkoutProgression
+      summary: Adjust workout intensity based on feedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiWorkoutAdjustRequest'
+      responses:
+        '200':
+          description: Adjusted workout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiWorkoutAdjustResponse'
+
+  /ai/progress/weekly-report:
+    post:
+      tags: [AiProgress]
+      operationId: generateWeeklyReport
+      summary: Generate weekly progress report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiWeeklyReportRequest'
+      responses:
+        '200':
+          description: Weekly report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiWeeklyReportResponse'
+
+  /ai/progress/detect-plateau:
+    post:
+      tags: [AiProgress]
+      operationId: detectPlateau
+      summary: Detect fitness plateau
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiPlateauDetectionRequest'
+      responses:
+        '200':
+          description: Plateau analysis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiPlateauDetectionResponse'
+
+  /ai/wellness/rest-day-analysis:
+    post:
+      tags: [AiWellness]
+      operationId: analyzeRestDay
+      summary: Analyze if user needs a rest day
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiRestDayRequest'
+      responses:
+        '200':
+          description: Rest day recommendation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiRestDayResponse'
+
 components:
   schemas:
     AiNutritionPlanRequest:
@@ -317,3 +471,264 @@ components:
       properties:
         text: { type: string }
         fromAi: { type: boolean }
+
+    # ========== NEW FEATURE DTOs ==========
+
+    AiFoodPhotoAnalysisRequest:
+      type: object
+      properties:
+        imageBase64: { type: string }
+        description: { type: string }
+
+    AiFoodPhotoAnalysisResponse:
+      type: object
+      properties:
+        foodItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecognizedFoodItem'
+        totalCalories: { type: integer }
+        totalProtein: { type: number, format: double }
+        totalCarbs: { type: number, format: double }
+        totalFat: { type: number, format: double }
+        confidence: { type: number, format: double }
+        fromAi: { type: boolean }
+
+    RecognizedFoodItem:
+      type: object
+      properties:
+        name: { type: string }
+        quantity: { type: string }
+        calories: { type: integer }
+        proteinGrams: { type: number, format: double }
+        carbsGrams: { type: number, format: double }
+        fatGrams: { type: number, format: double }
+
+    AiExerciseSubstitutionRequest:
+      type: object
+      properties:
+        exerciseName: { type: string }
+        muscleGroup: { type: string }
+        reason: { type: string, enum: [EQUIPMENT, INJURY, PREFERENCE] }
+        availableEquipment:
+          type: array
+          items: { type: string }
+        injuredBodyParts:
+          type: array
+          items: { type: string }
+
+    AiExerciseSubstitutionResponse:
+      type: object
+      properties:
+        alternatives:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExerciseAlternative'
+        fromAi: { type: boolean }
+
+    ExerciseAlternative:
+      type: object
+      properties:
+        exerciseName: { type: string }
+        muscleGroup: { type: string }
+        sets: { type: integer }
+        reps: { type: integer }
+        reason: { type: string }
+        equipmentNeeded: { type: string }
+        difficultyLevel: { type: string }
+
+    AiWeeklyReportRequest:
+      type: object
+      properties:
+        userName: { type: string }
+        weekStartDate: { type: string, format: date }
+        weightEntries:
+          type: array
+          items:
+            type: object
+        workoutCompletions: { type: integer }
+        totalWorkoutsPlanned: { type: integer }
+        mealAdherencePercent: { type: number, format: double }
+        totalSteps: { type: integer }
+        caloriesConsumed: { type: integer }
+        caloriesTarget: { type: integer }
+        goals:
+          type: array
+          items: { type: string }
+
+    AiWeeklyReportResponse:
+      type: object
+      properties:
+        summary: { type: string }
+        highlights:
+          type: array
+          items: { type: string }
+        concerns:
+          type: array
+          items: { type: string }
+        recommendations:
+          type: array
+          items: { type: string }
+        overallScore: { type: integer }
+        fromAi: { type: boolean }
+
+    AiPlateauDetectionRequest:
+      type: object
+      properties:
+        weightHistory:
+          type: array
+          items:
+            type: object
+        performanceHistory:
+          type: array
+          items:
+            type: object
+        currentGoal: { type: string }
+        daysAnalyzed: { type: integer }
+
+    AiPlateauDetectionResponse:
+      type: object
+      properties:
+        isPlateauDetected: { type: boolean }
+        plateauType: { type: string }
+        durationWeeks: { type: integer }
+        analysis: { type: string }
+        suggestions:
+          type: array
+          items: { type: string }
+        fromAi: { type: boolean }
+
+    AiMealSwapRequest:
+      type: object
+      properties:
+        originalMealName: { type: string }
+        originalCalories: { type: integer }
+        originalProtein: { type: number, format: double }
+        originalCarbs: { type: number, format: double }
+        originalFat: { type: number, format: double }
+        mealType: { type: string }
+        dietType: { type: string }
+        region: { type: string }
+        tolerancePercent: { type: integer, default: 5 }
+
+    AiMealSwapResponse:
+      type: object
+      properties:
+        alternatives:
+          type: array
+          items:
+            $ref: '#/components/schemas/MealAlternative'
+        fromAi: { type: boolean }
+
+    MealAlternative:
+      type: object
+      properties:
+        mealName: { type: string }
+        description: { type: string }
+        calories: { type: integer }
+        proteinGrams: { type: number, format: double }
+        carbsGrams: { type: number, format: double }
+        fatGrams: { type: number, format: double }
+        calorieDeviation: { type: number, format: double }
+        foodItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/AiFoodItem'
+
+    AiWorkoutAdjustRequest:
+      type: object
+      properties:
+        currentExercises:
+          type: array
+          items:
+            type: object
+        feedbackHistory:
+          type: array
+          items:
+            type: object
+        goal: { type: string }
+        currentWeek: { type: integer }
+
+    AiWorkoutAdjustResponse:
+      type: object
+      properties:
+        adjustedExercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdjustedExercise'
+        reasoning: { type: string }
+        fromAi: { type: boolean }
+
+    AdjustedExercise:
+      type: object
+      properties:
+        exerciseName: { type: string }
+        previousSets: { type: integer }
+        previousReps: { type: integer }
+        newSets: { type: integer }
+        newReps: { type: integer }
+        changeReason: { type: string }
+
+    AiRestDayRequest:
+      type: object
+      properties:
+        recentWorkouts:
+          type: array
+          items:
+            type: object
+        muscleGroupsWorked:
+          type: array
+          items: { type: string }
+        daysSinceLastRest: { type: integer }
+        fitnessLevel: { type: string }
+
+    AiRestDayResponse:
+      type: object
+      properties:
+        shouldRest: { type: boolean }
+        recommendation: { type: string }
+        recoveryActivities:
+          type: array
+          items: { type: string }
+        estimatedRecoveryHours: { type: integer }
+        stretchingSuggestions:
+          type: array
+          items: { type: string }
+        fromAi: { type: boolean }
+
+    AiGroceryListRequest:
+      type: object
+      properties:
+        meals:
+          type: array
+          items:
+            type: object
+        daysCount: { type: integer, default: 7 }
+        region: { type: string }
+
+    AiGroceryListResponse:
+      type: object
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroceryCategory'
+        fromAi: { type: boolean }
+
+    GroceryCategory:
+      type: object
+      properties:
+        categoryName: { type: string }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroceryItem'
+
+    GroceryItem:
+      type: object
+      properties:
+        name: { type: string }
+        quantity: { type: string }
+        unit: { type: string }
+        isOptional: { type: boolean }
+

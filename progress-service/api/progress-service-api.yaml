@@ -152,6 +152,51 @@ paths:
               schema:
                 type: object
 
+  # ========== NEW FEATURE ENDPOINTS ==========
+
+  /progress/weekly-report:
+    get:
+      tags: [Progress]
+      operationId: getWeeklyReport
+      summary: Get AI-generated weekly progress report
+      responses:
+        '200':
+          description: Weekly report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeeklyReportDTO'
+
+  /progress/plateau-analysis:
+    get:
+      tags: [Progress]
+      operationId: getPlateauAnalysis
+      summary: Check for fitness plateau
+      parameters:
+        - name: days
+          in: query
+          schema: { type: integer, default: 30 }
+      responses:
+        '200':
+          description: Plateau analysis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlateauAnalysisDTO'
+
+  /progress/achievements:
+    get:
+      tags: [Progress]
+      operationId: getAchievements
+      summary: Get user achievements and streaks
+      responses:
+        '200':
+          description: Achievements
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AchievementsDTO'
+
 components:
   schemas:
     WeightEntryDTO:
@@ -227,3 +272,65 @@ components:
       properties:
         date: { type: string, format: date }
         value: { type: number, format: double }
+
+    # ========== NEW FEATURE SCHEMAS ==========
+
+    WeeklyReportDTO:
+      type: object
+      properties:
+        summary: { type: string }
+        highlights:
+          type: array
+          items: { type: string }
+        concerns:
+          type: array
+          items: { type: string }
+        recommendations:
+          type: array
+          items: { type: string }
+        overallScore: { type: integer }
+        fromAi: { type: boolean }
+        weekStartDate: { type: string, format: date }
+
+    PlateauAnalysisDTO:
+      type: object
+      properties:
+        isPlateauDetected: { type: boolean }
+        plateauType: { type: string }
+        durationWeeks: { type: integer }
+        analysis: { type: string }
+        suggestions:
+          type: array
+          items: { type: string }
+        fromAi: { type: boolean }
+
+    AchievementsDTO:
+      type: object
+      properties:
+        achievements:
+          type: array
+          items:
+            type: object
+        streaks:
+          type: array
+          items:
+            type: object
+
+    AchievementItem:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        icon: { type: string }
+        earned: { type: boolean }
+        earnedAt: { type: string, format: date }
+        progress: { type: number, format: double }
+
+    StreakItem:
+      type: object
+      properties:
+        type: { type: string }
+        currentCount: { type: integer }
+        longestCount: { type: integer }
+        lastActivityDate: { type: string, format: date }
+

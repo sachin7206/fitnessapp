@@ -20,6 +20,9 @@ public class NutritionController implements NutritionApi {
     private final FoodPreferenceOperations userFoodPreferenceService;
     private final NutritionProfileOperations nutritionProfileService;
     private final MealTrackingOperations mealTrackingService;
+    private final FoodLoggingOperations foodLoggingService;
+    private final MealSwapOperations mealSwapService;
+    private final GroceryListOperations groceryListService;
 
     private String getCurrentEmail() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -110,5 +113,40 @@ public class NutritionController implements NutritionApi {
     @Override
     public ResponseEntity<DailyNutritionSummaryDTO> getTodayTracking() {
         return ResponseEntity.ok(mealTrackingService.getTodayTracking(getCurrentEmail()));
+    }
+
+    // ========== NEW FEATURE ENDPOINTS ==========
+
+    @Override
+    public ResponseEntity<FoodLogDTO> logFoodPhoto(FoodPhotoLogRequest request) {
+        return ResponseEntity.ok(foodLoggingService.logFoodPhoto(getCurrentEmail(), request));
+    }
+
+    @Override
+    public ResponseEntity<List<FoodLogDTO>> getTodayFoodLogs() {
+        return ResponseEntity.ok(foodLoggingService.getTodayFoodLogs(getCurrentEmail()));
+    }
+
+    @Override
+    public ResponseEntity<List<FoodLogDTO>> getFoodLogHistory(Integer days) {
+        return ResponseEntity.ok(foodLoggingService.getFoodLogHistory(getCurrentEmail(), days != null ? days : 7));
+    }
+
+    @Override
+    public ResponseEntity<MealSwapResponseDTO> suggestMealSwap(MealSwapRequestDTO request) {
+        return ResponseEntity.ok(mealSwapService.suggestMealSwap(getCurrentEmail(), request));
+    }
+
+    @Override
+    public ResponseEntity<NutritionPlanDTO> applyMealSwap(ApplyMealSwapRequest request) {
+        // For now, just return the current active plan — actual swap logic can be enhanced
+        String email = getCurrentEmail();
+        UserNutritionPlanDTO userPlan = nutritionService.getActivePlan(email);
+        return userPlan != null ? ResponseEntity.ok(userPlan.getNutritionPlan()) : ResponseEntity.noContent().build();
+    }
+
+    @Override
+    public ResponseEntity<GroceryListResponseDTO> getGroceryList(Integer weekNumber) {
+        return ResponseEntity.ok(groceryListService.getGroceryList(getCurrentEmail(), weekNumber != null ? weekNumber : 1));
     }
 }

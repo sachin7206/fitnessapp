@@ -198,6 +198,24 @@ const MyWorkoutScreen = ({ navigation }) => {
           </View>
         </View>
 
+        {/* Quick Action Buttons */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: spacing.lg }}>
+          <TouchableOpacity
+            style={{ alignItems: 'center', backgroundColor: colors.surface, borderRadius: borderRadius.lg, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 }}
+            onPress={() => navigation.navigate('WorkoutFeedback')}
+          >
+            <Text style={{ fontSize: 24, marginBottom: 4 }}>⚡</Text>
+            <Text style={{ fontSize: 11, color: colors.text.secondary, fontWeight: '600' }}>Feedback</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{ alignItems: 'center', backgroundColor: colors.surface, borderRadius: borderRadius.lg, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 }}
+            onPress={() => navigation.navigate('WeeklyReport')}
+          >
+            <Text style={{ fontSize: 24, marginBottom: 4 }}>📊</Text>
+            <Text style={{ fontSize: 11, color: colors.text.secondary, fontWeight: '600' }}>Report</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Motivational Quote — 30 min before workout */}
         {(isPreWorkout || isDuringWorkout) && workout.motivationalQuote && (
           <View style={styles.quoteCard}>

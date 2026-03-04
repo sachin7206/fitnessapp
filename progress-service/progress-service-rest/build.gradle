@@ -39,18 +39,24 @@ openApiGenerate {
         documentationProvider: "none"
     ]
     typeMappings.set([
-        "WeightEntryDTO"     : "WeightEntryDTO",
-        "BodyMeasurementDTO" : "BodyMeasurementDTO",
-        "ProgressGoalDTO"    : "ProgressGoalDTO",
-        "ProgressSummaryDTO" : "ProgressSummaryDTO",
-        "TrendDataDTO"       : "TrendDataDTO"
+        "WeightEntryDTO"      : "WeightEntryDTO",
+        "BodyMeasurementDTO"  : "BodyMeasurementDTO",
+        "ProgressGoalDTO"     : "ProgressGoalDTO",
+        "ProgressSummaryDTO"  : "ProgressSummaryDTO",
+        "TrendDataDTO"        : "TrendDataDTO",
+        "WeeklyReportDTO"     : "WeeklyReportDTO",
+        "PlateauAnalysisDTO"  : "PlateauAnalysisDTO",
+        "AchievementsDTO"     : "AchievementsDTO"
     ])
     importMappings.set([
-        "WeightEntryDTO"     : "com.fitnessapp.progress.common.dto.WeightEntryDTO",
-        "BodyMeasurementDTO" : "com.fitnessapp.progress.common.dto.BodyMeasurementDTO",
-        "ProgressGoalDTO"    : "com.fitnessapp.progress.common.dto.ProgressGoalDTO",
-        "ProgressSummaryDTO" : "com.fitnessapp.progress.common.dto.ProgressSummaryDTO",
-        "TrendDataDTO"       : "com.fitnessapp.progress.common.dto.TrendDataDTO"
+        "WeightEntryDTO"      : "com.fitnessapp.progress.common.dto.WeightEntryDTO",
+        "BodyMeasurementDTO"  : "com.fitnessapp.progress.common.dto.BodyMeasurementDTO",
+        "ProgressGoalDTO"     : "com.fitnessapp.progress.common.dto.ProgressGoalDTO",
+        "ProgressSummaryDTO"  : "com.fitnessapp.progress.common.dto.ProgressSummaryDTO",
+        "TrendDataDTO"        : "com.fitnessapp.progress.common.dto.TrendDataDTO",
+        "WeeklyReportDTO"     : "com.fitnessapp.progress.common.dto.WeeklyReportDTO",
+        "PlateauAnalysisDTO"  : "com.fitnessapp.progress.common.dto.PlateauAnalysisDTO",
+        "AchievementsDTO"     : "com.fitnessapp.progress.common.dto.AchievementsDTO"
     ])
 }
 

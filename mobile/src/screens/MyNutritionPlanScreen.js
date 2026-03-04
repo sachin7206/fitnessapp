@@ -566,6 +566,31 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
           </Text>
         </View>
 
+        {/* Quick Action Buttons */}
+        <View style={styles.quickActionsRow}>
+          <TouchableOpacity
+            style={styles.quickActionBtn}
+            onPress={() => navigation.navigate('GroceryList')}
+          >
+            <Text style={styles.quickActionIcon}>🛒</Text>
+            <Text style={styles.quickActionLabel}>Grocery List</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickActionBtn}
+            onPress={() => navigation.navigate('FoodPhotoLog')}
+          >
+            <Text style={styles.quickActionIcon}>📸</Text>
+            <Text style={styles.quickActionLabel}>Food Log</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickActionBtn}
+            onPress={() => navigation.navigate('WeeklyReport')}
+          >
+            <Text style={styles.quickActionIcon}>📊</Text>
+            <Text style={styles.quickActionLabel}>Report</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Today's Meals */}
         <Text style={styles.sectionTitle}>Today's Meals ({todaysMeals.length})</Text>
 
@@ -1139,6 +1164,30 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.text.inverse,
     fontWeight: '700',
+  },
+  quickActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: spacing.lg,
+    marginTop: spacing.md,
+  },
+  quickActionBtn: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    ...shadows.sm,
+  },
+  quickActionIcon: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  quickActionLabel: {
+    ...typography.caption,
+    color: colors.text.secondary,
+    fontWeight: '600',
+    fontSize: 11,
   },
 });
 

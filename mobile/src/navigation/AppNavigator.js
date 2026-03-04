@@ -25,6 +25,10 @@ import MyWorkoutScreen from '../screens/MyWorkoutScreen';
 import StepHistoryScreen from '../screens/StepHistoryScreen';
 import ProgressDashboardScreen from '../screens/ProgressDashboardScreen';
 import WellnessHomeScreen from '../screens/WellnessHomeScreen';
+import FoodPhotoLogScreen from '../screens/FoodPhotoLogScreen';
+import GroceryListScreen from '../screens/GroceryListScreen';
+import WeeklyReportScreen from '../screens/WeeklyReportScreen';
+import WorkoutFeedbackScreen from '../screens/WorkoutFeedbackScreen';
 
 import { colors, spacing } from '../config/theme';
 
@@ -103,6 +107,10 @@ const MainStack = () => (
     <Stack.Screen name="StepHistory" component={StepHistoryScreen} />
     <Stack.Screen name="ProgressDashboard" component={ProgressDashboardScreen} />
     <Stack.Screen name="WellnessHome" component={WellnessHomeScreen} />
+    <Stack.Screen name="FoodPhotoLog" component={FoodPhotoLogScreen} />
+    <Stack.Screen name="GroceryList" component={GroceryListScreen} />
+    <Stack.Screen name="WeeklyReport" component={WeeklyReportScreen} />
+    <Stack.Screen name="WorkoutFeedback" component={WorkoutFeedbackScreen} />
   </Stack.Navigator>
 );
 

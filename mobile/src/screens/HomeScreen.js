@@ -328,6 +328,30 @@ const HomeScreen = ({ navigation }) => {
       icon: '🧘',
       onPress: () => navigation.navigate('WellnessHome'),
     },
+    {
+      title: 'Food Log',
+      description: 'Log meals & track calories',
+      icon: '📸',
+      onPress: () => navigation.navigate('FoodPhotoLog'),
+    },
+    {
+      title: 'Grocery List',
+      description: 'Shopping list from plan',
+      icon: '🛒',
+      onPress: () => navigation.navigate('GroceryList'),
+    },
+    {
+      title: 'Weekly Report',
+      description: 'AI progress insights',
+      icon: '📊',
+      onPress: () => navigation.navigate('WeeklyReport'),
+    },
+    {
+      title: 'Workout Feedback',
+      description: 'Rate & optimize workouts',
+      icon: '⚡',
+      onPress: () => navigation.navigate('WorkoutFeedback'),
+    },
   ];
 
   // ---------- Render ----------

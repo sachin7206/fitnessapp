@@ -9,6 +9,7 @@ import com.google.genai.types.GenerateContentConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
+import java.util.Base64;
 import java.util.List;
 
 /**
@@ -95,6 +96,64 @@ public class GeminiClientService {
      */
     public String generateTextContent(String prompt) {
         return generateContent(prompt, false);
+    }
+
+    /**
+     * Generate content with an image (multimodal) using Base64-encoded image.
+     * @param prompt the text prompt
+     * @param imageBase64 the Base64-encoded image string
+     * @param jsonMode whether to request JSON response format
+     * @return the generated text content
+     */
+    public String generateContentWithImage(String prompt, String imageBase64, boolean jsonMode) {
+        List<String> apiKeys = geminiConfig.getApiKeys();
+        if (apiKeys.isEmpty()) {
+            throw new RuntimeException("No Gemini API keys configured");
+        }
+
+        for (String apiKey : apiKeys) {
+            try {
+                Client client = Client.builder().apiKey(apiKey).build();
+
+                GenerateContentConfig.Builder configBuilder = GenerateContentConfig.builder()
+                        .temperature(0.7f)
+                        .maxOutputTokens(8192);
+
+                if (jsonMode) {
+                    configBuilder.responseMimeType("application/json");
+                }
+
+                // Build multimodal content with image and text
+                byte[] imageBytes = Base64.getDecoder().decode(imageBase64);
+                Part imagePart = Part.fromBytes(imageBytes, "image/jpeg");
+                Part textPart = Part.fromText(prompt);
+                Content content = Content.builder()
+                        .role("user")
+                        .parts(List.of(imagePart, textPart))
+                        .build();
+
+                GenerateContentResponse response = client.models.generateContent(
+                        geminiConfig.getModel(),
+                        List.of(content),
+                        configBuilder.build()
+                );
+
+                String text = response.text();
+                if (text != null && !text.isBlank()) {
+                    log.debug("Gemini multimodal response received, length: {}", text.length());
+                    return text;
+                }
+            } catch (Exception e) {
+                String msg = e.getMessage() != null ? e.getMessage() : "";
+                if (msg.contains("429") || msg.contains("quota") || msg.contains("RESOURCE_EXHAUSTED")) {
+                    log.warn("Gemini API key rate limited for multimodal, trying next key...");
+                    continue;
+                }
+                log.error("Gemini multimodal API error: {}", msg);
+                throw new RuntimeException("Gemini multimodal API error: " + msg, e);
+            }
+        }
+        throw new RuntimeException("All Gemini API keys exhausted for multimodal request");
     }
 }
 

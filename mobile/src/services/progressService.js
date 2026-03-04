@@ -33,6 +33,26 @@ const progressService = {
     const res = await apiClient.get(`/progress/trends?days=${days}`);
     return res.data;
   },
+
+  // ========== NEW FEATURES ==========
+
+  // Get weekly AI report
+  getWeeklyReport: async () => {
+    const res = await apiClient.get('/progress/weekly-report');
+    return res.data;
+  },
+
+  // Get plateau analysis
+  getPlateauAnalysis: async (days = 30) => {
+    const res = await apiClient.get(`/progress/plateau-analysis?days=${days}`);
+    return res.data;
+  },
+
+  // Get achievements and streaks
+  getAchievements: async () => {
+    const res = await apiClient.get('/progress/achievements');
+    return res.data;
+  },
 };
 
 export default progressService;

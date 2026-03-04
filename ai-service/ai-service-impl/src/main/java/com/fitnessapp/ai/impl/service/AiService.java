@@ -378,5 +378,492 @@ public class AiService implements AiOperations {
         private Integer sets, reps, durationSeconds, restTimeSeconds, caloriesBurned, steps, order;
         private Boolean isCardio;
     }
+
+    // ================================
+    // FOOD PHOTO ANALYSIS (MULTIMODAL)
+    // ================================
+
+    @Override
+    public AiFoodPhotoAnalysisResponse analyzeFoodPhoto(AiFoodPhotoAnalysisRequest request) {
+        try {
+            String prompt = "You are a nutrition expert. Analyze this food image and identify all food items. "
+                    + "For each item estimate calories and macros. "
+                    + (request.getDescription() != null ? "Context: " + request.getDescription() + "\n" : "")
+                    + "Return ONLY valid JSON (no markdown):\n"
+                    + "{\"foodItems\":[{\"name\":\"...\",\"quantity\":\"1 serving\",\"calories\":200,"
+                    + "\"proteinGrams\":10.0,\"carbsGrams\":25.0,\"fatGrams\":8.0}],"
+                    + "\"totalCalories\":200,\"totalProtein\":10.0,\"totalCarbs\":25.0,\"totalFat\":8.0,\"confidence\":0.8}";
+
+            String jsonText;
+            if (request.getImageBase64() != null && !request.getImageBase64().isEmpty()) {
+                jsonText = geminiClient.generateContentWithImage(prompt, request.getImageBase64(), true);
+            } else {
+                jsonText = geminiClient.generateJsonContent(prompt);
+            }
+
+            String cleaned = cleanJson(jsonText);
+            JsonNode root = objectMapper.readTree(cleaned);
+
+            AiFoodPhotoAnalysisResponse response = new AiFoodPhotoAnalysisResponse();
+            List<AiFoodPhotoAnalysisResponse.RecognizedFoodItem> items = new ArrayList<>();
+            JsonNode itemsNode = root.path("foodItems");
+            if (itemsNode.isArray()) {
+                for (JsonNode node : itemsNode) {
+                    AiFoodPhotoAnalysisResponse.RecognizedFoodItem item = new AiFoodPhotoAnalysisResponse.RecognizedFoodItem();
+                    item.setName(node.path("name").asText("Food"));
+                    item.setQuantity(node.path("quantity").asText("1 serving"));
+                    item.setCalories(node.path("calories").asInt(200));
+                    item.setProteinGrams(node.path("proteinGrams").asDouble(10));
+                    item.setCarbsGrams(node.path("carbsGrams").asDouble(25));
+                    item.setFatGrams(node.path("fatGrams").asDouble(8));
+                    items.add(item);
+                }
+            }
+            response.setFoodItems(items);
+            response.setTotalCalories(root.path("totalCalories").asInt(items.stream().mapToInt(AiFoodPhotoAnalysisResponse.RecognizedFoodItem::getCalories).sum()));
+            response.setTotalProtein(root.path("totalProtein").asDouble());
+            response.setTotalCarbs(root.path("totalCarbs").asDouble());
+            response.setTotalFat(root.path("totalFat").asDouble());
+            response.setConfidence(root.path("confidence").asDouble(0.7));
+            response.setFromAi(true);
+            return response;
+        } catch (Exception e) {
+            log.warn("Food photo analysis failed: {}", e.getMessage());
+            return getFallbackFoodPhotoResponse();
+        }
+    }
+
+    private AiFoodPhotoAnalysisResponse getFallbackFoodPhotoResponse() {
+        AiFoodPhotoAnalysisResponse fallback = new AiFoodPhotoAnalysisResponse();
+        AiFoodPhotoAnalysisResponse.RecognizedFoodItem item = new AiFoodPhotoAnalysisResponse.RecognizedFoodItem(
+                "Unknown Food", "1 serving", 400, 15.0, 45.0, 12.0);
+        fallback.setFoodItems(List.of(item));
+        fallback.setTotalCalories(400);
+        fallback.setTotalProtein(15.0);
+        fallback.setTotalCarbs(45.0);
+        fallback.setTotalFat(12.0);
+        fallback.setConfidence(0.0);
+        fallback.setFromAi(false);
+        return fallback;
+    }
+
+    // ================================
+    // EXERCISE SUBSTITUTION
+    // ================================
+
+    @Override
+    public AiExerciseSubstitutionResponse suggestExerciseSubstitutes(AiExerciseSubstitutionRequest request) {
+        try {
+            StringBuilder p = new StringBuilder();
+            p.append("You are an expert fitness trainer. Suggest 3 alternative exercises.\n\n");
+            p.append("Original Exercise: ").append(request.getExerciseName()).append("\n");
+            p.append("Muscle Group: ").append(request.getMuscleGroup()).append("\n");
+            p.append("Reason for swap: ").append(request.getReason()).append("\n");
+            if (request.getAvailableEquipment() != null && !request.getAvailableEquipment().isEmpty()) {
+                p.append("Available Equipment: ").append(String.join(", ", request.getAvailableEquipment())).append("\n");
+            }
+            if (request.getInjuredBodyParts() != null && !request.getInjuredBodyParts().isEmpty()) {
+                p.append("Injured Body Parts (AVOID): ").append(String.join(", ", request.getInjuredBodyParts())).append("\n");
+            }
+            p.append("\nReturn ONLY valid JSON:\n");
+            p.append("{\"alternatives\":[{\"exerciseName\":\"...\",\"muscleGroup\":\"...\",\"sets\":3,\"reps\":12,");
+            p.append("\"reason\":\"why this is a good substitute\",\"equipmentNeeded\":\"...\",\"difficultyLevel\":\"EASY|MEDIUM|HARD\"}]}");
+
+            String jsonText = geminiClient.generateJsonContent(p.toString());
+            String cleaned = cleanJson(jsonText);
+            JsonNode root = objectMapper.readTree(cleaned);
+            List<AiExerciseSubstitutionResponse.ExerciseAlternative> alternatives = objectMapper.readValue(
+                    root.path("alternatives").toString(), new TypeReference<>() {});
+
+            AiExerciseSubstitutionResponse response = new AiExerciseSubstitutionResponse();
+            response.setAlternatives(alternatives);
+            response.setFromAi(true);
+            return response;
+        } catch (Exception e) {
+            log.warn("Exercise substitution failed: {}", e.getMessage());
+            return getFallbackExerciseSubstitution(request);
+        }
+    }
+
+    private AiExerciseSubstitutionResponse getFallbackExerciseSubstitution(AiExerciseSubstitutionRequest request) {
+        List<AiExerciseSubstitutionResponse.ExerciseAlternative> fallbacks = new ArrayList<>();
+        fallbacks.add(new AiExerciseSubstitutionResponse.ExerciseAlternative(
+                "Bodyweight Squats", request.getMuscleGroup(), 3, 15,
+                "No equipment needed, targets similar muscles", "None", "EASY"));
+        fallbacks.add(new AiExerciseSubstitutionResponse.ExerciseAlternative(
+                "Push-ups", request.getMuscleGroup(), 3, 12,
+                "Universal bodyweight exercise", "None", "MEDIUM"));
+        fallbacks.add(new AiExerciseSubstitutionResponse.ExerciseAlternative(
+                "Plank", request.getMuscleGroup(), 3, 0,
+                "Core stability, hold for 30-60 seconds", "None", "EASY"));
+        AiExerciseSubstitutionResponse response = new AiExerciseSubstitutionResponse();
+        response.setAlternatives(fallbacks);
+        response.setFromAi(false);
+        return response;
+    }
+
+    // ================================
+    // WEEKLY PROGRESS REPORT
+    // ================================
+
+    @Override
+    public AiWeeklyReportResponse generateWeeklyReport(AiWeeklyReportRequest request) {
+        try {
+            StringBuilder p = new StringBuilder();
+            p.append("You are a fitness coach. Generate a brief weekly progress report.\n\n");
+            p.append("User: ").append(request.getUserName()).append("\n");
+            p.append("Week starting: ").append(request.getWeekStartDate()).append("\n");
+            p.append("Workouts completed: ").append(request.getWorkoutCompletions())
+             .append("/").append(request.getTotalWorkoutsPlanned()).append("\n");
+            p.append("Meal adherence: ").append(String.format("%.0f", request.getMealAdherencePercent())).append("%\n");
+            p.append("Total steps: ").append(request.getTotalSteps()).append("\n");
+            p.append("Calories consumed: ").append(request.getCaloriesConsumed())
+             .append(" / target: ").append(request.getCaloriesTarget()).append("\n");
+            if (request.getGoals() != null) {
+                p.append("Goals: ").append(String.join(", ", request.getGoals())).append("\n");
+            }
+            p.append("\nReturn ONLY valid JSON:\n");
+            p.append("{\"summary\":\"...\",\"highlights\":[\"...\"],\"concerns\":[\"...\"],");
+            p.append("\"recommendations\":[\"...\"],\"overallScore\":75}");
+            p.append("\noverallScore is 0-100. Be encouraging but honest.");
+
+            String jsonText = geminiClient.generateJsonContent(p.toString());
+            String cleaned = cleanJson(jsonText);
+            JsonNode root = objectMapper.readTree(cleaned);
+
+            AiWeeklyReportResponse response = new AiWeeklyReportResponse();
+            response.setSummary(root.path("summary").asText("Good progress this week!"));
+            response.setHighlights(parseStringList(root.path("highlights")));
+            response.setConcerns(parseStringList(root.path("concerns")));
+            response.setRecommendations(parseStringList(root.path("recommendations")));
+            response.setOverallScore(root.path("overallScore").asInt(70));
+            response.setFromAi(true);
+            return response;
+        } catch (Exception e) {
+            log.warn("Weekly report generation failed: {}", e.getMessage());
+            return getFallbackWeeklyReport(request);
+        }
+    }
+
+    private AiWeeklyReportResponse getFallbackWeeklyReport(AiWeeklyReportRequest request) {
+        AiWeeklyReportResponse fallback = new AiWeeklyReportResponse();
+        int score = 50;
+        List<String> highlights = new ArrayList<>();
+        List<String> concerns = new ArrayList<>();
+        List<String> recommendations = new ArrayList<>();
+
+        if (request.getWorkoutCompletions() > 0) {
+            highlights.add("Completed " + request.getWorkoutCompletions() + " workouts this week");
+            score += 10;
+        }
+        if (request.getMealAdherencePercent() > 70) {
+            highlights.add("Great meal adherence at " + String.format("%.0f", request.getMealAdherencePercent()) + "%");
+            score += 10;
+        } else {
+            concerns.add("Meal adherence could improve");
+        }
+        if (request.getTotalSteps() > 50000) {
+            highlights.add("Excellent step count: " + request.getTotalSteps());
+            score += 10;
+        }
+        recommendations.add("Stay consistent with your workout schedule");
+        recommendations.add("Drink at least 8 glasses of water daily");
+        recommendations.add("Get 7-8 hours of sleep for optimal recovery");
+
+        fallback.setSummary("Here is your weekly fitness summary. Keep pushing towards your goals!");
+        fallback.setHighlights(highlights);
+        fallback.setConcerns(concerns);
+        fallback.setRecommendations(recommendations);
+        fallback.setOverallScore(Math.min(100, score));
+        fallback.setFromAi(false);
+        return fallback;
+    }
+
+    // ================================
+    // PLATEAU DETECTION
+    // ================================
+
+    @Override
+    public AiPlateauDetectionResponse detectPlateau(AiPlateauDetectionRequest request) {
+        try {
+            StringBuilder p = new StringBuilder();
+            p.append("You are a fitness analyst. Analyze this data for plateau detection.\n\n");
+            p.append("Goal: ").append(request.getCurrentGoal()).append("\n");
+            p.append("Days analyzed: ").append(request.getDaysAnalyzed()).append("\n");
+            p.append("Weight history: ").append(objectMapper.writeValueAsString(request.getWeightHistory())).append("\n");
+            if (request.getPerformanceHistory() != null) {
+                p.append("Performance history: ").append(objectMapper.writeValueAsString(request.getPerformanceHistory())).append("\n");
+            }
+            p.append("\nReturn ONLY valid JSON:\n");
+            p.append("{\"isPlateauDetected\":true/false,\"plateauType\":\"WEIGHT|STRENGTH|BOTH|NONE\",");
+            p.append("\"durationWeeks\":0,\"analysis\":\"...\",\"suggestions\":[\"...\"]}");
+
+            String jsonText = geminiClient.generateJsonContent(p.toString());
+            String cleaned = cleanJson(jsonText);
+            JsonNode root = objectMapper.readTree(cleaned);
+
+            AiPlateauDetectionResponse response = new AiPlateauDetectionResponse();
+            response.setPlateauDetected(root.path("isPlateauDetected").asBoolean(false));
+            response.setPlateauType(root.path("plateauType").asText("NONE"));
+            response.setDurationWeeks(root.path("durationWeeks").asInt(0));
+            response.setAnalysis(root.path("analysis").asText("Analysis unavailable"));
+            response.setSuggestions(parseStringList(root.path("suggestions")));
+            response.setFromAi(true);
+            return response;
+        } catch (Exception e) {
+            log.warn("Plateau detection failed: {}", e.getMessage());
+            AiPlateauDetectionResponse fallback = new AiPlateauDetectionResponse();
+            fallback.setPlateauDetected(false);
+            fallback.setPlateauType("NONE");
+            fallback.setAnalysis("Unable to analyze data. Continue your current plan and log data regularly.");
+            fallback.setSuggestions(List.of("Vary your workout intensity", "Try new exercises", "Adjust calorie intake slightly"));
+            fallback.setFromAi(false);
+            return fallback;
+        }
+    }
+
+    // ================================
+    // MEAL SWAP SUGGESTIONS
+    // ================================
+
+    @Override
+    public AiMealSwapResponse suggestMealSwap(AiMealSwapRequest request) {
+        try {
+            StringBuilder p = new StringBuilder();
+            p.append("You are an Indian nutritionist. Suggest 3 meal alternatives.\n\n");
+            p.append("Original Meal: ").append(request.getOriginalMealName()).append("\n");
+            p.append("Calories: ").append(request.getOriginalCalories()).append("\n");
+            p.append("Protein: ").append(request.getOriginalProtein()).append("g\n");
+            p.append("Carbs: ").append(request.getOriginalCarbs()).append("g\n");
+            p.append("Fat: ").append(request.getOriginalFat()).append("g\n");
+            p.append("Meal Type: ").append(request.getMealType()).append("\n");
+            p.append("Diet Type: ").append(request.getDietType()).append("\n");
+            p.append("Region: ").append(request.getRegion()).append(" India\n");
+            p.append("Macro tolerance: ±").append(request.getTolerancePercent()).append("%\n");
+            p.append("\nReturn ONLY valid JSON:\n");
+            p.append("{\"alternatives\":[{\"mealName\":\"...\",\"description\":\"...\",\"calories\":450,");
+            p.append("\"proteinGrams\":15.0,\"carbsGrams\":60.0,\"fatGrams\":12.0,\"calorieDeviation\":2.5,");
+            p.append("\"foodItems\":[{\"name\":\"...\",\"quantity\":\"...\",\"calories\":200,\"proteinGrams\":8.0,\"carbsGrams\":25.0,\"fatGrams\":5.0}]}]}");
+
+            String jsonText = geminiClient.generateJsonContent(p.toString());
+            String cleaned = cleanJson(jsonText);
+            JsonNode root = objectMapper.readTree(cleaned);
+
+            List<AiMealSwapResponse.MealAlternative> alternatives = new ArrayList<>();
+            for (JsonNode altNode : root.path("alternatives")) {
+                AiMealSwapResponse.MealAlternative alt = new AiMealSwapResponse.MealAlternative();
+                alt.setMealName(altNode.path("mealName").asText("Alternative Meal"));
+                alt.setDescription(altNode.path("description").asText(""));
+                alt.setCalories(altNode.path("calories").asInt(request.getOriginalCalories()));
+                alt.setProteinGrams(altNode.path("proteinGrams").asDouble(request.getOriginalProtein()));
+                alt.setCarbsGrams(altNode.path("carbsGrams").asDouble(request.getOriginalCarbs()));
+                alt.setFatGrams(altNode.path("fatGrams").asDouble(request.getOriginalFat()));
+                alt.setCalorieDeviation(altNode.path("calorieDeviation").asDouble(0));
+
+                List<AiNutritionPlanResponse.AiFoodItem> foodItems = new ArrayList<>();
+                for (JsonNode fi : altNode.path("foodItems")) {
+                    AiNutritionPlanResponse.AiFoodItem item = new AiNutritionPlanResponse.AiFoodItem();
+                    item.setName(fi.path("name").asText("Food"));
+                    item.setQuantity(fi.path("quantity").asText("1 serving"));
+                    item.setCalories(fi.path("calories").asInt(100));
+                    item.setProteinGrams(fi.path("proteinGrams").asDouble(5));
+                    item.setCarbsGrams(fi.path("carbsGrams").asDouble(15));
+                    item.setFatGrams(fi.path("fatGrams").asDouble(3));
+                    foodItems.add(item);
+                }
+                alt.setFoodItems(foodItems);
+                alternatives.add(alt);
+            }
+
+            AiMealSwapResponse response = new AiMealSwapResponse();
+            response.setAlternatives(alternatives);
+            response.setFromAi(true);
+            return response;
+        } catch (Exception e) {
+            log.warn("Meal swap suggestion failed: {}", e.getMessage());
+            return getFallbackMealSwap(request);
+        }
+    }
+
+    private AiMealSwapResponse getFallbackMealSwap(AiMealSwapRequest request) {
+        List<AiMealSwapResponse.MealAlternative> fallbacks = new ArrayList<>();
+        fallbacks.add(new AiMealSwapResponse.MealAlternative("Dal Rice Bowl",
+                "Simple and nutritious", request.getOriginalCalories(), request.getOriginalProtein(),
+                request.getOriginalCarbs(), request.getOriginalFat(), 0, new ArrayList<>()));
+        fallbacks.add(new AiMealSwapResponse.MealAlternative("Egg Bhurji with Roti",
+                "High protein alternative", request.getOriginalCalories(), request.getOriginalProtein(),
+                request.getOriginalCarbs(), request.getOriginalFat(), 0, new ArrayList<>()));
+        fallbacks.add(new AiMealSwapResponse.MealAlternative("Mixed Vegetable Curry with Rice",
+                "Balanced meal option", request.getOriginalCalories(), request.getOriginalProtein(),
+                request.getOriginalCarbs(), request.getOriginalFat(), 0, new ArrayList<>()));
+        AiMealSwapResponse response = new AiMealSwapResponse();
+        response.setAlternatives(fallbacks);
+        response.setFromAi(false);
+        return response;
+    }
+
+    // ================================
+    // WORKOUT PROGRESSION ADJUSTMENT
+    // ================================
+
+    @Override
+    public AiWorkoutAdjustResponse adjustWorkoutProgression(AiWorkoutAdjustRequest request) {
+        try {
+            StringBuilder p = new StringBuilder();
+            p.append("You are an expert fitness trainer. Adjust workout progression based on feedback.\n\n");
+            p.append("Goal: ").append(request.getGoal()).append("\n");
+            p.append("Current Week: ").append(request.getCurrentWeek()).append("\n");
+            p.append("Current exercises: ").append(objectMapper.writeValueAsString(request.getCurrentExercises())).append("\n");
+            p.append("Feedback history: ").append(objectMapper.writeValueAsString(request.getFeedbackHistory())).append("\n");
+            p.append("\nReturn ONLY valid JSON:\n");
+            p.append("{\"adjustedExercises\":[{\"exerciseName\":\"...\",\"previousSets\":3,\"previousReps\":12,");
+            p.append("\"newSets\":4,\"newReps\":10,\"changeReason\":\"...\"}],\"reasoning\":\"overall reasoning\"}");
+            p.append("\nRules: increase intensity if too easy, decrease if too hard, maintain if just right.");
+
+            String jsonText = geminiClient.generateJsonContent(p.toString());
+            String cleaned = cleanJson(jsonText);
+            JsonNode root = objectMapper.readTree(cleaned);
+
+            List<AiWorkoutAdjustResponse.AdjustedExercise> adjusted = objectMapper.readValue(
+                    root.path("adjustedExercises").toString(), new TypeReference<>() {});
+
+            AiWorkoutAdjustResponse response = new AiWorkoutAdjustResponse();
+            response.setAdjustedExercises(adjusted);
+            response.setReasoning(root.path("reasoning").asText("Adjusted based on your feedback"));
+            response.setFromAi(true);
+            return response;
+        } catch (Exception e) {
+            log.warn("Workout adjustment failed: {}", e.getMessage());
+            AiWorkoutAdjustResponse fallback = new AiWorkoutAdjustResponse();
+            fallback.setAdjustedExercises(new ArrayList<>());
+            fallback.setReasoning("Keep your current plan for another week, then reassess.");
+            fallback.setFromAi(false);
+            return fallback;
+        }
+    }
+
+    // ================================
+    // REST DAY ANALYSIS
+    // ================================
+
+    @Override
+    public AiRestDayResponse analyzeRestDay(AiRestDayRequest request) {
+        try {
+            StringBuilder p = new StringBuilder();
+            p.append("You are a sports recovery specialist. Analyze if this person needs rest.\n\n");
+            p.append("Days since last rest: ").append(request.getDaysSinceLastRest()).append("\n");
+            p.append("Fitness level: ").append(request.getFitnessLevel()).append("\n");
+            if (request.getMuscleGroupsWorked() != null) {
+                p.append("Recent muscle groups: ").append(String.join(", ", request.getMuscleGroupsWorked())).append("\n");
+            }
+            p.append("\nReturn ONLY valid JSON:\n");
+            p.append("{\"shouldRest\":true/false,\"recommendation\":\"...\",");
+            p.append("\"recoveryActivities\":[\"...\"],\"estimatedRecoveryHours\":24,");
+            p.append("\"stretchingSuggestions\":[\"...\"]}");
+
+            String jsonText = geminiClient.generateJsonContent(p.toString());
+            String cleaned = cleanJson(jsonText);
+            JsonNode root = objectMapper.readTree(cleaned);
+
+            AiRestDayResponse response = new AiRestDayResponse();
+            response.setShouldRest(root.path("shouldRest").asBoolean(request.getDaysSinceLastRest() > 3));
+            response.setRecommendation(root.path("recommendation").asText("Listen to your body"));
+            response.setRecoveryActivities(parseStringList(root.path("recoveryActivities")));
+            response.setEstimatedRecoveryHours(root.path("estimatedRecoveryHours").asInt(24));
+            response.setStretchingSuggestions(parseStringList(root.path("stretchingSuggestions")));
+            response.setFromAi(true);
+            return response;
+        } catch (Exception e) {
+            log.warn("Rest day analysis failed: {}", e.getMessage());
+            AiRestDayResponse fallback = new AiRestDayResponse();
+            fallback.setShouldRest(request.getDaysSinceLastRest() > 3);
+            fallback.setRecommendation(request.getDaysSinceLastRest() > 3
+                    ? "You've been training for several days. Consider a rest day for recovery."
+                    : "You're well-rested. Go ahead with your workout!");
+            fallback.setRecoveryActivities(List.of("Light walking", "Gentle stretching", "Foam rolling", "Yoga"));
+            fallback.setEstimatedRecoveryHours(24);
+            fallback.setStretchingSuggestions(List.of("Hamstring stretch", "Quad stretch", "Shoulder stretch", "Cat-cow stretch"));
+            fallback.setFromAi(false);
+            return fallback;
+        }
+    }
+
+    // ================================
+    // GROCERY LIST GENERATION
+    // ================================
+
+    @Override
+    public AiGroceryListResponse generateGroceryList(AiGroceryListRequest request) {
+        try {
+            StringBuilder p = new StringBuilder();
+            p.append("You are an Indian grocery shopping expert. Generate a categorized grocery list.\n\n");
+            p.append("Meals for ").append(request.getDaysCount()).append(" days:\n");
+            p.append(objectMapper.writeValueAsString(request.getMeals())).append("\n");
+            if (request.getRegion() != null) {
+                p.append("Region: ").append(request.getRegion()).append(" India\n");
+            }
+            p.append("\nReturn ONLY valid JSON:\n");
+            p.append("{\"categories\":[{\"categoryName\":\"Vegetables\",\"items\":[");
+            p.append("{\"name\":\"Tomato\",\"quantity\":\"500\",\"unit\":\"grams\",\"isOptional\":false}]}]}");
+            p.append("\nCategories: Vegetables, Fruits, Grains & Cereals, Dairy, Protein, Spices & Condiments, Oils & Fats, Others");
+
+            String jsonText = geminiClient.generateJsonContent(p.toString());
+            String cleaned = cleanJson(jsonText);
+            JsonNode root = objectMapper.readTree(cleaned);
+
+            List<AiGroceryListResponse.GroceryCategory> categories = objectMapper.readValue(
+                    root.path("categories").toString(), new TypeReference<>() {});
+
+            AiGroceryListResponse response = new AiGroceryListResponse();
+            response.setCategories(categories);
+            response.setFromAi(true);
+            return response;
+        } catch (Exception e) {
+            log.warn("Grocery list generation failed: {}", e.getMessage());
+            return getFallbackGroceryList();
+        }
+    }
+
+    private AiGroceryListResponse getFallbackGroceryList() {
+        List<AiGroceryListResponse.GroceryCategory> categories = new ArrayList<>();
+        categories.add(new AiGroceryListResponse.GroceryCategory("Vegetables", List.of(
+                new AiGroceryListResponse.GroceryItem("Onions", "1", "kg", false),
+                new AiGroceryListResponse.GroceryItem("Tomatoes", "500", "grams", false),
+                new AiGroceryListResponse.GroceryItem("Potatoes", "1", "kg", false),
+                new AiGroceryListResponse.GroceryItem("Green Vegetables", "500", "grams", false)
+        )));
+        categories.add(new AiGroceryListResponse.GroceryCategory("Grains & Cereals", List.of(
+                new AiGroceryListResponse.GroceryItem("Rice", "2", "kg", false),
+                new AiGroceryListResponse.GroceryItem("Wheat Flour", "1", "kg", false),
+                new AiGroceryListResponse.GroceryItem("Oats", "500", "grams", true)
+        )));
+        categories.add(new AiGroceryListResponse.GroceryCategory("Dairy", List.of(
+                new AiGroceryListResponse.GroceryItem("Milk", "2", "liters", false),
+                new AiGroceryListResponse.GroceryItem("Curd", "500", "grams", false)
+        )));
+        categories.add(new AiGroceryListResponse.GroceryCategory("Protein", List.of(
+                new AiGroceryListResponse.GroceryItem("Eggs", "12", "pieces", false),
+                new AiGroceryListResponse.GroceryItem("Chicken", "1", "kg", true),
+                new AiGroceryListResponse.GroceryItem("Dal (Lentils)", "500", "grams", false)
+        )));
+        AiGroceryListResponse response = new AiGroceryListResponse();
+        response.setCategories(categories);
+        response.setFromAi(false);
+        return response;
+    }
+
+    // ================================
+    // UTILITY HELPERS
+    // ================================
+
+    private List<String> parseStringList(JsonNode node) {
+        List<String> list = new ArrayList<>();
+        if (node != null && node.isArray()) {
+            for (JsonNode item : node) {
+                list.add(item.asText());
+            }
+        }
+        return list;
+    }
 }
 

@@ -255,6 +255,116 @@ paths:
               schema:
                 type: object
 
+  # ========== NEW FEATURE ENDPOINTS ==========
+
+  /nutrition/food-log:
+    post:
+      tags: [Nutrition]
+      operationId: logFoodPhoto
+      summary: Log food via photo analysis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodPhotoLogRequest'
+      responses:
+        '200':
+          description: Food logged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoodLogDTO'
+
+  /nutrition/food-log/today:
+    get:
+      tags: [Nutrition]
+      operationId: getTodayFoodLogs
+      summary: Get today food logs
+      responses:
+        '200':
+          description: Today food logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FoodLogDTO'
+
+  /nutrition/food-log/history:
+    get:
+      tags: [Nutrition]
+      operationId: getFoodLogHistory
+      summary: Get food log history
+      parameters:
+        - name: days
+          in: query
+          schema: { type: integer, default: 7 }
+      responses:
+        '200':
+          description: Food log history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FoodLogDTO'
+
+  /nutrition/my-plan/swap-meal:
+    post:
+      tags: [Nutrition]
+      operationId: suggestMealSwap
+      summary: Get meal swap suggestions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MealSwapRequestDTO'
+      responses:
+        '200':
+          description: Meal swap suggestions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealSwapResponseDTO'
+
+  /nutrition/my-plan/apply-swap:
+    post:
+      tags: [Nutrition]
+      operationId: applyMealSwap
+      summary: Apply a meal swap
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyMealSwapRequest'
+      responses:
+        '200':
+          description: Meal swapped
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NutritionPlanDTO'
+
+  /nutrition/my-plan/grocery-list:
+    get:
+      tags: [Nutrition]
+      operationId: getGroceryList
+      summary: Generate grocery list from active plan
+      parameters:
+        - name: weekNumber
+          in: query
+          schema: { type: integer, default: 1 }
+      responses:
+        '200':
+          description: Grocery list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroceryListResponseDTO'
+
 components:
   schemas:
     NutritionPlanDTO:
@@ -509,3 +619,74 @@ components:
         consumedProtein: { type: number, format: double }
         consumedCarbs: { type: number, format: double }
         consumedFat: { type: number, format: double }
+
+    # ========== NEW FEATURE SCHEMAS ==========
+
+    FoodPhotoLogRequest:
+      type: object
+      properties:
+        imageBase64: { type: string }
+        description: { type: string }
+        mealType: { type: string }
+        source: { type: string, enum: [PHOTO, MANUAL] }
+
+    FoodLogDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        logDate: { type: string, format: date }
+        mealType: { type: string }
+        description: { type: string }
+        source: { type: string }
+        totalCalories: { type: integer }
+        totalProtein: { type: number, format: double }
+        totalCarbs: { type: number, format: double }
+        totalFat: { type: number, format: double }
+        confidence: { type: number, format: double }
+        foodItems:
+          type: array
+          items:
+            type: object
+        createdAt: { type: string, format: date-time }
+
+    MealSwapRequestDTO:
+      type: object
+      properties:
+        mealId: { type: integer, format: int64 }
+        mealName: { type: string }
+        mealType: { type: string }
+        calories: { type: integer }
+        proteinGrams: { type: number, format: double }
+        carbsGrams: { type: number, format: double }
+        fatGrams: { type: number, format: double }
+
+    MealSwapResponseDTO:
+      type: object
+      properties:
+        originalMeal: { type: string }
+        alternatives:
+          type: array
+          items:
+            type: object
+
+    ApplyMealSwapRequest:
+      type: object
+      properties:
+        originalMealId: { type: integer, format: int64 }
+        newMealName: { type: string }
+        newCalories: { type: integer }
+        newProteinGrams: { type: number, format: double }
+        newCarbsGrams: { type: number, format: double }
+        newFatGrams: { type: number, format: double }
+
+    GroceryListResponseDTO:
+      type: object
+      properties:
+        planName: { type: string }
+        weekNumber: { type: integer }
+        categories:
+          type: array
+          items:
+            type: object
+        fromAi: { type: boolean }
+

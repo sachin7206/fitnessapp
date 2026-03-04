@@ -72,6 +72,32 @@ const workoutService = {
     const response = await apiClient.get(`/workouts/steps/history?days=${days}`);
     return response.data;
   },
+
+  // ========== NEW FEATURES ==========
+
+  // Suggest exercise substitutions
+  suggestExerciseSubstitutes: async (request) => {
+    const response = await apiClient.post('/workouts/my-plan/substitute', request, { timeout: 30000 });
+    return response.data;
+  },
+
+  // Submit workout feedback
+  submitWorkoutFeedback: async (request) => {
+    const response = await apiClient.post('/workouts/my-plan/feedback', request);
+    return response.data;
+  },
+
+  // Get AI-adjusted workout progression
+  adjustWorkoutProgression: async () => {
+    const response = await apiClient.post('/workouts/my-plan/adjust');
+    return response.data;
+  },
+
+  // Get workout feedback history
+  getWorkoutFeedbackHistory: async () => {
+    const response = await apiClient.get('/workouts/my-plan/feedback/history');
+    return response.data;
+  },
 };
 
 export default workoutService;

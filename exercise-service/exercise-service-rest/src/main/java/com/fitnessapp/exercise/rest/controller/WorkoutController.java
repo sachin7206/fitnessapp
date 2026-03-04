@@ -16,6 +16,7 @@ public class WorkoutController implements WorkoutApi {
 
     private final AIBasedWorkoutOperations aiWorkoutService;
     private final WorkoutTrackingOperations workoutTrackingService;
+    private final ExerciseEnhancementOperations exerciseEnhancementService;
 
     private String getCurrentEmail() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -72,5 +73,27 @@ public class WorkoutController implements WorkoutApi {
     @Override
     public ResponseEntity<List<DailyStepTrackingDTO>> getStepHistory(Integer days) {
         return ResponseEntity.ok(workoutTrackingService.getStepHistory(getCurrentEmail(), days != null ? days : 90));
+    }
+
+    // ========== NEW FEATURE ENDPOINTS ==========
+
+    @Override
+    public ResponseEntity<ExerciseSubstitutionResponseDTO> suggestExerciseSubstitutes(ExerciseSubstitutionRequestDTO request) {
+        return ResponseEntity.ok(exerciseEnhancementService.suggestExerciseSubstitutes(getCurrentEmail(), request));
+    }
+
+    @Override
+    public ResponseEntity<Object> submitWorkoutFeedback(WorkoutFeedbackRequest request) {
+        return ResponseEntity.ok(exerciseEnhancementService.submitWorkoutFeedback(getCurrentEmail(), request));
+    }
+
+    @Override
+    public ResponseEntity<WorkoutAdjustmentResponseDTO> adjustWorkoutProgression() {
+        return ResponseEntity.ok(exerciseEnhancementService.adjustWorkoutProgression(getCurrentEmail()));
+    }
+
+    @Override
+    public ResponseEntity<List<WorkoutFeedbackDTO>> getWorkoutFeedbackHistory() {
+        return ResponseEntity.ok(exerciseEnhancementService.getWorkoutFeedbackHistory(getCurrentEmail()));
     }
 }

@@ -13,6 +13,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ProgressController implements ProgressApi {
     private final ProgressTrackingOperations progressService;
+    private final ProgressEnhancementOperations progressEnhancementService;
 
     private String getCurrentEmail() {
         return SecurityContextHolder.getContext().getAuthentication().getName();
@@ -62,5 +63,22 @@ public class ProgressController implements ProgressApi {
     @Override
     public ResponseEntity<TrendDataDTO> getTrends(Integer days) {
         return ResponseEntity.ok(progressService.getTrends(getCurrentEmail(), days != null ? days : 30));
+    }
+
+    // ========== NEW FEATURE ENDPOINTS ==========
+
+    @Override
+    public ResponseEntity<WeeklyReportDTO> getWeeklyReport() {
+        return ResponseEntity.ok(progressEnhancementService.getWeeklyReport(getCurrentEmail()));
+    }
+
+    @Override
+    public ResponseEntity<PlateauAnalysisDTO> getPlateauAnalysis(Integer days) {
+        return ResponseEntity.ok(progressEnhancementService.getPlateauAnalysis(getCurrentEmail(), days != null ? days : 30));
+    }
+
+    @Override
+    public ResponseEntity<AchievementsDTO> getAchievements() {
+        return ResponseEntity.ok(progressEnhancementService.getAchievements(getCurrentEmail()));
     }
 }

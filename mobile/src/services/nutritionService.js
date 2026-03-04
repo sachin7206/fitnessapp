@@ -116,7 +116,48 @@ export const nutritionService = {
     const response = await apiClient.get('/nutrition/tracking/today');
     return response.data;
   },
+
+  // ========== NEW FEATURES ==========
+
+  // Log food via photo
+  logFoodPhoto: async (request) => {
+    const response = await apiClient.post('/nutrition/food-log', request, {
+      timeout: API_CONFIG.LONG_TIMEOUT,
+    });
+    return response.data;
+  },
+
+  // Get today's food logs
+  getTodayFoodLogs: async () => {
+    const response = await apiClient.get('/nutrition/food-log/today');
+    return response.data;
+  },
+
+  // Get food log history
+  getFoodLogHistory: async (days = 7) => {
+    const response = await apiClient.get(`/nutrition/food-log/history?days=${days}`);
+    return response.data;
+  },
+
+  // Get meal swap suggestions
+  suggestMealSwap: async (request) => {
+    const response = await apiClient.post('/nutrition/my-plan/swap-meal', request, {
+      timeout: API_CONFIG.LONG_TIMEOUT,
+    });
+    return response.data;
+  },
+
+  // Apply meal swap
+  applyMealSwap: async (request) => {
+    const response = await apiClient.post('/nutrition/my-plan/apply-swap', request);
+    return response.data;
+  },
+
+  // Get grocery list
+  getGroceryList: async (weekNumber = 1) => {
+    const response = await apiClient.get(`/nutrition/my-plan/grocery-list?weekNumber=${weekNumber}`);
+    return response.data;
+  },
 };
 
 export default nutritionService;
-

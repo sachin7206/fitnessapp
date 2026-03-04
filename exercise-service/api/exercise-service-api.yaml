@@ -179,6 +179,71 @@ paths:
                 items:
                   $ref: '#/components/schemas/DailyStepTrackingDTO'
 
+  /workouts/my-plan/substitute:
+    post:
+      tags: [Workout]
+      operationId: suggestExerciseSubstitutes
+      summary: Get exercise substitution suggestions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExerciseSubstitutionRequestDTO'
+      responses:
+        '200':
+          description: Exercise alternatives
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseSubstitutionResponseDTO'
+
+  /workouts/my-plan/feedback:
+    post:
+      tags: [Workout]
+      operationId: submitWorkoutFeedback
+      summary: Submit post-workout feedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkoutFeedbackRequest'
+      responses:
+        '200':
+          description: Feedback recorded
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /workouts/my-plan/adjust:
+    post:
+      tags: [Workout]
+      operationId: adjustWorkoutProgression
+      summary: Get AI-adjusted workout based on feedback
+      responses:
+        '200':
+          description: Adjusted workout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutAdjustmentResponseDTO'
+
+  /workouts/my-plan/feedback/history:
+    get:
+      tags: [Workout]
+      operationId: getWorkoutFeedbackHistory
+      responses:
+        '200':
+          description: Feedback history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkoutFeedbackDTO'
+
   /health:
     get:
       tags: [Health]
@@ -330,3 +395,57 @@ components:
         steps: { type: integer }
         stepGoal: { type: integer }
         goalCompleted: { type: boolean }
+
+    # ========== NEW FEATURE SCHEMAS ==========
+
+    ExerciseSubstitutionRequestDTO:
+      type: object
+      properties:
+        exerciseName: { type: string }
+        muscleGroup: { type: string }
+        reason: { type: string, enum: [EQUIPMENT, INJURY, PREFERENCE] }
+        availableEquipment:
+          type: array
+          items: { type: string }
+        injuredBodyParts:
+          type: array
+          items: { type: string }
+
+    ExerciseSubstitutionResponseDTO:
+      type: object
+      properties:
+        originalExercise: { type: string }
+        alternatives:
+          type: array
+          items:
+            type: object
+        fromAi: { type: boolean }
+
+    WorkoutFeedbackRequest:
+      type: object
+      properties:
+        difficulty: { type: string, enum: [TOO_EASY, JUST_RIGHT, TOO_HARD] }
+        energyLevel: { type: integer }
+        completionPercentage: { type: integer }
+        notes: { type: string }
+
+    WorkoutFeedbackDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        difficulty: { type: string }
+        energyLevel: { type: integer }
+        completionPercentage: { type: integer }
+        notes: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    WorkoutAdjustmentResponseDTO:
+      type: object
+      properties:
+        adjustedExercises:
+          type: array
+          items:
+            type: object
+        reasoning: { type: string }
+        fromAi: { type: boolean }
+
