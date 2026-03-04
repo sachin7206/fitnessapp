@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Exercise Service API
-  description: API for exercises and workout plans
+  description: API for exercises, workout plans, and step tracking
   version: 1.0.0
 
 paths:
@@ -9,61 +9,219 @@ paths:
     get:
       tags: [Exercise]
       operationId: getAllExercises
-      summary: Get all exercises with optional filters
       parameters:
         - name: category
           in: query
-          schema:
-            type: string
+          schema: { type: string }
         - name: difficulty
           in: query
-          schema:
-            type: string
+          schema: { type: string }
         - name: culturalOrigin
           in: query
-          schema:
-            type: string
+          schema: { type: string }
       responses:
         '200':
           description: Exercises retrieved
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/ApiResponseListExerciseDTO'
 
   /exercises/{id}:
     get:
       tags: [Exercise]
       operationId: getExerciseById
-      summary: Get exercise by ID
       parameters:
         - name: id
           in: path
           required: true
-          schema:
-            type: integer
-            format: int64
+          schema: { type: integer, format: int64 }
       responses:
         '200':
           description: Exercise retrieved
           content:
             application/json:
               schema:
+                $ref: '#/components/schemas/ApiResponseExerciseDTO'
+
+  /workouts/generate-plan:
+    post:
+      tags: [Workout]
+      operationId: generatePlan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateWorkoutPlanRequest'
+      responses:
+        '200':
+          description: Plan generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutPlanDTO'
+
+  /workouts/plans/{planId}/assign:
+    post:
+      tags: [Workout]
+      operationId: assignPlan
+      parameters:
+        - name: planId
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: Plan assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWorkoutPlanDTO'
+
+  /workouts/my-plan:
+    get:
+      tags: [Workout]
+      operationId: getActivePlan
+      responses:
+        '200':
+          description: Active plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWorkoutPlanDTO'
+    delete:
+      tags: [Workout]
+      operationId: cancelPlan
+      responses:
+        '200':
+          description: Plan cancelled
+
+  /workouts/my-plan/complete:
+    post:
+      tags: [Workout]
+      operationId: markComplete
+      responses:
+        '200':
+          description: Workout marked complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWorkoutPlanDTO'
+
+  /workouts/workout-count:
+    get:
+      tags: [Workout]
+      operationId: getWorkoutCount
+      responses:
+        '200':
+          description: Workout count
+          content:
+            application/json:
+              schema:
                 type: object
+
+  /workouts/motivational-quote:
+    get:
+      tags: [Workout]
+      operationId: getMotivationalQuote
+      responses:
+        '200':
+          description: Quote
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /workouts/steps/today:
+    get:
+      tags: [Workout]
+      operationId: getTodaySteps
+      responses:
+        '200':
+          description: Today steps
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyStepTrackingDTO'
+    put:
+      tags: [Workout]
+      operationId: syncSteps
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StepTrackingSyncRequest'
+      responses:
+        '200':
+          description: Steps synced
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyStepTrackingDTO'
+
+  /workouts/steps/history:
+    get:
+      tags: [Workout]
+      operationId: getStepHistory
+      parameters:
+        - name: days
+          in: query
+          schema: { type: integer, default: 90 }
+      responses:
+        '200':
+          description: Step history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DailyStepTrackingDTO'
 
   /health:
     get:
       tags: [Health]
       operationId: healthCheck
-      summary: Health check
       responses:
         '200':
           description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
 
 components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
+  schemas:
+    ExerciseDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+    ApiResponseListExerciseDTO:
+      type: object
+      properties:
+        success: { type: boolean }
+    ApiResponseExerciseDTO:
+      type: object
+      properties:
+        success: { type: boolean }
+    GenerateWorkoutPlanRequest:
+      type: object
+      properties:
+        goal: { type: string }
+    WorkoutPlanDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+    UserWorkoutPlanDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+    DailyStepTrackingDTO:
+      type: object
+      properties:
+        steps: { type: integer }
+    StepTrackingSyncRequest:
+      type: object
+      properties:
+        steps: { type: integer }

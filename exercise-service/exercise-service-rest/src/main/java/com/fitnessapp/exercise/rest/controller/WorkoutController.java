@@ -1,6 +1,7 @@
 package com.fitnessapp.exercise.rest.controller;
 
 import com.fitnessapp.exercise.common.dto.*;
+import com.fitnessapp.exercise.rest.api.WorkoutApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -10,9 +11,8 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/workouts")
 @RequiredArgsConstructor
-public class WorkoutController {
+public class WorkoutController implements WorkoutApi {
 
     private final AIBasedWorkoutOperations aiWorkoutService;
     private final WorkoutTrackingOperations workoutTrackingService;
@@ -22,58 +22,55 @@ public class WorkoutController {
         return auth.getName();
     }
 
-    @PostMapping("/generate-plan")
-    public ResponseEntity<WorkoutPlanDTO> generatePlan(@RequestBody GenerateWorkoutPlanRequest request) {
+    @Override
+    public ResponseEntity<WorkoutPlanDTO> generatePlan(GenerateWorkoutPlanRequest request) {
         return ResponseEntity.ok(aiWorkoutService.generatePersonalizedWorkoutPlan(getCurrentEmail(), request));
     }
 
-    @PostMapping("/plans/{planId}/assign")
-    public ResponseEntity<UserWorkoutPlanDTO> assignPlan(@PathVariable Long planId) {
+    @Override
+    public ResponseEntity<UserWorkoutPlanDTO> assignPlan(Long planId) {
         return ResponseEntity.ok(workoutTrackingService.assignWorkoutPlan(getCurrentEmail(), planId));
     }
 
-    @GetMapping("/my-plan")
+    @Override
     public ResponseEntity<UserWorkoutPlanDTO> getActivePlan() {
         UserWorkoutPlanDTO plan = workoutTrackingService.getActiveWorkoutPlan(getCurrentEmail());
         return plan == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(plan);
     }
 
-    @PostMapping("/my-plan/complete")
+    @Override
     public ResponseEntity<UserWorkoutPlanDTO> markComplete() {
         return ResponseEntity.ok(workoutTrackingService.markWorkoutComplete(getCurrentEmail()));
     }
 
-    @GetMapping("/workout-count")
-    public ResponseEntity<Map<String, Integer>> getWorkoutCount() {
+    @Override
+    public ResponseEntity<Object> getWorkoutCount() {
         return ResponseEntity.ok(Map.of("count", workoutTrackingService.getWorkoutCount(getCurrentEmail())));
     }
 
-    @DeleteMapping("/my-plan")
+    @Override
     public ResponseEntity<Void> cancelPlan() {
         workoutTrackingService.cancelPlan(getCurrentEmail());
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/motivational-quote")
-    public ResponseEntity<Map<String, String>> getMotivationalQuote() {
+    @Override
+    public ResponseEntity<Object> getMotivationalQuote() {
         return ResponseEntity.ok(Map.of("quote", aiWorkoutService.getMotivationalQuote(getCurrentEmail())));
     }
 
-    // -------- Step Tracking --------
-
-    @PutMapping("/steps/today")
-    public ResponseEntity<DailyStepTrackingDTO> syncSteps(@RequestBody StepTrackingSyncRequest request) {
+    @Override
+    public ResponseEntity<DailyStepTrackingDTO> syncSteps(StepTrackingSyncRequest request) {
         return ResponseEntity.ok(workoutTrackingService.syncSteps(getCurrentEmail(), request));
     }
 
-    @GetMapping("/steps/today")
+    @Override
     public ResponseEntity<DailyStepTrackingDTO> getTodaySteps() {
         return ResponseEntity.ok(workoutTrackingService.getTodaySteps(getCurrentEmail()));
     }
 
-    @GetMapping("/steps/history")
-    public ResponseEntity<List<DailyStepTrackingDTO>> getStepHistory(@RequestParam(defaultValue = "90") int days) {
-        return ResponseEntity.ok(workoutTrackingService.getStepHistory(getCurrentEmail(), days));
+    @Override
+    public ResponseEntity<List<DailyStepTrackingDTO>> getStepHistory(Integer days) {
+        return ResponseEntity.ok(workoutTrackingService.getStepHistory(getCurrentEmail(), days != null ? days : 90));
     }
 }
-

@@ -16,6 +16,7 @@ dependencyManagement {
 dependencies {
     implementation project(':nutrition-service-rest')
     implementation 'com.fitnessapp:user-service-sal:1.0.0'
+    implementation 'com.fitnessapp:ai-service-sal:1.0.0'
 
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'

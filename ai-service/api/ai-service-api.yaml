@@ -1,0 +1,174 @@
+openapi: 3.0.3
+info:
+  title: AI Service API
+  description: Centralized AI service for generating nutrition plans, workout plans, wellness plans, and text via Google Gemini
+  version: 1.0.0
+
+paths:
+  /ai/nutrition/generate-plan:
+    post:
+      tags: [AiNutrition]
+      operationId: generateNutritionPlan
+      summary: Generate an AI-based nutrition meal plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiNutritionPlanRequest'
+      responses:
+        '200':
+          description: AI-generated nutrition plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiNutritionPlanResponse'
+
+  /ai/nutrition/estimate-macros:
+    post:
+      tags: [AiNutrition]
+      operationId: estimateFoodMacros
+      summary: Estimate macros for a food description
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiEstimateMacrosRequest'
+      responses:
+        '200':
+          description: Estimated macros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiEstimateMacrosResponse'
+
+  /ai/workout/generate-plan:
+    post:
+      tags: [AiWorkout]
+      operationId: generateWorkoutPlan
+      summary: Generate an AI-based workout plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiWorkoutPlanRequest'
+      responses:
+        '200':
+          description: AI-generated workout plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiWorkoutPlanResponse'
+
+  /ai/workout/motivational-quote:
+    get:
+      tags: [AiWorkout]
+      operationId: getMotivationalQuote
+      summary: Generate a motivational workout quote
+      responses:
+        '200':
+          description: Motivational quote
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiMotivationalQuoteResponse'
+
+  /ai/wellness/generate-plan:
+    post:
+      tags: [AiWellness]
+      operationId: generateWellnessPlan
+      summary: Generate an AI-based wellness plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiWellnessPlanRequest'
+      responses:
+        '200':
+          description: AI-generated wellness plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiWellnessPlanResponse'
+
+  /ai/text/generate:
+    post:
+      tags: [AiText]
+      operationId: generateText
+      summary: Generate text from a custom prompt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiTextRequest'
+      responses:
+        '200':
+          description: Generated text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiTextResponse'
+
+  /ai/health:
+    get:
+      tags: [Health]
+      operationId: healthCheck
+      summary: AI service health check
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                type: object
+
+components:
+  schemas:
+    AiNutritionPlanRequest:
+      type: object
+      properties:
+        dietType: { type: string }
+    AiNutritionPlanResponse:
+      type: object
+      properties:
+        meals: { type: array, items: { type: object } }
+    AiEstimateMacrosRequest:
+      type: object
+      properties:
+        foodDescription: { type: string }
+    AiEstimateMacrosResponse:
+      type: object
+      properties:
+        name: { type: string }
+    AiWorkoutPlanRequest:
+      type: object
+      properties:
+        goal: { type: string }
+    AiWorkoutPlanResponse:
+      type: object
+      properties:
+        exercises: { type: array, items: { type: object } }
+    AiMotivationalQuoteResponse:
+      type: object
+      properties:
+        quote: { type: string }
+    AiWellnessPlanRequest:
+      type: object
+      properties:
+        type: { type: string }
+    AiWellnessPlanResponse:
+      type: object
+      properties:
+        sessions: { type: array, items: { type: object } }
+    AiTextRequest:
+      type: object
+      properties:
+        prompt: { type: string }
+    AiTextResponse:
+      type: object
+      properties:
+        text: { type: string }

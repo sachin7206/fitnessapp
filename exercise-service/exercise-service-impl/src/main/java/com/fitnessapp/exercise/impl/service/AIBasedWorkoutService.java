@@ -1,5 +1,7 @@
 package com.fitnessapp.exercise.impl.service;
 
+import com.fitnessapp.ai.common.dto.*;
+import com.fitnessapp.ai.sal.AiServiceSalClient;
 import com.fitnessapp.exercise.common.dto.*;
 import com.fitnessapp.exercise.impl.model.*;
 import com.fitnessapp.exercise.impl.repository.*;
@@ -15,19 +17,28 @@ public class AIBasedWorkoutService implements AIBasedWorkoutOperations {
 
     private final WorkoutPlanRepository workoutPlanRepo;
     private final MotivationalQuoteRepository quoteRepo;
-    private final WorkoutGeminiService geminiService;
+    private final AiServiceSalClient aiServiceSalClient;
 
     @Override
     @Transactional
     public WorkoutPlanDTO generatePersonalizedWorkoutPlan(String email, GenerateWorkoutPlanRequest request) {
         List<WorkoutPlan.WorkoutExercise> exercises = null;
 
-        // Try Gemini AI first
-        if (geminiService.isAvailable()) {
+        // Try AI service first
+        if (aiServiceSalClient.isAvailable()) {
             try {
-                exercises = geminiService.generateExercises(request);
+                AiWorkoutPlanRequest aiRequest = new AiWorkoutPlanRequest(
+                    request.getDaysPerWeek(), request.getExerciseType(), request.getExerciseTime(),
+                    request.getDurationMinutes(), request.getGoal(), request.getDifficulty(),
+                    request.getIncludeCardio(), request.getCardioType(), request.getCardioDurationMinutes(),
+                    request.getCardioSteps(), request.getFocusMuscleGroups()
+                );
+                AiWorkoutPlanResponse aiResponse = aiServiceSalClient.generateWorkoutPlan(aiRequest);
+                if (aiResponse != null && aiResponse.getExercises() != null && !aiResponse.getExercises().isEmpty()) {
+                    exercises = convertAiExercisesToEntities(aiResponse.getExercises());
+                }
             } catch (Exception e) {
-                log.warn("Gemini workout generation failed, falling back to prebuilt: {}", e.getMessage());
+                log.warn("AI workout generation failed, falling back to prebuilt: {}", e.getMessage());
             }
         }
 
@@ -76,13 +87,15 @@ public class AIBasedWorkoutService implements AIBasedWorkoutOperations {
 
     @Override
     public String getMotivationalQuote(String email) {
-        // Try Gemini first
-        if (geminiService.isAvailable()) {
+        // Try AI service first
+        if (aiServiceSalClient.isAvailable()) {
             try {
-                String quote = geminiService.generateMotivationalQuote();
-                if (quote != null && !quote.isEmpty()) return quote;
+                AiMotivationalQuoteResponse response = aiServiceSalClient.getMotivationalQuote();
+                if (response != null && response.isFromAi() && response.getQuote() != null && !response.getQuote().isEmpty()) {
+                    return response.getQuote();
+                }
             } catch (Exception e) {
-                log.warn("Gemini motivational quote failed, using fallback");
+                log.warn("AI motivational quote failed, using fallback");
             }
         }
         // Fallback: 30-day rotation from DB
@@ -267,6 +280,27 @@ public class AIBasedWorkoutService implements AIBasedWorkoutOperations {
         e.setCaloriesBurned(cal); e.setIsCardio(cardio);
         e.setSteps(steps > 0 ? steps : stepsVal); e.setOrder(order);
         return e;
+    }
+
+    /** Convert AI response exercises to JPA embedded entities */
+    private List<WorkoutPlan.WorkoutExercise> convertAiExercisesToEntities(List<AiWorkoutPlanResponse.AiExercise> aiExercises) {
+        List<WorkoutPlan.WorkoutExercise> exercises = new ArrayList<>();
+        for (AiWorkoutPlanResponse.AiExercise ae : aiExercises) {
+            WorkoutPlan.WorkoutExercise ex = new WorkoutPlan.WorkoutExercise();
+            ex.setExerciseName(ae.getExerciseName() != null ? ae.getExerciseName() : "Exercise");
+            ex.setSets(ae.getSets() != null ? ae.getSets() : 3);
+            ex.setReps(ae.getReps() != null ? ae.getReps() : 12);
+            ex.setDurationSeconds(ae.getDurationSeconds() != null ? ae.getDurationSeconds() : 0);
+            ex.setRestTimeSeconds(ae.getRestTimeSeconds() != null ? ae.getRestTimeSeconds() : 60);
+            ex.setDayOfWeek(ae.getDayOfWeek() != null ? ae.getDayOfWeek() : "MONDAY");
+            ex.setMuscleGroup(ae.getMuscleGroup() != null ? ae.getMuscleGroup() : "FULL_BODY");
+            ex.setCaloriesBurned(ae.getCaloriesBurned() != null ? ae.getCaloriesBurned() : 30);
+            ex.setIsCardio(ae.getIsCardio() != null ? ae.getIsCardio() : false);
+            ex.setSteps(ae.getSteps() != null ? ae.getSteps() : 0);
+            ex.setOrder(ae.getOrder() != null ? ae.getOrder() : exercises.size() + 1);
+            exercises.add(ex);
+        }
+        return exercises;
     }
 
     private WorkoutPlanDTO toDTO(WorkoutPlan plan) {

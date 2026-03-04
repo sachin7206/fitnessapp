@@ -3,6 +3,7 @@ info:
   title: Wellness Service API
   version: 1.0.0
   description: API for yoga, meditation, breathing exercises and wellness plans
+
 paths:
   /wellness/yoga/poses:
     get:
@@ -16,14 +17,13 @@ paths:
       responses:
         '200':
           description: Yoga poses
-  /wellness/yoga/sessions:
-    get:
-      operationId: getYogaSessions
-      summary: List yoga sessions
-      tags: [Wellness]
-      responses:
-        '200':
-          description: Yoga sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/YogaPoseDTO'
+
   /wellness/meditation/sessions:
     get:
       operationId: getMeditationSessions
@@ -36,6 +36,13 @@ paths:
       responses:
         '200':
           description: Meditation sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MeditationSessionDTO'
+
   /wellness/breathing/exercises:
     get:
       operationId: getBreathingExercises
@@ -44,6 +51,13 @@ paths:
       responses:
         '200':
           description: Breathing exercises
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BreathingExerciseDTO'
+
   /wellness/generate-plan:
     post:
       operationId: generatePlan
@@ -53,10 +67,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/GenerateWellnessPlanRequest'
+              type: object
       responses:
         '200':
           description: Generated plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WellnessPlanDTO'
+
   /wellness/plans/{planId}/assign:
     post:
       operationId: assignPlan
@@ -70,6 +89,11 @@ paths:
       responses:
         '200':
           description: Plan assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWellnessPlanDTO'
+
   /wellness/my-plan:
     get:
       operationId: getMyPlan
@@ -78,6 +102,11 @@ paths:
       responses:
         '200':
           description: Active plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWellnessPlanDTO'
+
   /wellness/my-plan/complete-session:
     post:
       operationId: completeSession
@@ -87,10 +116,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CompleteSessionRequest'
+              type: object
       responses:
         '200':
           description: Session completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWellnessPlanDTO'
+
   /wellness/tips/daily:
     get:
       operationId: getDailyTip
@@ -99,6 +133,11 @@ paths:
       responses:
         '200':
           description: Daily tip
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WellnessTipDTO'
+
   /wellness/streak:
     get:
       operationId: getStreak
@@ -107,21 +146,65 @@ paths:
       responses:
         '200':
           description: Streak data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WellnessStreakDTO'
+
+  /wellness/completions/today:
+    get:
+      operationId: getTodayCompletions
+      summary: Get today completions
+      tags: [Wellness]
+      responses:
+        '200':
+          description: Today completions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /health:
+    get:
+      tags: [Health]
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+
 components:
   schemas:
-    GenerateWellnessPlanRequest:
+    YogaPoseDTO:
       type: object
       properties:
-        type: { type: string, description: 'YOGA, MEDITATION, MIXED' }
-        level: { type: string, description: 'BEGINNER, INTERMEDIATE, ADVANCED' }
-        durationWeeks: { type: integer }
-        sessionsPerWeek: { type: integer }
-        focusAreas: { type: array, items: { type: string } }
-        sessionDurationMinutes: { type: integer }
-    CompleteSessionRequest:
+        id: { type: integer, format: int64 }
+    MeditationSessionDTO:
       type: object
       properties:
-        sessionType: { type: string }
-        sessionId: { type: integer, format: int64 }
-        durationMinutes: { type: integer }
-
+        id: { type: integer, format: int64 }
+    BreathingExerciseDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+    WellnessPlanDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+    UserWellnessPlanDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+    WellnessTipDTO:
+      type: object
+      properties:
+        tip: { type: string }
+    WellnessStreakDTO:
+      type: object
+      properties:
+        streak: { type: integer }

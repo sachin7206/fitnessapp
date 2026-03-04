@@ -3,6 +3,7 @@ info:
   title: Progress Service API
   version: 1.0.0
   description: API for tracking fitness progress - weight, measurements, goals
+
 paths:
   /progress/weight:
     post:
@@ -13,10 +14,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WeightEntryRequest'
+              type: object
       responses:
         '200':
           description: Weight logged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeightEntryDTO'
     get:
       operationId: getWeightEntries
       summary: Get weight history
@@ -28,6 +33,13 @@ paths:
       responses:
         '200':
           description: Weight entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WeightEntryDTO'
+
   /progress/measurements:
     post:
       operationId: logMeasurements
@@ -37,10 +49,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/BodyMeasurementRequest'
+              $ref: '#/components/schemas/BodyMeasurementDTO'
       responses:
         '200':
           description: Measurements logged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyMeasurementDTO'
     get:
       operationId: getMeasurements
       summary: Get measurements history
@@ -52,6 +68,13 @@ paths:
       responses:
         '200':
           description: Measurements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BodyMeasurementDTO'
+
   /progress/goals:
     post:
       operationId: setGoal
@@ -61,10 +84,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProgressGoalRequest'
+              $ref: '#/components/schemas/ProgressGoalDTO'
       responses:
         '200':
           description: Goal set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressGoalDTO'
     get:
       operationId: getGoals
       summary: Get active goals
@@ -72,6 +99,13 @@ paths:
       responses:
         '200':
           description: Goals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProgressGoalDTO'
+
   /progress/summary:
     get:
       operationId: getSummary
@@ -84,6 +118,11 @@ paths:
       responses:
         '200':
           description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressSummaryDTO'
+
   /progress/trends:
     get:
       operationId: getTrends
@@ -96,32 +135,42 @@ paths:
       responses:
         '200':
           description: Trends
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendDataDTO'
+
+  /health:
+    get:
+      tags: [Health]
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
 
 components:
   schemas:
-    WeightEntryRequest:
+    WeightEntryDTO:
       type: object
       properties:
         weight: { type: number, format: double }
-        unit: { type: string, default: kg }
-        notes: { type: string }
-    BodyMeasurementRequest:
+    BodyMeasurementDTO:
       type: object
       properties:
-        chest: { type: number, format: double }
         waist: { type: number, format: double }
-        hips: { type: number, format: double }
-        leftArm: { type: number, format: double }
-        rightArm: { type: number, format: double }
-        leftThigh: { type: number, format: double }
-        rightThigh: { type: number, format: double }
-        neck: { type: number, format: double }
-        unit: { type: string, default: cm }
-    ProgressGoalRequest:
+    ProgressGoalDTO:
       type: object
       properties:
         goalType: { type: string }
-        targetValue: { type: number, format: double }
-        targetDate: { type: string, format: date }
-        unit: { type: string }
-
+    ProgressSummaryDTO:
+      type: object
+      properties:
+        period: { type: string }
+    TrendDataDTO:
+      type: object
+      properties:
+        days: { type: integer }

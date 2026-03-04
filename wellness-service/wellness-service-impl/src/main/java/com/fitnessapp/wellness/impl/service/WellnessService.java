@@ -2,6 +2,8 @@ package com.fitnessapp.wellness.impl.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fitnessapp.ai.common.dto.*;
+import com.fitnessapp.ai.sal.AiServiceSalClient;
 import com.fitnessapp.wellness.common.dto.*;
 import com.fitnessapp.wellness.impl.model.*;
 import com.fitnessapp.wellness.impl.repository.*;
@@ -23,6 +25,7 @@ public class WellnessService implements WellnessOperations {
     private final SessionCompletionRepository completionRepo;
     private final WellnessTipRepository tipRepo;
     private final ObjectMapper objectMapper;
+    private final AiServiceSalClient aiServiceSalClient;
 
     @Override
     public List<YogaPoseDTO> getYogaPoses(String difficulty) {
@@ -49,8 +52,27 @@ public class WellnessService implements WellnessOperations {
         int sessionsPerWeek = request.get("sessionsPerWeek") != null ? ((Number) request.get("sessionsPerWeek")).intValue() : 5;
         int sessionDuration = request.get("sessionDurationMinutes") != null ? ((Number) request.get("sessionDurationMinutes")).intValue() : 30;
 
-        // Build fallback plan
-        List<WellnessSessionItemDTO> sessions = buildFallbackSessions(type, level, sessionsPerWeek, sessionDuration);
+        List<WellnessSessionItemDTO> sessions = null;
+
+        // Try AI service first
+        if (aiServiceSalClient.isAvailable()) {
+            try {
+                AiWellnessPlanRequest aiRequest = new AiWellnessPlanRequest(
+                    type, level, durationWeeks, sessionsPerWeek, sessionDuration, null);
+                AiWellnessPlanResponse aiResponse = aiServiceSalClient.generateWellnessPlan(aiRequest);
+                if (aiResponse != null && aiResponse.getSessions() != null && !aiResponse.getSessions().isEmpty()) {
+                    sessions = convertAiSessions(aiResponse.getSessions(), sessionDuration);
+                    log.info("AI-generated wellness plan for user: {}", email);
+                }
+            } catch (Exception e) {
+                log.warn("AI wellness plan generation failed, using fallback: {}", e.getMessage());
+            }
+        }
+
+        // Fallback to pre-built plan
+        if (sessions == null || sessions.isEmpty()) {
+            sessions = buildFallbackSessions(type, level, sessionsPerWeek, sessionDuration);
+        }
 
         int totalCalories = sessions.stream().mapToInt(s -> s.getCaloriesBurned() != null ? s.getCaloriesBurned() : 0).sum() * durationWeeks;
 
@@ -74,6 +96,22 @@ public class WellnessService implements WellnessOperations {
         WellnessPlanDTO dto = toPlanDTO(saved);
         dto.setSessions(sessions);
         return dto;
+    }
+
+    /** Convert AI-generated sessions to DTOs */
+    private List<WellnessSessionItemDTO> convertAiSessions(List<AiWellnessPlanResponse.AiWellnessSession> aiSessions, int duration) {
+        List<WellnessSessionItemDTO> sessions = new ArrayList<>();
+        for (AiWellnessPlanResponse.AiWellnessSession as : aiSessions) {
+            WellnessSessionItemDTO s = new WellnessSessionItemDTO();
+            s.setDayOfWeek(as.getDayOfWeek());
+            s.setSessionType(as.getSessionType());
+            s.setSessionName(as.getSessionName());
+            s.setDescription(as.getDescription());
+            s.setDurationMinutes(as.getDurationMinutes() != null ? as.getDurationMinutes() : duration);
+            s.setCaloriesBurned(as.getCaloriesBurned() != null ? as.getCaloriesBurned() : duration * 3);
+            sessions.add(s);
+        }
+        return sessions;
     }
 
     private List<WellnessSessionItemDTO> buildFallbackSessions(String type, String level, int sessionsPerWeek, int duration) {

@@ -28,6 +28,10 @@ openApiGenerate {
     outputDir = "${buildDir}/generated"
     apiPackage = "com.fitnessapp.user.rest.api"
     modelPackage = "com.fitnessapp.user.rest.model"
+    generateModelTests = false
+    generateModelDocumentation = false
+    generateApiTests = false
+    generateApiDocumentation = false
     configOptions = [
         interfaceOnly    : "true",
         useSpringBoot3   : "true",
@@ -36,6 +40,32 @@ openApiGenerate {
         openApiNullable  : "false",
         documentationProvider: "none"
     ]
+    typeMappings.set([
+        "RegisterRequest"             : "RegisterRequest",
+        "LoginRequest"                : "LoginRequest",
+        "ForgotPasswordRequest"       : "ForgotPasswordRequest",
+        "ResetPasswordRequest"        : "ResetPasswordRequest",
+        "UserDto"                     : "UserDto",
+        "AuthResponse"                : "AuthResponse",
+        "UpdateProfileRequest"        : "UpdateProfileRequest",
+        "UpdateHealthMetricsRequest"  : "UpdateHealthMetricsRequest",
+        "ProfileCompletionStatusDTO"  : "ProfileCompletionStatusDTO",
+        "ApiResponseAuthResponse"     : "ApiResponse",
+        "ApiResponseUserDto"          : "ApiResponse",
+        "ApiResponseVoid"             : "ApiResponse"
+    ])
+    importMappings.set([
+        "RegisterRequest"             : "com.fitnessapp.user.common.dto.RegisterRequest",
+        "LoginRequest"                : "com.fitnessapp.user.common.dto.LoginRequest",
+        "ForgotPasswordRequest"       : "com.fitnessapp.user.common.dto.ForgotPasswordRequest",
+        "ResetPasswordRequest"        : "com.fitnessapp.user.common.dto.ResetPasswordRequest",
+        "UserDto"                     : "com.fitnessapp.user.common.dto.UserDto",
+        "AuthResponse"                : "com.fitnessapp.user.common.dto.AuthResponse",
+        "UpdateProfileRequest"        : "com.fitnessapp.user.common.dto.UpdateProfileRequest",
+        "UpdateHealthMetricsRequest"  : "com.fitnessapp.user.common.dto.UpdateHealthMetricsRequest",
+        "ProfileCompletionStatusDTO"  : "com.fitnessapp.user.common.dto.ProfileCompletionStatusDTO",
+        "ApiResponse"                 : "com.fitnessapp.common.dto.ApiResponse"
+    ])
 }
 
 sourceSets {

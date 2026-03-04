@@ -27,6 +27,10 @@ openApiGenerate {
     outputDir = "${buildDir}/generated"
     apiPackage = "com.fitnessapp.nutrition.rest.api"
     modelPackage = "com.fitnessapp.nutrition.rest.model"
+    generateModelTests = false
+    generateModelDocumentation = false
+    generateApiTests = false
+    generateApiDocumentation = false
     configOptions = [
         interfaceOnly    : "true",
         useSpringBoot3   : "true",
@@ -35,6 +39,24 @@ openApiGenerate {
         openApiNullable  : "false",
         documentationProvider: "none"
     ]
+    typeMappings.set([
+        "NutritionPlanDTO"            : "NutritionPlanDTO",
+        "UserNutritionPlanDTO"        : "UserNutritionPlanDTO",
+        "GenerateNutritionPlanRequest": "GenerateNutritionPlanRequest",
+        "UserFoodPreferenceDTO"       : "UserFoodPreferenceDTO",
+        "ProfileCompletionStatusDTO"  : "ProfileCompletionStatusDTO",
+        "DailyNutritionSummaryDTO"    : "DailyNutritionSummaryDTO",
+        "DailyTrackingSyncRequest"    : "DailyTrackingSyncRequest"
+    ])
+    importMappings.set([
+        "NutritionPlanDTO"            : "com.fitnessapp.nutrition.common.dto.NutritionPlanDTO",
+        "UserNutritionPlanDTO"        : "com.fitnessapp.nutrition.common.dto.UserNutritionPlanDTO",
+        "GenerateNutritionPlanRequest": "com.fitnessapp.nutrition.common.dto.GenerateNutritionPlanRequest",
+        "UserFoodPreferenceDTO"       : "com.fitnessapp.nutrition.common.dto.UserFoodPreferenceDTO",
+        "ProfileCompletionStatusDTO"  : "com.fitnessapp.user.common.dto.ProfileCompletionStatusDTO",
+        "DailyNutritionSummaryDTO"    : "com.fitnessapp.nutrition.common.dto.DailyNutritionSummaryDTO",
+        "DailyTrackingSyncRequest"    : "com.fitnessapp.nutrition.common.dto.DailyTrackingSyncRequest"
+    ])
 }
 
 sourceSets {

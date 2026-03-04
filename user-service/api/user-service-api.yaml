@@ -22,7 +22,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponseWrapper'
+                $ref: '#/components/schemas/ApiResponseAuthResponse'
 
   /auth/login:
     post:
@@ -41,7 +41,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponseWrapper'
+                $ref: '#/components/schemas/ApiResponseAuthResponse'
 
   /auth/refresh:
     post:
@@ -60,7 +60,45 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponseWrapper'
+                $ref: '#/components/schemas/ApiResponseAuthResponse'
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      operationId: forgotPassword
+      summary: Send password reset OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: OTP sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      operationId: resetPassword
+      summary: Reset password with OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
 
   /auth/logout:
     post:
@@ -70,27 +108,27 @@ paths:
       responses:
         '200':
           description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
 
   /users/profile:
     get:
       tags: [User]
       operationId: getProfile
       summary: Get current user profile
-      security:
-        - bearerAuth: []
       responses:
         '200':
           description: Profile retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserDtoWrapper'
+                $ref: '#/components/schemas/ApiResponseUserDto'
     put:
       tags: [User]
       operationId: updateProfile
       summary: Update user profile
-      security:
-        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -103,15 +141,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserDtoWrapper'
+                $ref: '#/components/schemas/ApiResponseUserDto'
 
   /users/health-metrics:
     put:
       tags: [User]
       operationId: updateHealthMetrics
       summary: Update health metrics
-      security:
-        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -124,15 +160,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserDtoWrapper'
+                $ref: '#/components/schemas/ApiResponseUserDto'
 
   /users/goals:
     put:
       tags: [User]
       operationId: updateGoals
       summary: Update user goals
-      security:
-        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -147,7 +181,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserDtoWrapper'
+                $ref: '#/components/schemas/ApiResponseUserDto'
 
   /internal/users/by-email:
     get:
@@ -214,258 +248,83 @@ paths:
       responses:
         '200':
           description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
 
 components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
   schemas:
     RegisterRequest:
       type: object
-      required: [email, password, firstName, lastName]
+      x-mapped-type: com.fitnessapp.user.common.dto.RegisterRequest
       properties:
         email:
           type: string
-          format: email
-        password:
-          type: string
-          minLength: 6
-        firstName:
-          type: string
-        lastName:
-          type: string
-        phone:
-          type: string
-        language:
-          type: string
-          default: en
-        region:
-          type: string
-
     LoginRequest:
       type: object
-      required: [email, password]
+      x-mapped-type: com.fitnessapp.user.common.dto.LoginRequest
       properties:
         email:
           type: string
-          format: email
-        password:
+    ForgotPasswordRequest:
+      type: object
+      x-mapped-type: com.fitnessapp.user.common.dto.ForgotPasswordRequest
+      properties:
+        email:
           type: string
-
+    ResetPasswordRequest:
+      type: object
+      x-mapped-type: com.fitnessapp.user.common.dto.ResetPasswordRequest
+      properties:
+        email:
+          type: string
     UserDto:
       type: object
+      x-mapped-type: com.fitnessapp.user.common.dto.UserDto
       properties:
         id:
           type: integer
           format: int64
-        email:
-          type: string
-        profile:
-          $ref: '#/components/schemas/ProfileDto'
-        healthMetrics:
-          $ref: '#/components/schemas/HealthMetricsDto'
-        goals:
-          type: array
-          items:
-            type: string
-        createdAt:
-          type: string
-          format: date-time
-
-    ProfileDto:
-      type: object
-      properties:
-        firstName:
-          type: string
-        lastName:
-          type: string
-        age:
-          type: integer
-        gender:
-          type: string
-        phone:
-          type: string
-        language:
-          type: string
-        region:
-          type: string
-        avatarUrl:
-          type: string
-
-    HealthMetricsDto:
-      type: object
-      properties:
-        height:
-          type: number
-          format: double
-        currentWeight:
-          type: number
-          format: double
-        targetWeight:
-          type: number
-          format: double
-        activityLevel:
-          type: string
-        healthConditions:
-          type: array
-          items:
-            type: string
-        dietaryPreferences:
-          type: array
-          items:
-            type: string
-
-    UpdateProfileRequest:
-      type: object
-      properties:
-        profile:
-          $ref: '#/components/schemas/ProfileData'
-        healthMetrics:
-          $ref: '#/components/schemas/HealthMetricsData'
-        goals:
-          type: array
-          items:
-            type: string
-        firstName:
-          type: string
-        lastName:
-          type: string
-        age:
-          type: integer
-        gender:
-          type: string
-        phone:
-          type: string
-        language:
-          type: string
-        region:
-          type: string
-
-    ProfileData:
-      type: object
-      properties:
-        firstName:
-          type: string
-        lastName:
-          type: string
-        age:
-          type: integer
-        gender:
-          type: string
-        phone:
-          type: string
-        language:
-          type: string
-        region:
-          type: string
-        avatarUrl:
-          type: string
-
-    HealthMetricsData:
-      type: object
-      properties:
-        height:
-          type: number
-          format: double
-        currentWeight:
-          type: number
-          format: double
-        targetWeight:
-          type: number
-          format: double
-        activityLevel:
-          type: string
-        healthConditions:
-          type: array
-          items:
-            type: string
-        dietaryPreferences:
-          type: array
-          items:
-            type: string
-
-    UpdateHealthMetricsRequest:
-      type: object
-      properties:
-        height:
-          type: number
-          format: double
-        currentWeight:
-          type: number
-          format: double
-        targetWeight:
-          type: number
-          format: double
-        activityLevel:
-          type: string
-        healthConditions:
-          type: array
-          items:
-            type: string
-        dietaryPreferences:
-          type: array
-          items:
-            type: string
-
-    ProfileCompletionStatusDTO:
-      type: object
-      properties:
-        isComplete:
-          type: boolean
-        hasPersonalInfo:
-          type: boolean
-        hasHealthMetrics:
-          type: boolean
-        hasGoals:
-          type: boolean
-        hasDietaryPreference:
-          type: boolean
-        missingFields:
-          type: array
-          items:
-            type: string
-        completionPercentage:
-          type: integer
-
     AuthResponse:
       type: object
+      x-mapped-type: com.fitnessapp.user.common.dto.AuthResponse
       properties:
         accessToken:
           type: string
-        refreshToken:
-          type: string
-        tokenType:
-          type: string
-          default: Bearer
-        user:
-          $ref: '#/components/schemas/UserDto'
-
-    AuthResponseWrapper:
+    UpdateProfileRequest:
       type: object
+      x-mapped-type: com.fitnessapp.user.common.dto.UpdateProfileRequest
+      properties:
+        firstName:
+          type: string
+    UpdateHealthMetricsRequest:
+      type: object
+      x-mapped-type: com.fitnessapp.user.common.dto.UpdateHealthMetricsRequest
+      properties:
+        height:
+          type: number
+    ProfileCompletionStatusDTO:
+      type: object
+      x-mapped-type: com.fitnessapp.user.common.dto.ProfileCompletionStatusDTO
+      properties:
+        isComplete:
+          type: boolean
+    ApiResponseAuthResponse:
+      type: object
+      x-mapped-type: com.fitnessapp.common.dto.ApiResponse
       properties:
         success:
           type: boolean
-        message:
-          type: string
-        data:
-          $ref: '#/components/schemas/AuthResponse'
-        timestamp:
-          type: string
-          format: date-time
-
-    UserDtoWrapper:
+    ApiResponseUserDto:
       type: object
+      x-mapped-type: com.fitnessapp.common.dto.ApiResponse
       properties:
         success:
           type: boolean
-        message:
-          type: string
-        data:
-          $ref: '#/components/schemas/UserDto'
-        timestamp:
-          type: string
-          format: date-time
-
+    ApiResponseVoid:
+      type: object
+      x-mapped-type: com.fitnessapp.common.dto.ApiResponse
+      properties:
+        success:
+          type: boolean

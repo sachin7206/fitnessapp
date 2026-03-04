@@ -1,0 +1,82 @@
+plugins {
+    id 'java-library'
+    id 'io.spring.dependency-management' version '1.1.4'
+    id 'org.openapi.generator' version '7.2.0'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom 'org.springframework.boot:spring-boot-dependencies:3.2.2'
+    }
+}
+
+dependencies {
+    api project(':ai-service-common')
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
+    implementation 'io.swagger.core.v3:swagger-annotations:2.2.19'
+    implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
+    implementation 'jakarta.annotation:jakarta.annotation-api'
+}
+
+openApiGenerate {
+    generatorName = "spring"
+    inputSpec = "${rootProject.projectDir}/api/ai-service-api.yaml"
+    outputDir = "${buildDir}/generated"
+    apiPackage = "com.fitnessapp.ai.rest.api"
+    modelPackage = "com.fitnessapp.ai.rest.model"
+    configOptions = [
+        interfaceOnly    : "true",
+        useSpringBoot3   : "true",
+        useTags          : "true",
+        skipDefaultInterface: "true",
+        openApiNullable  : "false",
+        documentationProvider: "none"
+    ]
+    generateModelTests = false
+    generateModelDocumentation = false
+    generateApiTests = false
+    generateApiDocumentation = false
+    typeMappings.set([
+        "AiNutritionPlanRequest"     : "AiNutritionPlanRequest",
+        "AiNutritionPlanResponse"    : "AiNutritionPlanResponse",
+        "AiEstimateMacrosRequest"    : "AiEstimateMacrosRequest",
+        "AiEstimateMacrosResponse"   : "AiEstimateMacrosResponse",
+        "AiWorkoutPlanRequest"       : "AiWorkoutPlanRequest",
+        "AiWorkoutPlanResponse"      : "AiWorkoutPlanResponse",
+        "AiMotivationalQuoteResponse": "AiMotivationalQuoteResponse",
+        "AiWellnessPlanRequest"      : "AiWellnessPlanRequest",
+        "AiWellnessPlanResponse"     : "AiWellnessPlanResponse",
+        "AiTextRequest"              : "AiTextRequest",
+        "AiTextResponse"             : "AiTextResponse",
+        "HealthCheck200Response"     : "Object"
+    ])
+    importMappings.set([
+        "AiNutritionPlanRequest"     : "com.fitnessapp.ai.common.dto.AiNutritionPlanRequest",
+        "AiNutritionPlanResponse"    : "com.fitnessapp.ai.common.dto.AiNutritionPlanResponse",
+        "AiEstimateMacrosRequest"    : "com.fitnessapp.ai.common.dto.AiEstimateMacrosRequest",
+        "AiEstimateMacrosResponse"   : "com.fitnessapp.ai.common.dto.AiEstimateMacrosResponse",
+        "AiWorkoutPlanRequest"       : "com.fitnessapp.ai.common.dto.AiWorkoutPlanRequest",
+        "AiWorkoutPlanResponse"      : "com.fitnessapp.ai.common.dto.AiWorkoutPlanResponse",
+        "AiMotivationalQuoteResponse": "com.fitnessapp.ai.common.dto.AiMotivationalQuoteResponse",
+        "AiWellnessPlanRequest"      : "com.fitnessapp.ai.common.dto.AiWellnessPlanRequest",
+        "AiWellnessPlanResponse"     : "com.fitnessapp.ai.common.dto.AiWellnessPlanResponse",
+        "AiTextRequest"              : "com.fitnessapp.ai.common.dto.AiTextRequest",
+        "AiTextResponse"             : "com.fitnessapp.ai.common.dto.AiTextResponse"
+    ])
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir "${buildDir}/generated/src/main/java"
+        }
+    }
+}
+
+tasks.named('compileJava') {
+    dependsOn 'openApiGenerate'
+}
+

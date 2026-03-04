@@ -1,14 +1,15 @@
 package com.fitnessapp.progress.rest.controller;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.fitnessapp.progress.rest.api.HealthApi;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-public class HealthController {
-    @GetMapping("/health")
-    public Map<String, String> health() {
-        return Map.of("status", "UP", "service", "progress-service");
+public class HealthController implements HealthApi {
+
+    @Override
+    public ResponseEntity<Object> healthCheck() {
+        return ResponseEntity.ok(Map.of("status", "UP", "service", "Progress Service", "version", "1.0.0"));
     }
 }
-

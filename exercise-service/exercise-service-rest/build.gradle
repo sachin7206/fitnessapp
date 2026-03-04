@@ -26,6 +26,10 @@ openApiGenerate {
     outputDir = "${buildDir}/generated"
     apiPackage = "com.fitnessapp.exercise.rest.api"
     modelPackage = "com.fitnessapp.exercise.rest.model"
+    generateModelTests = false
+    generateModelDocumentation = false
+    generateApiTests = false
+    generateApiDocumentation = false
     configOptions = [
         interfaceOnly    : "true",
         useSpringBoot3   : "true",
@@ -34,6 +38,25 @@ openApiGenerate {
         openApiNullable  : "false",
         documentationProvider: "none"
     ]
+    typeMappings.set([
+        "ExerciseDTO"                 : "ExerciseDTO",
+        "ApiResponseListExerciseDTO"  : "ApiResponse",
+        "ApiResponseExerciseDTO"      : "ApiResponse",
+        "GenerateWorkoutPlanRequest"  : "GenerateWorkoutPlanRequest",
+        "WorkoutPlanDTO"              : "WorkoutPlanDTO",
+        "UserWorkoutPlanDTO"          : "UserWorkoutPlanDTO",
+        "DailyStepTrackingDTO"        : "DailyStepTrackingDTO",
+        "StepTrackingSyncRequest"     : "StepTrackingSyncRequest"
+    ])
+    importMappings.set([
+        "ExerciseDTO"                 : "com.fitnessapp.exercise.common.dto.ExerciseDTO",
+        "ApiResponse"                 : "com.fitnessapp.common.dto.ApiResponse",
+        "GenerateWorkoutPlanRequest"  : "com.fitnessapp.exercise.common.dto.GenerateWorkoutPlanRequest",
+        "WorkoutPlanDTO"              : "com.fitnessapp.exercise.common.dto.WorkoutPlanDTO",
+        "UserWorkoutPlanDTO"          : "com.fitnessapp.exercise.common.dto.UserWorkoutPlanDTO",
+        "DailyStepTrackingDTO"        : "com.fitnessapp.exercise.common.dto.DailyStepTrackingDTO",
+        "StepTrackingSyncRequest"     : "com.fitnessapp.exercise.common.dto.StepTrackingSyncRequest"
+    ])
 }
 
 sourceSets {

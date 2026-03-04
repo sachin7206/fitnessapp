@@ -26,6 +26,10 @@ openApiGenerate {
     outputDir = "${buildDir}/generated"
     apiPackage = "com.fitnessapp.progress.rest.api"
     modelPackage = "com.fitnessapp.progress.rest.model"
+    generateModelTests = false
+    generateModelDocumentation = false
+    generateApiTests = false
+    generateApiDocumentation = false
     configOptions = [
         interfaceOnly    : "true",
         useSpringBoot3   : "true",
@@ -34,6 +38,20 @@ openApiGenerate {
         openApiNullable  : "false",
         documentationProvider: "none"
     ]
+    typeMappings.set([
+        "WeightEntryDTO"     : "WeightEntryDTO",
+        "BodyMeasurementDTO" : "BodyMeasurementDTO",
+        "ProgressGoalDTO"    : "ProgressGoalDTO",
+        "ProgressSummaryDTO" : "ProgressSummaryDTO",
+        "TrendDataDTO"       : "TrendDataDTO"
+    ])
+    importMappings.set([
+        "WeightEntryDTO"     : "com.fitnessapp.progress.common.dto.WeightEntryDTO",
+        "BodyMeasurementDTO" : "com.fitnessapp.progress.common.dto.BodyMeasurementDTO",
+        "ProgressGoalDTO"    : "com.fitnessapp.progress.common.dto.ProgressGoalDTO",
+        "ProgressSummaryDTO" : "com.fitnessapp.progress.common.dto.ProgressSummaryDTO",
+        "TrendDataDTO"       : "com.fitnessapp.progress.common.dto.TrendDataDTO"
+    ])
 }
 
 sourceSets {
@@ -47,4 +65,3 @@ sourceSets {
 tasks.named('compileJava') {
     dependsOn 'openApiGenerate'
 }
-

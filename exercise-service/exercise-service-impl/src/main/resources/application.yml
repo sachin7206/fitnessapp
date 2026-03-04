@@ -36,13 +36,4 @@ logging:
     root: INFO
     com.fitnessapp: DEBUG
 
-gemini:
-  api:
-    key: ${GEMINI_API_KEYS:}
-    url: https://generativelanguage.googleapis.com/v1beta/models
-  model: gemini-2.0-flash
-  enabled: true
-  timeout:
-    connect: 10000
-    read: 60000
 

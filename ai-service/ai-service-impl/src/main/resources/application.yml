@@ -1,0 +1,33 @@
+server:
+  port: 8086
+
+spring:
+  application:
+    name: ai-service
+
+jwt:
+  secret: ${JWT_SECRET:change-me-in-production-use-env-variable}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    hostname: localhost
+    prefer-ip-address: false
+
+gemini:
+  api:
+    keys: ${GEMINI_API_KEYS:}
+    url: https://generativelanguage.googleapis.com/v1beta/models
+  model: ${GEMINI_MODEL:gemma-3-27b-it}
+  enabled: true
+  timeout:
+    connect: 15000
+    read: 120000
+
+logging:
+  level:
+    root: INFO
+    com.fitnessapp: DEBUG
+

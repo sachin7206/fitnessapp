@@ -1,6 +1,7 @@
 package com.fitnessapp.progress.rest.controller;
 
 import com.fitnessapp.progress.common.dto.*;
+import com.fitnessapp.progress.rest.api.ProgressApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -9,58 +10,57 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/progress")
 @RequiredArgsConstructor
-public class ProgressController {
+public class ProgressController implements ProgressApi {
     private final ProgressTrackingOperations progressService;
 
     private String getCurrentEmail() {
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 
-    @PostMapping("/weight")
-    public ResponseEntity<WeightEntryDTO> logWeight(@RequestBody Map<String, Object> body) {
-        Double weight = body.get("weight") != null ? ((Number) body.get("weight")).doubleValue() : null;
-        String unit = (String) body.getOrDefault("unit", "kg");
-        Double bmi = body.get("bmi") != null ? ((Number) body.get("bmi")).doubleValue() : null;
-        Double bodyFat = body.get("bodyFatPercentage") != null ? ((Number) body.get("bodyFatPercentage")).doubleValue() : null;
-        String notes = (String) body.get("notes");
+    @Override
+    public ResponseEntity<WeightEntryDTO> logWeight(Object body) {
+        Map<String, Object> map = (Map<String, Object>) body;
+        Double weight = map.get("weight") != null ? ((Number) map.get("weight")).doubleValue() : null;
+        String unit = (String) map.getOrDefault("unit", "kg");
+        Double bmi = map.get("bmi") != null ? ((Number) map.get("bmi")).doubleValue() : null;
+        Double bodyFat = map.get("bodyFatPercentage") != null ? ((Number) map.get("bodyFatPercentage")).doubleValue() : null;
+        String notes = (String) map.get("notes");
         return ResponseEntity.ok(progressService.logWeight(getCurrentEmail(), weight, unit, bmi, bodyFat, notes));
     }
 
-    @GetMapping("/weight")
-    public ResponseEntity<List<WeightEntryDTO>> getWeightEntries(@RequestParam(defaultValue = "90") int days) {
-        return ResponseEntity.ok(progressService.getWeightEntries(getCurrentEmail(), days));
+    @Override
+    public ResponseEntity<List<WeightEntryDTO>> getWeightEntries(Integer days) {
+        return ResponseEntity.ok(progressService.getWeightEntries(getCurrentEmail(), days != null ? days : 90));
     }
 
-    @PostMapping("/measurements")
-    public ResponseEntity<BodyMeasurementDTO> logMeasurements(@RequestBody BodyMeasurementDTO dto) {
+    @Override
+    public ResponseEntity<BodyMeasurementDTO> logMeasurements(BodyMeasurementDTO dto) {
         return ResponseEntity.ok(progressService.logMeasurements(getCurrentEmail(), dto));
     }
 
-    @GetMapping("/measurements")
-    public ResponseEntity<List<BodyMeasurementDTO>> getMeasurements(@RequestParam(defaultValue = "90") int days) {
-        return ResponseEntity.ok(progressService.getMeasurements(getCurrentEmail(), days));
+    @Override
+    public ResponseEntity<List<BodyMeasurementDTO>> getMeasurements(Integer days) {
+        return ResponseEntity.ok(progressService.getMeasurements(getCurrentEmail(), days != null ? days : 90));
     }
 
-    @PostMapping("/goals")
-    public ResponseEntity<ProgressGoalDTO> setGoal(@RequestBody ProgressGoalDTO dto) {
+    @Override
+    public ResponseEntity<ProgressGoalDTO> setGoal(ProgressGoalDTO dto) {
         return ResponseEntity.ok(progressService.setGoal(getCurrentEmail(), dto));
     }
 
-    @GetMapping("/goals")
+    @Override
     public ResponseEntity<List<ProgressGoalDTO>> getGoals() {
         return ResponseEntity.ok(progressService.getGoals(getCurrentEmail()));
     }
 
-    @GetMapping("/summary")
-    public ResponseEntity<ProgressSummaryDTO> getSummary(@RequestParam(defaultValue = "monthly") String period) {
-        return ResponseEntity.ok(progressService.getSummary(getCurrentEmail(), period));
+    @Override
+    public ResponseEntity<ProgressSummaryDTO> getSummary(String period) {
+        return ResponseEntity.ok(progressService.getSummary(getCurrentEmail(), period != null ? period : "monthly"));
     }
 
-    @GetMapping("/trends")
-    public ResponseEntity<TrendDataDTO> getTrends(@RequestParam(defaultValue = "30") int days) {
-        return ResponseEntity.ok(progressService.getTrends(getCurrentEmail(), days));
+    @Override
+    public ResponseEntity<TrendDataDTO> getTrends(Integer days) {
+        return ResponseEntity.ok(progressService.getTrends(getCurrentEmail(), days != null ? days : 30));
     }
 }
-

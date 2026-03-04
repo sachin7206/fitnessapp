@@ -1,14 +1,15 @@
 package com.fitnessapp.wellness.rest.controller;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.fitnessapp.wellness.rest.api.HealthApi;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-public class HealthController {
-    @GetMapping("/health")
-    public Map<String, String> health() {
-        return Map.of("status", "UP", "service", "wellness-service");
+public class HealthController implements HealthApi {
+
+    @Override
+    public ResponseEntity<Object> healthCheck() {
+        return ResponseEntity.ok(Map.of("status", "UP", "service", "Wellness Service", "version", "1.0.0"));
     }
 }
-
