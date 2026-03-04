@@ -1,0 +1,20 @@
+# Production profile - Cloud deployment
+server:
+  port: ${PORT:8086}
+
+jwt:
+  secret: ${JWT_SECRET}
+
+gemini:
+  api-keys: ${GEMINI_API_KEYS}
+  model: ${GEMINI_MODEL:gemma-3-27b-it}
+
+eureka:
+  client:
+    enabled: false
+
+logging:
+  level:
+    root: INFO
+    com.fitnessapp: INFO
+

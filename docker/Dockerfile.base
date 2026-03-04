@@ -1,0 +1,29 @@
+# ===== Stage 1: Build =====
+FROM gradle:8-jdk17 AS build
+WORKDIR /app
+
+# Copy common-lib first (shared dependency)
+COPY common-lib/ common-lib/
+RUN cd common-lib && gradle publishToMavenLocal -x test
+
+# Copy ai-service modules (ai-service-common, ai-service-sal needed by other services)
+COPY ai-service/ai-service-common/ ai-service/ai-service-common/
+COPY ai-service/ai-service-sal/ ai-service/ai-service-sal/
+COPY ai-service/settings.gradle ai-service/
+COPY ai-service/build.gradle ai-service/
+COPY ai-service/gradlew ai-service/
+COPY ai-service/gradle/ ai-service/gradle/
+RUN cd ai-service && gradle :ai-service-common:publishToMavenLocal :ai-service-sal:publishToMavenLocal -x test
+
+# Copy user-service modules (user-service-common, user-service-sal needed by other services)
+COPY user-service/user-service-common/ user-service/user-service-common/
+COPY user-service/user-service-sal/ user-service/user-service-sal/
+COPY user-service/settings.gradle user-service/
+COPY user-service/build.gradle user-service/
+COPY user-service/gradlew user-service/
+COPY user-service/gradle/ user-service/gradle/
+RUN cd user-service && gradle :user-service-common:publishToMavenLocal :user-service-sal:publishToMavenLocal -x test
+
+# This is the base build image with all shared dependencies published
+# Individual service Dockerfiles will extend from here
+

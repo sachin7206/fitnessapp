@@ -1,0 +1,62 @@
+# Production profile - Cloud deployment (no Eureka, direct URLs)
+server:
+  port: ${PORT:8080}
+
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: user-service
+          uri: ${USER_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/auth/**, /api/users/**, /api/health
+          filters:
+            - StripPrefix=1
+
+        - id: nutrition-service
+          uri: ${NUTRITION_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/nutrition/**
+          filters:
+            - StripPrefix=1
+
+        - id: exercise-service
+          uri: ${EXERCISE_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/exercises/**, /api/workouts/**
+          filters:
+            - StripPrefix=1
+
+        - id: progress-service
+          uri: ${PROGRESS_SERVICE_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/progress/**
+          filters:
+            - StripPrefix=1
+
+        - id: wellness-service
+          uri: ${WELLNESS_SERVICE_URL:http://localhost:8085}
+          predicates:
+            - Path=/api/wellness/**
+          filters:
+            - StripPrefix=1
+
+        - id: ai-service
+          uri: ${AI_SERVICE_URL:http://localhost:8086}
+          predicates:
+            - Path=/api/ai/**
+          filters:
+            - StripPrefix=1
+
+jwt:
+  secret: ${JWT_SECRET}
+
+eureka:
+  client:
+    enabled: false
+
+logging:
+  level:
+    root: INFO
+    com.fitnessapp: INFO
+

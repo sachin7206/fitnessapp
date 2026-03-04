@@ -1,0 +1,11 @@
+**/build/
+**/node_modules/
+**/.gradle/
+**/.idea/
+**/logs/
+**/*.log
+**/.DS_Store
+**/mobile/
+**/.git/
+**/docs/
+

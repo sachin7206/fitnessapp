@@ -1,0 +1,90 @@
+name: Build & Deploy Services
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/fitnessapp
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service:
+          - name: user-service
+            context: .
+            dockerfile: user-service/Dockerfile
+          - name: nutrition-service
+            context: .
+            dockerfile: nutrition-service/Dockerfile
+          - name: exercise-service
+            context: .
+            dockerfile: exercise-service/Dockerfile
+          - name: progress-service
+            context: .
+            dockerfile: progress-service/Dockerfile
+          - name: wellness-service
+            context: .
+            dockerfile: wellness-service/Dockerfile
+          - name: ai-service
+            context: .
+            dockerfile: ai-service/Dockerfile
+          - name: api-gateway
+            context: .
+            dockerfile: api-gateway/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.service.name }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.service.context }}
+          file: ${{ matrix.service.dockerfile }}
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service.name }}:latest
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service.name }}:${{ github.sha }}
+
+  deploy-render:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to Render
+        run: |
+          # Trigger Render deploy hooks for each service
+          # Set these webhook URLs in GitHub Secrets after creating Render services
+          services=("USER_SERVICE" "NUTRITION_SERVICE" "EXERCISE_SERVICE" "PROGRESS_SERVICE" "WELLNESS_SERVICE" "AI_SERVICE" "API_GATEWAY")
+          for svc in "${services[@]}"; do
+            hook_var="RENDER_DEPLOY_HOOK_${svc}"
+            hook_url="${!hook_var}"
+            if [ -n "$hook_url" ]; then
+              echo "Deploying ${svc}..."
+              curl -s "$hook_url" || true
+            else
+              echo "No deploy hook for ${svc}, skipping"
+            fi
+          done
+        env:
+          RENDER_DEPLOY_HOOK_USER_SERVICE: ${{ secrets.RENDER_DEPLOY_HOOK_USER_SERVICE }}
+          RENDER_DEPLOY_HOOK_NUTRITION_SERVICE: ${{ secrets.RENDER_DEPLOY_HOOK_NUTRITION_SERVICE }}
+          RENDER_DEPLOY_HOOK_EXERCISE_SERVICE: ${{ secrets.RENDER_DEPLOY_HOOK_EXERCISE_SERVICE }}
+          RENDER_DEPLOY_HOOK_PROGRESS_SERVICE: ${{ secrets.RENDER_DEPLOY_HOOK_PROGRESS_SERVICE }}
+          RENDER_DEPLOY_HOOK_WELLNESS_SERVICE: ${{ secrets.RENDER_DEPLOY_HOOK_WELLNESS_SERVICE }}
+          RENDER_DEPLOY_HOOK_AI_SERVICE: ${{ secrets.RENDER_DEPLOY_HOOK_AI_SERVICE }}
+          RENDER_DEPLOY_HOOK_API_GATEWAY: ${{ secrets.RENDER_DEPLOY_HOOK_API_GATEWAY }}
+

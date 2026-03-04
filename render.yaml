@@ -1,0 +1,160 @@
+# Render Blueprint - Infrastructure as Code
+# Deploy all services at once: https://render.com/docs/blueprint-spec
+# Link your GitHub repo at https://dashboard.render.com/blueprints
+
+services:
+  # ========== API Gateway ==========
+  - type: web
+    name: fitnessapp-gateway
+    runtime: docker
+    dockerfilePath: api-gateway/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: JWT_SECRET
+        sync: false  # Set manually in Render dashboard
+      - key: USER_SERVICE_URL
+        value: https://fitnessapp-user.onrender.com
+      - key: NUTRITION_SERVICE_URL
+        value: https://fitnessapp-nutrition.onrender.com
+      - key: EXERCISE_SERVICE_URL
+        value: https://fitnessapp-exercise.onrender.com
+      - key: PROGRESS_SERVICE_URL
+        value: https://fitnessapp-progress.onrender.com
+      - key: WELLNESS_SERVICE_URL
+        value: https://fitnessapp-wellness.onrender.com
+      - key: AI_SERVICE_URL
+        value: https://fitnessapp-ai.onrender.com
+
+  # ========== User Service ==========
+  - type: web
+    name: fitnessapp-user
+    runtime: docker
+    dockerfilePath: user-service/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+
+  # ========== Nutrition Service ==========
+  - type: web
+    name: fitnessapp-nutrition
+    runtime: docker
+    dockerfilePath: nutrition-service/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: USER_SERVICE_URL
+        value: https://fitnessapp-user.onrender.com
+      - key: AI_SERVICE_URL
+        value: https://fitnessapp-ai.onrender.com
+
+  # ========== Exercise Service ==========
+  - type: web
+    name: fitnessapp-exercise
+    runtime: docker
+    dockerfilePath: exercise-service/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: USER_SERVICE_URL
+        value: https://fitnessapp-user.onrender.com
+      - key: AI_SERVICE_URL
+        value: https://fitnessapp-ai.onrender.com
+
+  # ========== Progress Service ==========
+  - type: web
+    name: fitnessapp-progress
+    runtime: docker
+    dockerfilePath: progress-service/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: AI_SERVICE_URL
+        value: https://fitnessapp-ai.onrender.com
+
+  # ========== Wellness Service ==========
+  - type: web
+    name: fitnessapp-wellness
+    runtime: docker
+    dockerfilePath: wellness-service/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: USER_SERVICE_URL
+        value: https://fitnessapp-user.onrender.com
+      - key: AI_SERVICE_URL
+        value: https://fitnessapp-ai.onrender.com
+
+  # ========== AI Service ==========
+  - type: web
+    name: fitnessapp-ai
+    runtime: docker
+    dockerfilePath: ai-service/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: JWT_SECRET
+        sync: false
+      - key: GEMINI_API_KEYS
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemma-3-27b-it
+

@@ -2,11 +2,24 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
+// Production API URL - set this when deploying to cloud
+const PRODUCTION_API_URL = Constants.expoConfig?.extra?.apiUrl || null;
+
 // Local development settings
 const BACKEND_IP = '192.168.1.2';
 const BACKEND_PORT = '8080';
 
 const getApiUrl = () => {
+  // Use production URL if available (set via app.json extra or env)
+  if (PRODUCTION_API_URL) {
+    return PRODUCTION_API_URL;
+  }
+
+  // Check if running in production mode
+  if (!__DEV__ && PRODUCTION_API_URL) {
+    return PRODUCTION_API_URL;
+  }
+
   if (Platform.OS === 'web') {
     // Web (Chrome) - use localhost
     return `http://localhost:${BACKEND_PORT}/api`;
