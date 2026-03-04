@@ -1,4 +1,7 @@
-FROM gradle:8-jdk17 AS build
+FROM eclipse-temurin:17-jdk AS build
+
+# Disable Gradle daemon for Docker compatibility
+ENV GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
 WORKDIR /app
 
 # Copy and publish common-lib

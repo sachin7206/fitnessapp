@@ -1,0 +1,7 @@
+# Ensure gradlew scripts always use LF line endings
+**/gradlew text eol=lf
+*.sh text eol=lf
+
+# Gradle wrapper jar is binary
+**/gradle-wrapper.jar binary
+
