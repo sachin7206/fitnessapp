@@ -1,0 +1,55 @@
+name: Deploy Web App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+  workflow_dispatch:
+
+jobs:
+  deploy-github-pages:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+      contents: read
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npx expo export --platform web
+        env:
+          EXPO_PUBLIC_API_URL: ${{ vars.API_URL || 'https://fitnessapp-gateway.onrender.com/api' }}
+
+      - name: Add SPA fallback for GitHub Pages
+        run: cp dist/index.html dist/404.html
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: mobile/dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
