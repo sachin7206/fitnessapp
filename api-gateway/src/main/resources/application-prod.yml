@@ -5,6 +5,26 @@ server:
 spring:
   cloud:
     gateway:
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - ${FRONTEND_URL:https://fitnessapp.vercel.app}
+              - "https://*.vercel.app"
+              - "https://*.netlify.app"
+              - "https://sachin7206.github.io"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+              - PATCH
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
       routes:
         - id: user-service
           uri: ${USER_SERVICE_URL:http://localhost:8081}
