@@ -39,22 +39,24 @@ openApiGenerate {
         documentationProvider: "none"
     ]
     typeMappings.set([
-        "YogaPoseDTO"          : "YogaPoseDTO",
-        "MeditationSessionDTO" : "MeditationSessionDTO",
-        "BreathingExerciseDTO"  : "BreathingExerciseDTO",
-        "WellnessPlanDTO"       : "WellnessPlanDTO",
-        "UserWellnessPlanDTO"   : "UserWellnessPlanDTO",
-        "WellnessTipDTO"        : "WellnessTipDTO",
-        "WellnessStreakDTO"     : "WellnessStreakDTO"
+        "YogaPoseDTO"            : "YogaPoseDTO",
+        "MeditationSessionDTO"   : "MeditationSessionDTO",
+        "BreathingExerciseDTO"   : "BreathingExerciseDTO",
+        "WellnessSessionItemDTO" : "WellnessSessionItemDTO",
+        "WellnessPlanDTO"        : "WellnessPlanDTO",
+        "UserWellnessPlanDTO"    : "UserWellnessPlanDTO",
+        "WellnessTipDTO"         : "WellnessTipDTO",
+        "WellnessStreakDTO"      : "WellnessStreakDTO"
     ])
     importMappings.set([
-        "YogaPoseDTO"          : "com.fitnessapp.wellness.common.dto.YogaPoseDTO",
-        "MeditationSessionDTO" : "com.fitnessapp.wellness.common.dto.MeditationSessionDTO",
-        "BreathingExerciseDTO"  : "com.fitnessapp.wellness.common.dto.BreathingExerciseDTO",
-        "WellnessPlanDTO"       : "com.fitnessapp.wellness.common.dto.WellnessPlanDTO",
-        "UserWellnessPlanDTO"   : "com.fitnessapp.wellness.common.dto.UserWellnessPlanDTO",
-        "WellnessTipDTO"        : "com.fitnessapp.wellness.common.dto.WellnessTipDTO",
-        "WellnessStreakDTO"     : "com.fitnessapp.wellness.common.dto.WellnessStreakDTO"
+        "YogaPoseDTO"            : "com.fitnessapp.wellness.common.dto.YogaPoseDTO",
+        "MeditationSessionDTO"   : "com.fitnessapp.wellness.common.dto.MeditationSessionDTO",
+        "BreathingExerciseDTO"   : "com.fitnessapp.wellness.common.dto.BreathingExerciseDTO",
+        "WellnessSessionItemDTO" : "com.fitnessapp.wellness.common.dto.WellnessSessionItemDTO",
+        "WellnessPlanDTO"        : "com.fitnessapp.wellness.common.dto.WellnessPlanDTO",
+        "UserWellnessPlanDTO"    : "com.fitnessapp.wellness.common.dto.UserWellnessPlanDTO",
+        "WellnessTipDTO"         : "com.fitnessapp.wellness.common.dto.WellnessTipDTO",
+        "WellnessStreakDTO"      : "com.fitnessapp.wellness.common.dto.WellnessStreakDTO"
     ])
 }
 

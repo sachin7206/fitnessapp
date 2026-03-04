@@ -197,31 +197,136 @@ components:
       type: object
       properties:
         id: { type: integer, format: int64 }
+        name:
+          type: object
+          additionalProperties: { type: string }
+        description:
+          type: object
+          additionalProperties: { type: string }
+        category: { type: string }
+        difficulty: { type: string }
+        caloriesBurnedPerMin: { type: number, format: double }
+        equipment:
+          type: array
+          items: { type: string }
+        videoUrl: { type: string }
+        thumbnailUrl: { type: string }
+        culturalOrigin: { type: string }
+        muscleGroups:
+          type: array
+          items: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+
     ApiResponseListExerciseDTO:
       type: object
       properties:
         success: { type: boolean }
+        message: { type: string }
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExerciseDTO'
+
     ApiResponseExerciseDTO:
       type: object
       properties:
         success: { type: boolean }
+        message: { type: string }
+        data:
+          $ref: '#/components/schemas/ExerciseDTO'
+
     GenerateWorkoutPlanRequest:
       type: object
       properties:
+        daysPerWeek: { type: integer }
+        exerciseType: { type: string }
+        exerciseTime: { type: string }
+        durationMinutes: { type: integer }
         goal: { type: string }
+        difficulty: { type: string }
+        includeCardio: { type: boolean }
+        cardioType: { type: string }
+        cardioDurationMinutes: { type: integer }
+        cardioSteps: { type: integer }
+        focusMuscleGroups:
+          type: array
+          items: { type: string }
+
     WorkoutPlanDTO:
       type: object
       properties:
         id: { type: integer, format: int64 }
+        userId: { type: integer, format: int64 }
+        planName: { type: string }
+        planType: { type: string }
+        exercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkoutExerciseDTO'
+        frequency: { type: string }
+        difficulty: { type: string }
+        durationWeeks: { type: integer }
+        isActive: { type: boolean }
+        exerciseType: { type: string }
+        exerciseTime: { type: string }
+        exerciseDurationMinutes: { type: integer }
+        goal: { type: string }
+        daysPerWeek: { type: integer }
+        caloriesPerSession: { type: integer }
+        cardioType: { type: string }
+        cardioDurationMinutes: { type: integer }
+        cardioSteps: { type: integer }
+        cardioCalories: { type: integer }
+        isTemplate: { type: boolean }
+
+    WorkoutExerciseDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        exerciseId: { type: integer, format: int64 }
+        exerciseName: { type: string }
+        sets: { type: integer }
+        reps: { type: integer }
+        durationSeconds: { type: integer }
+        restTimeSeconds: { type: integer }
+        order: { type: integer }
+        dayOfWeek: { type: string }
+        muscleGroup: { type: string }
+        caloriesBurned: { type: integer }
+        isCardio: { type: boolean }
+        steps: { type: integer }
+
     UserWorkoutPlanDTO:
       type: object
       properties:
         id: { type: integer, format: int64 }
+        userEmail: { type: string }
+        workoutPlan:
+          $ref: '#/components/schemas/WorkoutPlanDTO'
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        status: { type: string }
+        completedWorkouts: { type: integer }
+        totalWorkouts: { type: integer }
+        currentWeek: { type: integer }
+        scheduledForTomorrow: { type: boolean }
+
     DailyStepTrackingDTO:
       type: object
       properties:
+        id: { type: integer, format: int64 }
+        userEmail: { type: string }
+        trackingDate: { type: string, format: date }
         steps: { type: integer }
+        stepGoal: { type: integer }
+        caloriesBurned: { type: integer }
+        goalCompleted: { type: boolean }
+
     StepTrackingSyncRequest:
       type: object
       properties:
         steps: { type: integer }
+        stepGoal: { type: integer }
+        goalCompleted: { type: boolean }

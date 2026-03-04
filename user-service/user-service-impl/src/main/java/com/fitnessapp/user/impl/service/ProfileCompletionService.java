@@ -51,4 +51,3 @@ public class ProfileCompletionService implements ProfileCompletionOperations {
         return s.isHasPersonalInfo() && s.isHasHealthMetrics() && s.isHasDietaryPreference() && s.isHasGoals();
     }
 }
-

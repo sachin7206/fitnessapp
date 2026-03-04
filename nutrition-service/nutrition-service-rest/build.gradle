@@ -41,20 +41,28 @@ openApiGenerate {
     ]
     typeMappings.set([
         "NutritionPlanDTO"            : "NutritionPlanDTO",
+        "MealDTO"                     : "MealDTO",
+        "FoodItemDTO"                 : "FoodItemDTO",
         "UserNutritionPlanDTO"        : "UserNutritionPlanDTO",
         "GenerateNutritionPlanRequest": "GenerateNutritionPlanRequest",
         "UserFoodPreferenceDTO"       : "UserFoodPreferenceDTO",
         "ProfileCompletionStatusDTO"  : "ProfileCompletionStatusDTO",
         "DailyNutritionSummaryDTO"    : "DailyNutritionSummaryDTO",
+        "DailyMealTrackingDTO"        : "DailyMealTrackingDTO",
+        "MealCompletionRequest"       : "MealCompletionRequest",
         "DailyTrackingSyncRequest"    : "DailyTrackingSyncRequest"
     ])
     importMappings.set([
         "NutritionPlanDTO"            : "com.fitnessapp.nutrition.common.dto.NutritionPlanDTO",
+        "MealDTO"                     : "com.fitnessapp.nutrition.common.dto.MealDTO",
+        "FoodItemDTO"                 : "com.fitnessapp.nutrition.common.dto.FoodItemDTO",
         "UserNutritionPlanDTO"        : "com.fitnessapp.nutrition.common.dto.UserNutritionPlanDTO",
         "GenerateNutritionPlanRequest": "com.fitnessapp.nutrition.common.dto.GenerateNutritionPlanRequest",
         "UserFoodPreferenceDTO"       : "com.fitnessapp.nutrition.common.dto.UserFoodPreferenceDTO",
         "ProfileCompletionStatusDTO"  : "com.fitnessapp.user.common.dto.ProfileCompletionStatusDTO",
         "DailyNutritionSummaryDTO"    : "com.fitnessapp.nutrition.common.dto.DailyNutritionSummaryDTO",
+        "DailyMealTrackingDTO"        : "com.fitnessapp.nutrition.common.dto.DailyMealTrackingDTO",
+        "MealCompletionRequest"       : "com.fitnessapp.nutrition.common.dto.MealCompletionRequest",
         "DailyTrackingSyncRequest"    : "com.fitnessapp.nutrition.common.dto.DailyTrackingSyncRequest"
     ])
 }

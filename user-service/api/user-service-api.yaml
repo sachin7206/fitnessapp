@@ -257,74 +257,273 @@ components:
   schemas:
     RegisterRequest:
       type: object
-      x-mapped-type: com.fitnessapp.user.common.dto.RegisterRequest
+      required: [email, password, firstName, lastName]
       properties:
         email:
           type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        language:
+          type: string
+          default: en
+        region:
+          type: string
+
     LoginRequest:
       type: object
-      x-mapped-type: com.fitnessapp.user.common.dto.LoginRequest
+      required: [email, password]
       properties:
         email:
           type: string
+          format: email
+        password:
+          type: string
+
     ForgotPasswordRequest:
       type: object
-      x-mapped-type: com.fitnessapp.user.common.dto.ForgotPasswordRequest
       properties:
         email:
           type: string
+
     ResetPasswordRequest:
       type: object
-      x-mapped-type: com.fitnessapp.user.common.dto.ResetPasswordRequest
       properties:
-        email:
+        token:
           type: string
+        newPassword:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        tokenType:
+          type: string
+          default: Bearer
+        user:
+          $ref: '#/components/schemas/UserDto'
+
     UserDto:
       type: object
-      x-mapped-type: com.fitnessapp.user.common.dto.UserDto
       properties:
         id:
           type: integer
           format: int64
-    AuthResponse:
-      type: object
-      x-mapped-type: com.fitnessapp.user.common.dto.AuthResponse
-      properties:
-        accessToken:
+        email:
           type: string
-    UpdateProfileRequest:
+        profile:
+          $ref: '#/components/schemas/ProfileDto'
+        healthMetrics:
+          $ref: '#/components/schemas/HealthMetricsDto'
+        goals:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    ProfileDto:
       type: object
-      x-mapped-type: com.fitnessapp.user.common.dto.UpdateProfileRequest
       properties:
         firstName:
           type: string
-    UpdateHealthMetricsRequest:
+        lastName:
+          type: string
+        age:
+          type: integer
+        gender:
+          type: string
+        phone:
+          type: string
+        language:
+          type: string
+        region:
+          type: string
+        avatarUrl:
+          type: string
+
+    HealthMetricsDto:
       type: object
-      x-mapped-type: com.fitnessapp.user.common.dto.UpdateHealthMetricsRequest
       properties:
         height:
           type: number
+          format: double
+        currentWeight:
+          type: number
+          format: double
+        targetWeight:
+          type: number
+          format: double
+        activityLevel:
+          type: string
+        healthConditions:
+          type: array
+          items:
+            type: string
+        dietaryPreferences:
+          type: array
+          items:
+            type: string
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        profile:
+          $ref: '#/components/schemas/ProfileData'
+        healthMetrics:
+          $ref: '#/components/schemas/HealthMetricsData'
+        goals:
+          type: array
+          items:
+            type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        age:
+          type: integer
+        gender:
+          type: string
+        phone:
+          type: string
+        language:
+          type: string
+        region:
+          type: string
+
+    ProfileData:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        age:
+          type: integer
+        gender:
+          type: string
+        phone:
+          type: string
+        language:
+          type: string
+        region:
+          type: string
+        avatarUrl:
+          type: string
+
+    HealthMetricsData:
+      type: object
+      properties:
+        height:
+          type: number
+          format: double
+        currentWeight:
+          type: number
+          format: double
+        targetWeight:
+          type: number
+          format: double
+        activityLevel:
+          type: string
+        healthConditions:
+          type: array
+          items:
+            type: string
+        dietaryPreferences:
+          type: array
+          items:
+            type: string
+
+    UpdateHealthMetricsRequest:
+      type: object
+      properties:
+        height:
+          type: number
+          format: double
+        currentWeight:
+          type: number
+          format: double
+        targetWeight:
+          type: number
+          format: double
+        activityLevel:
+          type: string
+        healthConditions:
+          type: array
+          items:
+            type: string
+        dietaryPreferences:
+          type: array
+          items:
+            type: string
+
     ProfileCompletionStatusDTO:
       type: object
-      x-mapped-type: com.fitnessapp.user.common.dto.ProfileCompletionStatusDTO
       properties:
         isComplete:
           type: boolean
+        hasPersonalInfo:
+          type: boolean
+        hasHealthMetrics:
+          type: boolean
+        hasGoals:
+          type: boolean
+        hasDietaryPreference:
+          type: boolean
+        missingFields:
+          type: array
+          items:
+            type: string
+        completionPercentage:
+          type: integer
+
     ApiResponseAuthResponse:
       type: object
-      x-mapped-type: com.fitnessapp.common.dto.ApiResponse
       properties:
         success:
           type: boolean
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/AuthResponse'
+        timestamp:
+          type: string
+          format: date-time
+
     ApiResponseUserDto:
       type: object
-      x-mapped-type: com.fitnessapp.common.dto.ApiResponse
       properties:
         success:
           type: boolean
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/UserDto'
+        timestamp:
+          type: string
+          format: date-time
+
     ApiResponseVoid:
       type: object
-      x-mapped-type: com.fitnessapp.common.dto.ApiResponse
       properties:
         success:
           type: boolean
+        message:
+          type: string
+        data:
+          type: object
+        timestamp:
+          type: string
+          format: date-time

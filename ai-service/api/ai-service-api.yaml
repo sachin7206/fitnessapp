@@ -132,43 +132,188 @@ components:
       type: object
       properties:
         dietType: { type: string }
+        goal: { type: string }
+        targetCalories: { type: integer }
+        region: { type: string }
+        age: { type: integer }
+        gender: { type: string }
+        weight: { type: number, format: double }
+        height: { type: number, format: double }
+        mealSlots:
+          type: array
+          items:
+            $ref: '#/components/schemas/MealSlot'
+        foodPreferences:
+          $ref: '#/components/schemas/FoodPrefs'
+
+    MealSlot:
+      type: object
+      properties:
+        name: { type: string }
+        type: { type: string }
+        time: { type: string }
+
+    FoodPrefs:
+      type: object
+      properties:
+        includeChicken: { type: boolean }
+        includeFish: { type: boolean }
+        includeRedMeat: { type: boolean }
+        eggsPerDay: { type: integer }
+        includeRice: { type: boolean }
+        includeRoti: { type: boolean }
+        includeDal: { type: boolean }
+        includeMilk: { type: boolean }
+        includePaneer: { type: boolean }
+        includeCurd: { type: boolean }
+        allergies:
+          type: array
+          items: { type: string }
+        dislikedFoods:
+          type: array
+          items: { type: string }
+        cookingOilPreference: { type: string }
+        preferHomemade: { type: boolean }
+
     AiNutritionPlanResponse:
       type: object
       properties:
-        meals: { type: array, items: { type: object } }
+        meals:
+          type: array
+          items:
+            $ref: '#/components/schemas/AiMeal'
+
+    AiMeal:
+      type: object
+      properties:
+        name: { type: string }
+        mealType: { type: string }
+        timeOfDay: { type: string }
+        calories: { type: integer }
+        preparationTips: { type: string }
+        foodItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/AiFoodItem'
+
+    AiFoodItem:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        quantity: { type: string }
+        region: { type: string }
+        calories: { type: integer }
+        proteinGrams: { type: number, format: double }
+        carbsGrams: { type: number, format: double }
+        fatGrams: { type: number, format: double }
+        fiberGrams: { type: number, format: double }
+        isVegetarian: { type: boolean }
+
     AiEstimateMacrosRequest:
       type: object
       properties:
         foodDescription: { type: string }
+
     AiEstimateMacrosResponse:
       type: object
       properties:
         name: { type: string }
+        calories: { type: integer }
+        proteinGrams: { type: number, format: double }
+        carbsGrams: { type: number, format: double }
+        fatGrams: { type: number, format: double }
+
     AiWorkoutPlanRequest:
       type: object
       properties:
+        daysPerWeek: { type: integer }
+        exerciseType: { type: string }
+        exerciseTime: { type: string }
+        durationMinutes: { type: integer }
         goal: { type: string }
+        difficulty: { type: string }
+        includeCardio: { type: boolean }
+        cardioType: { type: string }
+        cardioDurationMinutes: { type: integer }
+        cardioSteps: { type: integer }
+        focusMuscleGroups:
+          type: array
+          items: { type: string }
+
     AiWorkoutPlanResponse:
       type: object
       properties:
-        exercises: { type: array, items: { type: object } }
+        exercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/AiExercise'
+
+    AiExercise:
+      type: object
+      properties:
+        exerciseName: { type: string }
+        sets: { type: integer }
+        reps: { type: integer }
+        durationSeconds: { type: integer }
+        restTimeSeconds: { type: integer }
+        dayOfWeek: { type: string }
+        muscleGroup: { type: string }
+        caloriesBurned: { type: integer }
+        isCardio: { type: boolean }
+        steps: { type: integer }
+        order: { type: integer }
+
     AiMotivationalQuoteResponse:
       type: object
       properties:
         quote: { type: string }
+        fromAi: { type: boolean }
+
     AiWellnessPlanRequest:
       type: object
       properties:
         type: { type: string }
+        level: { type: string }
+        durationWeeks: { type: integer }
+        sessionsPerWeek: { type: integer }
+        sessionDurationMinutes: { type: integer }
+        focusAreas:
+          type: array
+          items: { type: string }
+
     AiWellnessPlanResponse:
       type: object
       properties:
-        sessions: { type: array, items: { type: object } }
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AiWellnessSession'
+
+    AiWellnessSession:
+      type: object
+      properties:
+        dayOfWeek: { type: string }
+        sessionType: { type: string }
+        sessionName: { type: string }
+        description: { type: string }
+        durationMinutes: { type: integer }
+        caloriesBurned: { type: integer }
+        poses:
+          type: array
+          items: { type: string }
+        steps:
+          type: array
+          items: { type: string }
+
     AiTextRequest:
       type: object
       properties:
         prompt: { type: string }
+        jsonResponse: { type: boolean }
+
     AiTextResponse:
       type: object
       properties:
         text: { type: string }
+        fromAi: { type: boolean }

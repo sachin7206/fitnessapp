@@ -157,20 +157,73 @@ components:
     WeightEntryDTO:
       type: object
       properties:
+        id: { type: integer, format: int64 }
+        date: { type: string, format: date }
         weight: { type: number, format: double }
+        unit: { type: string }
+        bmi: { type: number, format: double }
+        bodyFatPercentage: { type: number, format: double }
+        notes: { type: string }
+
     BodyMeasurementDTO:
       type: object
       properties:
+        id: { type: integer, format: int64 }
+        date: { type: string, format: date }
+        chest: { type: number, format: double }
         waist: { type: number, format: double }
+        hips: { type: number, format: double }
+        leftArm: { type: number, format: double }
+        rightArm: { type: number, format: double }
+        leftThigh: { type: number, format: double }
+        rightThigh: { type: number, format: double }
+        neck: { type: number, format: double }
+        unit: { type: string }
+
     ProgressGoalDTO:
       type: object
       properties:
+        id: { type: integer, format: int64 }
         goalType: { type: string }
+        targetValue: { type: number, format: double }
+        currentValue: { type: number, format: double }
+        startValue: { type: number, format: double }
+        startDate: { type: string, format: date }
+        targetDate: { type: string, format: date }
+        unit: { type: string }
+        isActive: { type: boolean }
+        progressPercentage: { type: number, format: double }
+
     ProgressSummaryDTO:
       type: object
       properties:
         period: { type: string }
+        currentWeight: { type: number, format: double }
+        weightChange: { type: number, format: double }
+        bmi: { type: number, format: double }
+        activeGoals:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProgressGoalDTO'
+        latestMeasurements:
+          $ref: '#/components/schemas/BodyMeasurementDTO'
+        totalEntriesLogged: { type: integer }
+        streakDays: { type: integer }
+
     TrendDataDTO:
       type: object
       properties:
-        days: { type: integer }
+        weightTrend:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrendPoint'
+        bmiTrend:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrendPoint'
+
+    TrendPoint:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        value: { type: number, format: double }
