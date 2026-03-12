@@ -1,0 +1,19 @@
+databaseChangeLog:
+  - changeSet:
+      id: 009-add-weight-and-set-details-to-workout-exercises
+      author: fitnessapp
+      changes:
+        - addColumn:
+            tableName: workout_exercises
+            columns:
+              - column:
+                  name: weight
+                  type: DOUBLE
+                  constraints:
+                    nullable: true
+              - column:
+                  name: set_details_json
+                  type: TEXT
+                  constraints:
+                    nullable: true
+

@@ -9,7 +9,12 @@ export const register = createAsyncThunk(
       const response = await authService.register(userData);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Registration failed');
+      console.error('Register thunk error:', error?.response?.status, error?.response?.data, error?.message);
+      const msg = error.response?.data?.message
+        || error.response?.data?.error
+        || error.message
+        || 'Registration failed';
+      return rejectWithValue(msg);
     }
   }
 );
@@ -21,7 +26,12 @@ export const login = createAsyncThunk(
       const response = await authService.login(email, password);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Login failed');
+      console.error('Login thunk error:', error?.response?.status, error?.response?.data, error?.message);
+      const msg = error.response?.data?.message
+        || error.response?.data?.error
+        || error.message
+        || 'Login failed';
+      return rejectWithValue(msg);
     }
   }
 );

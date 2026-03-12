@@ -52,7 +52,12 @@ openApiGenerate {
         "ExerciseSubstitutionResponseDTO"   : "ExerciseSubstitutionResponseDTO",
         "WorkoutFeedbackRequest"            : "WorkoutFeedbackRequest",
         "WorkoutFeedbackDTO"                : "WorkoutFeedbackDTO",
-        "WorkoutAdjustmentResponseDTO"      : "WorkoutAdjustmentResponseDTO"
+        "WorkoutAdjustmentResponseDTO"      : "WorkoutAdjustmentResponseDTO",
+        "CustomWorkoutPlanRequest"          : "CustomWorkoutPlanRequest",
+        "CustomExerciseEntry"               : "CustomExerciseEntry",
+        "CustomWorkoutLogSyncRequest"       : "CustomWorkoutLogSyncRequest",
+        "CustomWorkoutLogDTO"               : "CustomWorkoutLogDTO",
+        "UpdateExerciseRequest"             : "UpdateExerciseRequest"
     ])
     importMappings.set([
         "ExerciseDTO"                       : "com.fitnessapp.exercise.common.dto.ExerciseDTO",
@@ -67,7 +72,12 @@ openApiGenerate {
         "ExerciseSubstitutionResponseDTO"   : "com.fitnessapp.exercise.common.dto.ExerciseSubstitutionResponseDTO",
         "WorkoutFeedbackRequest"            : "com.fitnessapp.exercise.common.dto.WorkoutFeedbackRequest",
         "WorkoutFeedbackDTO"                : "com.fitnessapp.exercise.common.dto.WorkoutFeedbackDTO",
-        "WorkoutAdjustmentResponseDTO"      : "com.fitnessapp.exercise.common.dto.WorkoutAdjustmentResponseDTO"
+        "WorkoutAdjustmentResponseDTO"      : "com.fitnessapp.exercise.common.dto.WorkoutAdjustmentResponseDTO",
+        "CustomWorkoutPlanRequest"          : "com.fitnessapp.exercise.common.dto.CustomWorkoutPlanRequest",
+        "CustomExerciseEntry"               : "com.fitnessapp.exercise.common.dto.CustomExerciseEntry",
+        "CustomWorkoutLogSyncRequest"       : "com.fitnessapp.exercise.common.dto.CustomWorkoutLogSyncRequest",
+        "CustomWorkoutLogDTO"               : "com.fitnessapp.exercise.common.dto.CustomWorkoutLogDTO",
+        "UpdateExerciseRequest"             : "com.fitnessapp.exercise.common.dto.UpdateExerciseRequest"
     ])
 }
 

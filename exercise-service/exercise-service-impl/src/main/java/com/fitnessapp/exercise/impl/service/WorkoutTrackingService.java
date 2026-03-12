@@ -1,5 +1,6 @@
 package com.fitnessapp.exercise.impl.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fitnessapp.exercise.common.dto.*;
 import com.fitnessapp.exercise.impl.model.*;
 import com.fitnessapp.exercise.impl.repository.*;
@@ -9,7 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service @RequiredArgsConstructor @Slf4j
@@ -19,35 +20,12 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
     private final WorkoutPlanRepository workoutPlanRepo;
     private final WorkoutCompletionRepository completionRepo;
     private final DailyStepTrackingRepository stepTrackingRepo;
+    private final CustomWorkoutLogRepository customLogRepo;
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional
     public UserWorkoutPlanDTO getActiveWorkoutPlan(String email) {
-        LocalDate today = LocalDate.now();
-
-        // 1. Check ENDING_TODAY plans — if their endDate has passed, mark COMPLETED
-        userPlanRepo.findByUserEmailAndStatus(email, "ENDING_TODAY").ifPresent(ending -> {
-            if (!ending.getEndDate().isAfter(today.minusDays(1))) {
-                ending.setStatus("COMPLETED");
-                userPlanRepo.save(ending);
-            }
-        });
-
-        // 2. Check SCHEDULED plans — if startDate is today or past, activate it
-        userPlanRepo.findByUserEmailAndStatus(email, "SCHEDULED").ifPresent(scheduled -> {
-            if (!scheduled.getStartDate().isAfter(today)) {
-                scheduled.setStatus("ACTIVE");
-                userPlanRepo.save(scheduled);
-            }
-        });
-
-        // 3. If there's an ENDING_TODAY plan, it's still active for today — return it
-        var endingToday = userPlanRepo.findByUserEmailAndStatus(email, "ENDING_TODAY");
-        if (endingToday.isPresent()) {
-            return toDTO(endingToday.get());
-        }
-
-        // 4. Return ACTIVE plan
         return userPlanRepo.findByUserEmailAndStatus(email, "ACTIVE")
                 .map(this::toDTO)
                 .orElse(null);
@@ -62,52 +40,135 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
         int durationWeeks = plan.getDurationWeeks() != null ? plan.getDurationWeeks() : 8;
         int daysPerWeek = plan.getDaysPerWeek() != null ? plan.getDaysPerWeek() : 4;
 
-        var existingActive = userPlanRepo.findByUserEmailAndStatus(email, "ACTIVE");
-        LocalDate startDate;
+        // Delete all exercise log data and completions for this user first
+        customLogRepo.deleteByUserEmail(email);
+        completionRepo.deleteByUserEmail(email);
 
-        if (existingActive.isPresent()) {
-            // Old plan stays active for today — mark it to end at midnight
-            UserWorkoutPlan oldPlan = existingActive.get();
-            oldPlan.setStatus("ENDING_TODAY");
-            oldPlan.setEndDate(LocalDate.now());
-            userPlanRepo.save(oldPlan);
-
-            // Cancel any previously scheduled plan
-            userPlanRepo.findByUserEmailAndStatus(email, "SCHEDULED").ifPresent(scheduled -> {
-                scheduled.setStatus("CANCELLED");
-                userPlanRepo.save(scheduled);
-            });
-
-            // New plan starts tomorrow
-            startDate = LocalDate.now().plusDays(1);
-        } else {
-            // Cancel any previously scheduled plan
-            userPlanRepo.findByUserEmailAndStatus(email, "SCHEDULED").ifPresent(scheduled -> {
-                scheduled.setStatus("CANCELLED");
-                userPlanRepo.save(scheduled);
-            });
-
-            // Also check ENDING_TODAY (created earlier today)
-            userPlanRepo.findByUserEmailAndStatus(email, "ENDING_TODAY").ifPresent(endingToday -> {
-                // Already has an ending-today plan, new plan starts tomorrow
-            });
-
-            startDate = LocalDate.now();
+        // Collect old workout plan IDs to delete (but not the new plan being assigned)
+        List<UserWorkoutPlan> existingPlans = userPlanRepo.findByUserEmail(email);
+        List<Long> oldWorkoutPlanIds = new ArrayList<>();
+        for (UserWorkoutPlan oldUserPlan : existingPlans) {
+            if (oldUserPlan.getWorkoutPlan() != null && !oldUserPlan.getWorkoutPlan().getId().equals(planId)) {
+                oldWorkoutPlanIds.add(oldUserPlan.getWorkoutPlan().getId());
+            }
         }
+
+        // Delete all user workout plan entries
+        userPlanRepo.deleteAll(existingPlans);
+        userPlanRepo.flush();
+
+        // Now delete old workout plans (cascades to exercises)
+        for (Long oldPlanId : oldWorkoutPlanIds) {
+            workoutPlanRepo.deleteById(oldPlanId);
+        }
+        workoutPlanRepo.flush();
+
+        // Create new plan — starts immediately as ACTIVE
+        LocalDate startDate = LocalDate.now();
 
         UserWorkoutPlan userPlan = new UserWorkoutPlan();
         userPlan.setUserEmail(email);
         userPlan.setWorkoutPlan(plan);
         userPlan.setStartDate(startDate);
         userPlan.setEndDate(startDate.plusWeeks(durationWeeks));
-        userPlan.setStatus(startDate.isAfter(LocalDate.now()) ? "SCHEDULED" : "ACTIVE");
+        userPlan.setStatus("ACTIVE");
         userPlan.setCompletedWorkouts(0);
         userPlan.setTotalWorkouts(durationWeeks * daysPerWeek);
         userPlan.setCurrentWeek(1);
 
         UserWorkoutPlanDTO dto = toDTO(userPlanRepo.save(userPlan));
-        dto.setScheduledForTomorrow(startDate.isAfter(LocalDate.now()));
+        dto.setScheduledForTomorrow(false);
+
+        // Create initial log entries for each exercise
+        createInitialExerciseLogs(email, plan, startDate);
+
+        log.info("Assigned new workout plan {} to user {} immediately. Old plans and logs deleted.", planId, email);
+
         return dto;
+    }
+
+    private void createInitialExerciseLogs(String email, WorkoutPlan plan, LocalDate logDate) {
+        if (plan.getExercises() == null || plan.getExercises().isEmpty()) return;
+
+        // Group exercises by dayOfWeek
+        Map<String, List<WorkoutPlan.WorkoutExercise>> byDay = new LinkedHashMap<>();
+        for (WorkoutPlan.WorkoutExercise ex : plan.getExercises()) {
+            byDay.computeIfAbsent(ex.getDayOfWeek(), k -> new ArrayList<>()).add(ex);
+        }
+
+        for (Map.Entry<String, List<WorkoutPlan.WorkoutExercise>> dayEntry : byDay.entrySet()) {
+            String dayOfWeek = dayEntry.getKey();
+            List<WorkoutPlan.WorkoutExercise> dayExercises = dayEntry.getValue();
+
+            for (int i = 0; i < dayExercises.size(); i++) {
+                final int exerciseIdx = i;
+                WorkoutPlan.WorkoutExercise ex = dayExercises.get(i);
+
+                // Build initial sets data from setDetailsJson or flat fields
+                List<Map<String, Object>> initialSets;
+                boolean isCardio = ex.getIsCardio() != null && ex.getIsCardio();
+
+                if (isCardio) {
+                    // For cardio, store duration instead of sets/reps
+                    initialSets = new ArrayList<>();
+                    Map<String, Object> cardioEntry = new LinkedHashMap<>();
+                    int durationSec = ex.getDurationSeconds() != null ? ex.getDurationSeconds() : 0;
+                    cardioEntry.put("durationSeconds", durationSec);
+                    cardioEntry.put("durationMinutes", durationSec / 60);
+                    initialSets.add(cardioEntry);
+                } else if (ex.getSetDetailsJson() != null) {
+                    try {
+                        initialSets = objectMapper.readValue(ex.getSetDetailsJson(),
+                                objectMapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+                    } catch (Exception e) {
+                        initialSets = buildFlatSets(ex);
+                    }
+                } else {
+                    initialSets = buildFlatSets(ex);
+                }
+
+                // Wrap in history array: [ { sets: [...], loggedAt: "..." } ]
+                Map<String, Object> historyEntry = new LinkedHashMap<>();
+                historyEntry.put("sets", initialSets);
+                historyEntry.put("loggedAt", LocalDateTime.now().toString());
+                List<Map<String, Object>> history = new ArrayList<>();
+                history.add(historyEntry);
+
+                try {
+                    // Find or create log record
+                    CustomWorkoutLog logRecord = customLogRepo
+                            .findByUserEmailAndLogDateAndDayOfWeekAndExerciseIndex(email, logDate, dayOfWeek, exerciseIdx)
+                            .orElseGet(() -> {
+                                CustomWorkoutLog newLog = new CustomWorkoutLog();
+                                newLog.setUserEmail(email);
+                                newLog.setLogDate(logDate);
+                                newLog.setDayOfWeek(dayOfWeek);
+                                newLog.setExerciseIndex(exerciseIdx);
+                                return newLog;
+                            });
+
+                    logRecord.setExerciseName(ex.getExerciseName());
+                    logRecord.setSetsData(objectMapper.writeValueAsString(history));
+                    logRecord.setCompletedAt(LocalDateTime.now());
+                    customLogRepo.save(logRecord);
+                } catch (Exception e) {
+                    log.warn("Failed to create initial log for exercise {}: {}", ex.getExerciseName(), e.getMessage());
+                }
+            }
+        }
+        log.info("Created initial exercise logs for user: {}", email);
+    }
+
+    private List<Map<String, Object>> buildFlatSets(WorkoutPlan.WorkoutExercise ex) {
+        int numSets = ex.getSets() != null ? ex.getSets() : 3;
+        List<Map<String, Object>> sets = new ArrayList<>();
+        for (int s = 0; s < numSets; s++) {
+            Map<String, Object> set = new LinkedHashMap<>();
+            set.put("reps", ex.getReps() != null ? ex.getReps() : 12);
+            set.put("weight", ex.getWeight());
+            sets.add(set);
+        }
+        return sets;
     }
 
     @Override
@@ -222,15 +283,17 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
             planDTO.setCardioDurationMinutes(plan.getCardioDurationMinutes());
             planDTO.setCardioSteps(plan.getCardioSteps());
             planDTO.setCardioCalories(plan.getCardioCalories());
+            planDTO.setRestDay(plan.getRestDay());
             planDTO.setExercises(plan.getExercises().stream().map(e -> {
                 WorkoutExerciseDTO edto = new WorkoutExerciseDTO();
                 edto.setId(e.getId()); edto.setExerciseId(e.getExerciseId());
                 edto.setExerciseName(e.getExerciseName()); edto.setSets(e.getSets());
-                edto.setReps(e.getReps()); edto.setDurationSeconds(e.getDurationSeconds());
+                edto.setReps(e.getReps()); edto.setWeight(e.getWeight());
+                edto.setDurationSeconds(e.getDurationSeconds());
                 edto.setRestTimeSeconds(e.getRestTimeSeconds()); edto.setOrder(e.getOrder());
                 edto.setDayOfWeek(e.getDayOfWeek()); edto.setMuscleGroup(e.getMuscleGroup());
                 edto.setCaloriesBurned(e.getCaloriesBurned()); edto.setIsCardio(e.getIsCardio());
-                edto.setSteps(e.getSteps());
+                edto.setSteps(e.getSteps()); edto.setSetDetailsJson(e.getSetDetailsJson());
                 return edto;
             }).collect(Collectors.toList()));
             dto.setWorkoutPlan(planDTO);

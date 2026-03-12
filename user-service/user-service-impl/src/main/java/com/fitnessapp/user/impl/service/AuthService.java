@@ -46,8 +46,8 @@ public class AuthService implements AuthOperations {
         user = userRepository.save(user);
 
         UserDetails ud = userDetailsService.loadUserByUsername(user.getEmail());
-        return new AuthResponse(jwtTokenProvider.generateAccessToken(ud),
-                jwtTokenProvider.generateRefreshToken(ud), userService.convertToDto(user));
+        return new AuthResponse(jwtTokenProvider.generateAccessToken(ud, user.getId()),
+                jwtTokenProvider.generateRefreshToken(ud, user.getId()), userService.convertToDto(user));
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -56,8 +56,8 @@ public class AuthService implements AuthOperations {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         UserDetails ud = userDetailsService.loadUserByUsername(request.getEmail());
-        return new AuthResponse(jwtTokenProvider.generateAccessToken(ud),
-                jwtTokenProvider.generateRefreshToken(ud), userService.convertToDto(user));
+        return new AuthResponse(jwtTokenProvider.generateAccessToken(ud, user.getId()),
+                jwtTokenProvider.generateRefreshToken(ud, user.getId()), userService.convertToDto(user));
     }
 
     public AuthResponse refreshToken(String refreshToken) {
@@ -67,7 +67,7 @@ public class AuthService implements AuthOperations {
             throw new RuntimeException("Invalid refresh token");
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        return new AuthResponse(jwtTokenProvider.generateAccessToken(ud),
+        return new AuthResponse(jwtTokenProvider.generateAccessToken(ud, user.getId()),
                 refreshToken, userService.convertToDto(user));
     }
 

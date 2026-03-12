@@ -179,8 +179,8 @@ export default {
     preferHomemade: 'Prefer Homemade',
     allergies: 'Allergies',
     dislikedFoods: 'Disliked Foods',
-    newPlanTomorrow: 'This new plan will start from tomorrow',
-    oldPlanActive: 'Your current plan stays active until midnight',
+    newPlanTomorrow: 'Your current plan will be replaced immediately',
+    oldPlanActive: 'New plan will be active right away',
   },
 
   // Workout
@@ -281,7 +281,7 @@ export default {
     benefits: 'Benefits',
     instructions: 'Instructions',
     newPlan: 'Create New Plan',
-    currentPlanMidnight: 'Current plan stays until midnight, new starts tomorrow.',
+    currentPlanMidnight: 'Your current plan will be replaced with the new one.',
     calTotal: 'cal total',
     min: 'min',
     cal: 'cal',

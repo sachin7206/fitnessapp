@@ -7,21 +7,18 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class WorkoutExerciseDTO {
-    private Long id;
-    private Long exerciseId;
+public class CustomExerciseEntry {
     private String exerciseName;
     private Integer sets;
     private Integer reps;
     private Double weight;
+    private String muscleGroup;
+    private Boolean isCardio;
     private Integer durationSeconds;
     private Integer restTimeSeconds;
-    private Integer order;
     private String dayOfWeek;
-    private String muscleGroup;
+    private Integer order;
     private Integer caloriesBurned;
-    private Boolean isCardio;
-    private Integer steps;
     private String setDetailsJson; // JSON: [{"reps":12,"weight":50},...]
 }
 

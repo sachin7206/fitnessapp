@@ -244,6 +244,85 @@ paths:
                 items:
                   $ref: '#/components/schemas/WorkoutFeedbackDTO'
 
+  /workouts/custom-plan:
+    post:
+      tags: [Workout]
+      operationId: saveCustomPlan
+      summary: Save a user-created custom workout plan (free service)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomWorkoutPlanRequest'
+      responses:
+        '200':
+          description: Custom plan saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutPlanDTO'
+
+  /workouts/custom-plan/exercises/{exerciseId}:
+    put:
+      tags: [Workout]
+      operationId: updateExercise
+      summary: Update a single exercise in-place (sets, reps, weight, rest, setDetailsJson)
+      parameters:
+        - name: exerciseId
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateExerciseRequest'
+      responses:
+        '200':
+          description: Exercise updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutExerciseDTO'
+
+  /workouts/custom-plan/log:
+    put:
+      tags: [Workout]
+      operationId: syncCustomWorkoutLog
+      summary: Sync exercise set/rep/weight logs for custom plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomWorkoutLogSyncRequest'
+      responses:
+        '200':
+          description: Logs synced
+          content:
+            application/json:
+              schema:
+                type: object
+    get:
+      tags: [Workout]
+      operationId: getCustomWorkoutLogs
+      summary: Get exercise logs for custom workout
+      parameters:
+        - name: days
+          in: query
+          schema: { type: integer, default: 30 }
+      responses:
+        '200':
+          description: Exercise logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomWorkoutLogDTO'
+
   /health:
     get:
       tags: [Health]
@@ -448,4 +527,62 @@ components:
             type: object
         reasoning: { type: string }
         fromAi: { type: boolean }
+
+    CustomWorkoutPlanRequest:
+      type: object
+      properties:
+        planName: { type: string }
+        planType: { type: string }
+        daysPerWeek: { type: integer }
+        restDay: { type: string, description: 'Day of the week for rest, e.g. SUNDAY' }
+        exercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomExerciseEntry'
+
+    CustomExerciseEntry:
+      type: object
+      properties:
+        exerciseName: { type: string }
+        sets: { type: integer }
+        reps: { type: integer }
+        weight: { type: number, format: double }
+        muscleGroup: { type: string }
+        isCardio: { type: boolean }
+        durationSeconds: { type: integer }
+        restTimeSeconds: { type: integer }
+        dayOfWeek: { type: string }
+        order: { type: integer }
+        caloriesBurned: { type: integer }
+        setDetailsJson: { type: string, description: 'JSON array of per-set details, e.g. [{"reps":12,"weight":50},{"reps":10,"weight":55}]' }
+
+    CustomWorkoutLogSyncRequest:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        logs:
+          type: object
+          additionalProperties:
+            type: object
+
+    UpdateExerciseRequest:
+      type: object
+      properties:
+        sets: { type: integer }
+        reps: { type: integer }
+        weight: { type: number, format: double }
+        restTimeSeconds: { type: integer }
+        setDetailsJson: { type: string, description: 'JSON array of per-set details' }
+
+    CustomWorkoutLogDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        userEmail: { type: string }
+        logDate: { type: string, format: date }
+        dayOfWeek: { type: string }
+        exerciseIndex: { type: integer }
+        exerciseName: { type: string }
+        setsData: { type: string }
+        completedAt: { type: string, format: date-time }
 

@@ -48,8 +48,10 @@ const HomeScreen = ({ navigation }) => {
   // Load persisted tracking on mount (with backend sync — one time only)
   useEffect(() => {
     dispatch(loadTrackingFromStorage());
-    dispatch(loadWorkoutTrackingFromStorage());
-    fetchWorkoutData();
+    dispatch(loadWorkoutTrackingFromStorage()).then(() => {
+      // Fetch workout plan data only after tracking is loaded (avoids double step calls)
+      fetchWorkoutData();
+    });
   }, []);
 
   // Refresh clock every 30 seconds; detect day change to auto-reset
@@ -90,10 +92,10 @@ const HomeScreen = ({ navigation }) => {
           dispatch(setStepGoal(cardioSteps));
         }
         // Fetch motivational quote
-        const quoteData = await workoutService.getMotivationalQuote();
-        dispatch(setMotivationalQuote(quoteData.quote));
-        // Single persist after all data is loaded
-        dispatch(persistWorkoutTracking());
+        try {
+          const quoteData = await workoutService.getMotivationalQuote();
+          dispatch(setMotivationalQuote(quoteData.quote));
+        } catch (e) { /* quote fetch failure is non-critical */ }
       }
     } catch (e) { /* no active plan is fine */ }
   };
@@ -308,7 +310,20 @@ const HomeScreen = ({ navigation }) => {
       title: t('home.myWorkout'),
       description: t('home.trackWorkout'),
       icon: '💪',
-      onPress: () => navigation.navigate('MyWorkout'),
+      onPress: () => {
+        const activePlan = workoutTracking.activePlan;
+        if (activePlan) {
+          // If custom plan, go to free workout view
+          if (activePlan?.workoutPlan?.planType === 'CUSTOM') {
+            navigation.navigate('FreeWorkoutView');
+          } else {
+            navigation.navigate('MyWorkout');
+          }
+        } else {
+          // No plan - show choice screen
+          navigation.navigate('WorkoutChoice');
+        }
+      },
     },
     {
       title: t('home.myNutrition'),

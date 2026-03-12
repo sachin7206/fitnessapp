@@ -37,6 +37,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (StringUtils.hasText(jwt) && jwtTokenProvider.validateToken(jwt)) {
                 String username = jwtTokenProvider.extractUsername(jwt);
+                Long userId = jwtTokenProvider.extractUserId(jwt);
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
@@ -45,7 +46,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         );
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                log.debug("Set authentication for user: {}", username);
+
+                // Store userId as request attribute for controllers to access
+                if (userId != null) {
+                    request.setAttribute("userId", userId);
+                }
+
+                log.debug("Set authentication for user: {} (id: {})", username, userId);
             }
         } catch (Exception ex) {
             log.error("Could not set user authentication: {}", ex.getMessage());

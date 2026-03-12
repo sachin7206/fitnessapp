@@ -170,8 +170,8 @@ export default {
     preferHomemade: 'घर का बना पसंद करें',
     allergies: 'एलर्जी',
     dislikedFoods: 'नापसंद खाद्य पदार्थ',
-    newPlanTomorrow: 'यह नई योजना कल से शुरू होगी',
-    oldPlanActive: 'आपकी वर्तमान योजना आधी रात तक सक्रिय रहेगी',
+    newPlanTomorrow: 'आपकी वर्तमान योजना तुरंत बदल दी जाएगी',
+    oldPlanActive: 'नई योजना तुरंत सक्रिय हो जाएगी',
   },
   workout: {
     title: 'मेरा व्यायाम',

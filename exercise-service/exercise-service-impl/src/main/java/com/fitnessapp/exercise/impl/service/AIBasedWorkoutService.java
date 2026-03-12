@@ -21,7 +21,7 @@ public class AIBasedWorkoutService implements AIBasedWorkoutOperations {
 
     @Override
     @Transactional
-    public WorkoutPlanDTO generatePersonalizedWorkoutPlan(String email, GenerateWorkoutPlanRequest request) {
+    public WorkoutPlanDTO generatePersonalizedWorkoutPlan(String email, Long userId, GenerateWorkoutPlanRequest request) {
         List<WorkoutPlan.WorkoutExercise> exercises = null;
 
         // Try AI service first
@@ -59,6 +59,7 @@ public class AIBasedWorkoutService implements AIBasedWorkoutOperations {
 
         // Save plan
         WorkoutPlan plan = new WorkoutPlan();
+        plan.setUserId(userId);
         plan.setPlanName(buildPlanName(request));
         plan.setPlanType(request.getExerciseType());
         plan.setExercises(exercises);
@@ -316,15 +317,17 @@ public class AIBasedWorkoutService implements AIBasedWorkoutOperations {
         dto.setCardioType(plan.getCardioType()); dto.setCardioDurationMinutes(plan.getCardioDurationMinutes());
         dto.setCardioSteps(plan.getCardioSteps()); dto.setCardioCalories(plan.getCardioCalories());
         dto.setIsTemplate(plan.getIsTemplate());
+        dto.setRestDay(plan.getRestDay());
         dto.setExercises(plan.getExercises().stream().map(e -> {
             WorkoutExerciseDTO edto = new WorkoutExerciseDTO();
             edto.setId(e.getId()); edto.setExerciseId(e.getExerciseId());
             edto.setExerciseName(e.getExerciseName()); edto.setSets(e.getSets());
-            edto.setReps(e.getReps()); edto.setDurationSeconds(e.getDurationSeconds());
+            edto.setReps(e.getReps()); edto.setWeight(e.getWeight());
+            edto.setDurationSeconds(e.getDurationSeconds());
             edto.setRestTimeSeconds(e.getRestTimeSeconds()); edto.setOrder(e.getOrder());
             edto.setDayOfWeek(e.getDayOfWeek()); edto.setMuscleGroup(e.getMuscleGroup());
             edto.setCaloriesBurned(e.getCaloriesBurned()); edto.setIsCardio(e.getIsCardio());
-            edto.setSteps(e.getSteps());
+            edto.setSteps(e.getSteps()); edto.setSetDetailsJson(e.getSetDetailsJson());
             return edto;
         }).collect(Collectors.toList()));
         return dto;

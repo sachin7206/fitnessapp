@@ -98,6 +98,32 @@ const workoutService = {
     const response = await apiClient.get('/workouts/my-plan/feedback/history');
     return response.data;
   },
+
+  // ========== FREE/CUSTOM WORKOUT ==========
+
+  // Save a custom workout plan (free service)
+  saveCustomWorkoutPlan: async (request) => {
+    const response = await apiClient.post('/workouts/custom-plan', request);
+    return response.data;
+  },
+
+  // Update a single exercise in-place (sets, reps, weight, rest, setDetailsJson)
+  updateExercise: async (exerciseId, request) => {
+    const response = await apiClient.put(`/workouts/custom-plan/exercises/${exerciseId}`, request);
+    return response.data;
+  },
+
+  // Sync custom workout exercise log to backend
+  syncCustomWorkoutLog: async (request) => {
+    const response = await apiClient.put('/workouts/custom-plan/log', request);
+    return response.data;
+  },
+
+  // Get custom workout exercise logs
+  getCustomWorkoutLogs: async (days = 30) => {
+    const response = await apiClient.get(`/workouts/custom-plan/log?days=${days}`);
+    return response.data;
+  },
 };
 
 export default workoutService;

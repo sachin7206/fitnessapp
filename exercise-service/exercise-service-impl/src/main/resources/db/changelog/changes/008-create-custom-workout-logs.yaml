@@ -1,0 +1,59 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008-create-custom-workout-logs
+      author: system
+      changes:
+        - createTable:
+            tableName: custom_workout_logs
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_email
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: log_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: day_of_week
+                  type: VARCHAR(20)
+              - column:
+                  name: exercise_index
+                  type: INT
+              - column:
+                  name: exercise_name
+                  type: VARCHAR(255)
+              - column:
+                  name: sets_data
+                  type: TEXT
+              - column:
+                  name: completed_at
+                  type: DATETIME
+              - column:
+                  name: created_at
+                  type: DATETIME
+                  defaultValueComputed: CURRENT_TIMESTAMP
+
+        - addUniqueConstraint:
+            tableName: custom_workout_logs
+            columnNames: user_email, log_date, day_of_week, exercise_index
+            constraintName: uk_custom_workout_log
+
+        - createIndex:
+            tableName: custom_workout_logs
+            indexName: idx_custom_log_user_date
+            columns:
+              - column:
+                  name: user_email
+              - column:
+                  name: log_date
+

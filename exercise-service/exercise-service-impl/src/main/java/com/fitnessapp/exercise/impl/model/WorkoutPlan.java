@@ -46,6 +46,7 @@ public class WorkoutPlan {
     private Integer cardioSteps;
     private Integer cardioCalories;
     private Boolean isTemplate;
+    private String restDay;
 
     @CreatedDate
     @Column(updatable = false)
@@ -65,6 +66,7 @@ public class WorkoutPlan {
         private String exerciseName;
         private Integer sets;
         private Integer reps;
+        private Double weight;
         private Integer durationSeconds;
         private Integer restTimeSeconds;
 
@@ -76,5 +78,8 @@ public class WorkoutPlan {
         private Integer caloriesBurned;
         private Boolean isCardio;
         private Integer steps;
+
+        @Column(name = "set_details_json", columnDefinition = "TEXT")
+        private String setDetailsJson; // JSON: [{"reps":12,"weight":50},{"reps":10,"weight":55}]
     }
 }

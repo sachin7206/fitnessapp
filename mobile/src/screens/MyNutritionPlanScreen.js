@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -35,6 +35,7 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [now, setNow] = useState(new Date());
+  const isInitialMount = useRef(true);
 
   // Replacement food modal state
   const [replaceModalVisible, setReplaceModalVisible] = useState(false);
@@ -127,6 +128,10 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
 
   useFocusEffect(
     useCallback(() => {
+      if (isInitialMount.current) {
+        isInitialMount.current = false;
+        return;
+      }
       fetchActivePlan();
     }, [])
   );
@@ -155,13 +160,13 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
 
   const handleCreateNewPlan = () => {
     if (Platform.OS === 'web') {
-      if (window.confirm('Create a new nutrition plan? Your current plan will stay active until midnight, and the new plan will start tomorrow.')) {
+      if (window.confirm('Create a new nutrition plan? Your current plan will be replaced immediately.')) {
         navigation.navigate('NutritionProfileSetup');
       }
     } else {
       Alert.alert(
         'Create New Plan',
-        'Your current plan will stay active until midnight, and the new plan will start tomorrow. Continue?',
+        'Your current plan will be replaced immediately. Continue?',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Continue', onPress: () => navigation.navigate('NutritionProfileSetup') },

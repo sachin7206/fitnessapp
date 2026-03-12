@@ -2,6 +2,7 @@ package com.fitnessapp.exercise.rest.controller;
 
 import com.fitnessapp.exercise.common.dto.*;
 import com.fitnessapp.exercise.rest.api.WorkoutApi;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -17,15 +18,22 @@ public class WorkoutController implements WorkoutApi {
     private final AIBasedWorkoutOperations aiWorkoutService;
     private final WorkoutTrackingOperations workoutTrackingService;
     private final ExerciseEnhancementOperations exerciseEnhancementService;
+    private final CustomWorkoutOperations customWorkoutService;
+    private final HttpServletRequest httpServletRequest;
 
     private String getCurrentEmail() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return auth.getName();
     }
 
+    private Long getCurrentUserId() {
+        Object userId = httpServletRequest.getAttribute("userId");
+        return userId instanceof Long ? (Long) userId : null;
+    }
+
     @Override
     public ResponseEntity<WorkoutPlanDTO> generatePlan(GenerateWorkoutPlanRequest request) {
-        return ResponseEntity.ok(aiWorkoutService.generatePersonalizedWorkoutPlan(getCurrentEmail(), request));
+        return ResponseEntity.ok(aiWorkoutService.generatePersonalizedWorkoutPlan(getCurrentEmail(), getCurrentUserId(), request));
     }
 
     @Override
@@ -95,5 +103,27 @@ public class WorkoutController implements WorkoutApi {
     @Override
     public ResponseEntity<List<WorkoutFeedbackDTO>> getWorkoutFeedbackHistory() {
         return ResponseEntity.ok(exerciseEnhancementService.getWorkoutFeedbackHistory(getCurrentEmail()));
+    }
+
+    // ========== CUSTOM WORKOUT PLAN ENDPOINTS ==========
+
+    @Override
+    public ResponseEntity<WorkoutPlanDTO> saveCustomPlan(CustomWorkoutPlanRequest request) {
+        return ResponseEntity.ok(customWorkoutService.saveCustomWorkoutPlan(getCurrentEmail(), getCurrentUserId(), request));
+    }
+
+    @Override
+    public ResponseEntity<WorkoutExerciseDTO> updateExercise(Long exerciseId, UpdateExerciseRequest request) {
+        return ResponseEntity.ok(customWorkoutService.updateExercise(getCurrentEmail(), exerciseId, request));
+    }
+
+    @Override
+    public ResponseEntity<Object> syncCustomWorkoutLog(CustomWorkoutLogSyncRequest request) {
+        return ResponseEntity.ok(customWorkoutService.syncCustomWorkoutLog(getCurrentEmail(), request));
+    }
+
+    @Override
+    public ResponseEntity<List<CustomWorkoutLogDTO>> getCustomWorkoutLogs(Integer days) {
+        return ResponseEntity.ok(customWorkoutService.getCustomWorkoutLogs(getCurrentEmail(), days != null ? days : 30));
     }
 }

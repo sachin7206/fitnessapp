@@ -4,6 +4,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -18,21 +19,32 @@ import { useTranslation } from '../i18n';
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const { isLoading, error } = useSelector((state) => state.auth);
 
   const handleLogin = async () => {
+    console.log('handleLogin called', { email, password: password ? '***' : '' });
+    setLoginError('');
+
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      const msg = 'Please fill in all fields';
+      setLoginError(msg);
+      if (Platform.OS !== 'web') Alert.alert('Error', msg);
       return;
     }
 
     try {
+      console.log('Dispatching login...');
       await dispatch(login({ email, password })).unwrap();
+      console.log('Login succeeded');
       // Navigation is handled automatically after successful login
     } catch (err) {
-      Alert.alert('Login Failed', err || 'Invalid credentials');
+      console.log('Login error:', err);
+      const msg = err || 'Invalid credentials';
+      setLoginError(typeof msg === 'string' ? msg : 'Login failed');
+      if (Platform.OS !== 'web') Alert.alert('Login Failed', msg);
     }
   };
 
@@ -80,15 +92,27 @@ const LoginScreen = ({ navigation }) => {
             <Text style={styles.forgotPasswordText}>{t('auth.forgotPassword')}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.button, isLoading && styles.buttonDisabled]}
-            onPress={handleLogin}
+          {loginError ? (
+            <Text style={styles.loginError}>{loginError}</Text>
+          ) : null}
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.button,
+              isLoading && styles.buttonDisabled,
+              Platform.OS === 'web' && { cursor: 'pointer' },
+              pressed && { opacity: 0.7 },
+            ]}
+            onPress={() => {
+              console.log('Login button pressed');
+              handleLogin();
+            }}
             disabled={isLoading}
           >
             <Text style={styles.buttonText}>
               {isLoading ? t('common.loading') : t('auth.login')}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>{t('auth.noAccount')} </Text>
@@ -165,6 +189,16 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  loginError: {
+    color: '#D32F2F',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+    backgroundColor: '#FFEBEE',
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
   },
   buttonText: {
     ...typography.button,

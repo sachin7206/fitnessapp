@@ -12,7 +12,7 @@ const formatLabel = (str) => {
 };
 
 const MUSCLE_ICONS = {
-  'CHEST': '🫁', 'BACK': '🔙', 'LEGS': '🦵', 'SHOULDERS': '💪',
+  'CHEST': '🫁', 'BACK': '🏋️‍♂️', 'LEGS': '🦵', 'SHOULDERS': '💪',
   'ARMS': '💪', 'FULL_BODY': '🏋️', 'CARDIO': '❤️', 'CORE': '🎯',
 };
 
@@ -54,23 +54,13 @@ const GeneratedWorkoutPlanViewScreen = ({ navigation, route }) => {
   const handleAssign = async () => {
     setAssigning(true);
     try {
-      const result = await workoutService.assignWorkoutPlan(plan.id);
-      const isScheduled = result?.scheduledForTomorrow;
+      await workoutService.assignWorkoutPlan(plan.id);
 
-      if (isScheduled) {
-        const msg = 'Your new workout plan will start from tomorrow! 🌅\n\nYour current plan remains active until midnight tonight. Get ready for a fresh start!';
-        if (Platform.OS === 'web') {
-          window.alert('Plan Scheduled! 📅\n\n' + msg);
-        } else {
-          Alert.alert('Plan Scheduled! 📅', msg);
-        }
+      const msg = 'Your workout plan has been assigned! Let\'s crush it! 💪';
+      if (Platform.OS === 'web') {
+        window.alert(msg);
       } else {
-        const msg = 'Your workout plan has been assigned! Let\'s crush it! 💪';
-        if (Platform.OS === 'web') {
-          window.alert(msg);
-        } else {
-          Alert.alert('Plan Assigned! 🎉', msg);
-        }
+        Alert.alert('Plan Assigned! 🎉', msg);
       }
       navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }, { name: 'MyWorkout' }] });
     } catch (error) {

@@ -16,40 +16,45 @@ const BACKEND_IP = '192.168.1.2';
 const BACKEND_PORT = '8080';
 
 const getApiUrl = () => {
-  // Use production URL if available
-  if (PRODUCTION_API_URL) {
-    return PRODUCTION_API_URL;
-  }
-
-  if (Platform.OS === 'web') {
-    // Deployed web app - check if we're NOT on localhost
-    if (typeof window !== 'undefined' &&
-        window.location &&
-        window.location.hostname !== 'localhost' &&
-        window.location.hostname !== '127.0.0.1') {
-      // We're deployed but no API URL was set - show error
-      console.warn('No EXPO_PUBLIC_API_URL set for production web deployment');
-      // Fall through to localhost which will fail gracefully
+  try {
+    // Use production URL if available
+    if (PRODUCTION_API_URL && typeof PRODUCTION_API_URL === 'string') {
+      return PRODUCTION_API_URL;
     }
+
+    if (Platform.OS === 'web') {
+      // Deployed web app - check if we're NOT on localhost
+      if (typeof window !== 'undefined' &&
+          window.location &&
+          window.location.hostname !== 'localhost' &&
+          window.location.hostname !== '127.0.0.1') {
+        // We're deployed but no API URL was set - show error
+        console.warn('No EXPO_PUBLIC_API_URL set for production web deployment');
+        // Fall through to localhost which will fail gracefully
+      }
+      return `http://localhost:${BACKEND_PORT}/api`;
+    }
+
+    // For mobile devices (iOS/Android), try to get IP from Expo
+    try {
+      const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;
+      const expoIp = debuggerHost?.split(':')[0];
+      if (expoIp && expoIp !== 'localhost' && expoIp !== '127.0.0.1') {
+        return `http://${expoIp}:${BACKEND_PORT}/api`;
+      }
+    } catch (e) {
+      console.log('Could not get Expo IP, using fallback');
+    }
+
+    // Fallback to hardcoded IP
+    return `http://${BACKEND_IP}:${BACKEND_PORT}/api`;
+  } catch (e) {
+    console.warn('getApiUrl error, using fallback:', e);
     return `http://localhost:${BACKEND_PORT}/api`;
   }
-
-  // For mobile devices (iOS/Android), try to get IP from Expo
-  try {
-    const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;
-    const expoIp = debuggerHost?.split(':')[0];
-    if (expoIp && expoIp !== 'localhost' && expoIp !== '127.0.0.1') {
-      return `http://${expoIp}:${BACKEND_PORT}/api`;
-    }
-  } catch (e) {
-    console.log('Could not get Expo IP, using fallback');
-  }
-
-  // Fallback to hardcoded IP
-  return `http://${BACKEND_IP}:${BACKEND_PORT}/api`;
 };
 
-const API_URL = getApiUrl();
+const API_URL = String(getApiUrl());
 
 export default {
   API_URL,

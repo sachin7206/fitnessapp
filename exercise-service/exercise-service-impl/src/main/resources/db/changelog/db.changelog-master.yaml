@@ -20,4 +20,13 @@ databaseChangeLog:
   - include:
       file: changes/007-create-workout-feedback-table.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/008-create-custom-workout-logs.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/009-add-weight-setdetails-to-exercises.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/010-add-rest-day-to-workout-plans.yaml
+      relativeToChangelogFile: true
 

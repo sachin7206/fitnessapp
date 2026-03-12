@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl, Alert, Platform,
@@ -18,7 +18,7 @@ const formatLabel = (str) => {
 };
 
 const MUSCLE_ICONS = {
-  'CHEST': '🫁', 'BACK': '🔙', 'LEGS': '🦵', 'SHOULDERS': '💪',
+  'CHEST': '🫁', 'BACK': '🏋️‍♂️', 'LEGS': '🦵', 'SHOULDERS': '💪',
   'ARMS': '💪', 'FULL_BODY': '🏋️', 'CARDIO': '❤️', 'CORE': '🎯',
 };
 
@@ -32,6 +32,7 @@ const MyWorkoutScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [now, setNow] = useState(new Date());
   const [expandedDays, setExpandedDays] = useState({});
+  const isInitialMount = useRef(true);
 
   useEffect(() => {
     dispatch(loadWorkoutTrackingLocal());
@@ -48,20 +49,27 @@ const MyWorkoutScreen = ({ navigation }) => {
       if (response) {
         setUserPlan(response);
         dispatch(setActivePlan(response));
-        dispatch(persistWorkoutTracking());
+
+        // If this is a custom plan, redirect to FreeWorkoutView
+        if (response?.workoutPlan?.planType === 'CUSTOM') {
+          navigation.replace('FreeWorkoutView');
+          return;
+        }
 
         // Fetch motivational quote
         try {
           const quoteData = await workoutService.getMotivationalQuote();
           dispatch(setMotivationalQuote(quoteData.quote));
-          dispatch(persistWorkoutTracking());
         } catch (e) { /* ignore */ }
+
+        // Persist once after all data is loaded
+        dispatch(persistWorkoutTracking());
       } else {
-        navigation.replace('WorkoutSetup');
+        navigation.replace('WorkoutChoice');
       }
     } catch (error) {
       console.log('Error fetching workout plan:', error);
-      navigation.replace('WorkoutSetup');
+      navigation.replace('WorkoutChoice');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -69,7 +77,13 @@ const MyWorkoutScreen = ({ navigation }) => {
   };
 
   useEffect(() => { fetchPlan(); }, []);
-  useFocusEffect(useCallback(() => { fetchPlan(); }, []));
+  useFocusEffect(useCallback(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    fetchPlan();
+  }, []));
 
   const onRefresh = () => { setRefreshing(true); fetchPlan(); };
 
@@ -101,7 +115,42 @@ const MyWorkoutScreen = ({ navigation }) => {
   // Today's exercises
   const todayDay = DAY_NAMES[now.getDay()];
   const allExercises = userPlan?.workoutPlan?.exercises || [];
-  const todayExercises = allExercises.filter(e => e.dayOfWeek === todayDay);
+  const planRestDay = userPlan?.workoutPlan?.restDay || '';
+
+  // Build cycle map: non-workout, non-rest days repeat workout days in order
+  const ORDERED_DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+
+  const getWorkoutDaysFromPlan = () => {
+    const daysWithExercises = new Set(allExercises.map(e => e.dayOfWeek));
+    return ORDERED_DAYS.filter(d => daysWithExercises.has(d));
+  };
+
+  const getCycleDayMap = () => {
+    const workoutDays = getWorkoutDaysFromPlan();
+    if (workoutDays.length === 0 || workoutDays.length >= 7) return {};
+    const cycleMap = {};
+    let cycleIndex = 0;
+    ORDERED_DAYS.forEach(day => {
+      if (workoutDays.includes(day)) return;
+      if (day === planRestDay) { cycleMap[day] = '__REST__'; return; }
+      cycleMap[day] = workoutDays[cycleIndex % workoutDays.length];
+      cycleIndex++;
+    });
+    return cycleMap;
+  };
+
+  const cycleDayMap = getCycleDayMap();
+
+  const getExercisesForDay = (day) => {
+    const directExercises = allExercises.filter(e => e.dayOfWeek === day);
+    if (directExercises.length > 0) return { exercises: directExercises, sourceDay: null };
+    const mappedDay = cycleDayMap[day];
+    if (!mappedDay || mappedDay === '__REST__') return { exercises: [], sourceDay: null, isRest: mappedDay === '__REST__' };
+    return { exercises: allExercises.filter(e => e.dayOfWeek === mappedDay), sourceDay: mappedDay };
+  };
+
+  const todayData = getExercisesForDay(todayDay);
+  const todayExercises = todayData.exercises;
   const isRestDay = todayExercises.length === 0;
   const todayCalories = todayExercises.reduce((s, e) => s + (e.caloriesBurned || 0), 0);
 
@@ -133,11 +182,11 @@ const MyWorkoutScreen = ({ navigation }) => {
   };
 
   const handleNewPlan = () => {
-    const doNav = () => navigation.navigate('WorkoutSetup');
+    const doNav = () => navigation.navigate('WorkoutChoice');
     if (Platform.OS === 'web') {
-      if (window.confirm('Create a new workout plan? Your current plan will stay active until midnight, and the new plan will start tomorrow.')) doNav();
+      if (window.confirm('Create a new workout plan? Your current plan will be replaced immediately.')) doNav();
     } else {
-      Alert.alert('Create New Plan', 'Your current plan will stay active until midnight, and the new plan will start tomorrow. Continue?', [
+      Alert.alert('Create New Plan', 'Your current plan will be replaced immediately. Continue?', [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Continue', onPress: doNav },
       ]);
@@ -225,58 +274,7 @@ const MyWorkoutScreen = ({ navigation }) => {
           </View>
         )}
 
-        {/* Today's Workout */}
-        <Text style={styles.sectionTitle}>
-          Today — {formatLabel(todayDay)} {isRestDay ? '(Rest Day 😴)' : ''}
-        </Text>
-
-        {isRestDay ? (
-          <View style={styles.restDayCard}>
-            <Text style={styles.restDayIcon}>😴</Text>
-            <Text style={styles.restDayText}>Rest day! Your muscles need recovery.</Text>
-          </View>
-        ) : (
-          <>
-            <View style={styles.todayStats}>
-              <View style={styles.todayStat}>
-                <Text style={styles.todayStatVal}>{todayExercises.length}</Text>
-                <Text style={styles.todayStatLabel}>Exercises</Text>
-              </View>
-              <View style={styles.todayStat}>
-                <Text style={styles.todayStatVal}>{todayCalories}</Text>
-                <Text style={styles.todayStatLabel}>Est. Calories</Text>
-              </View>
-              <View style={styles.todayStat}>
-                <Text style={styles.todayStatVal}>{exerciseTime}</Text>
-                <Text style={styles.todayStatLabel}>Time</Text>
-              </View>
-            </View>
-
-            {todayExercises
-              .sort((a, b) => (a.order || 0) - (b.order || 0))
-              .map((ex, idx) => (
-                <View key={idx} style={[styles.exerciseCard, workout.todayCompleted && styles.exerciseCardDone]}>
-                  <View style={styles.exerciseRow}>
-                    <Text style={styles.exerciseIcon}>
-                      {ex.isCardio ? '❤️' : (MUSCLE_ICONS[ex.muscleGroup] || '💪')}
-                    </Text>
-                    <View style={styles.exerciseInfo}>
-                      <Text style={[styles.exerciseName, workout.todayCompleted && styles.exerciseNameDone]}>
-                        {ex.exerciseName}
-                      </Text>
-                      <Text style={styles.exerciseDetail}>
-                        {ex.isCardio
-                          ? `${Math.round((ex.durationSeconds || 0) / 60)} min${ex.steps > 0 ? ` • ${ex.steps} steps` : ''}`
-                          : `${ex.sets} sets × ${ex.reps} reps • Rest ${ex.restTimeSeconds}s`}
-                      </Text>
-                    </View>
-                    <Text style={styles.exerciseCal}>{ex.caloriesBurned || 0} cal</Text>
-                  </View>
-                </View>
-              ))}
-          </>
-        )}
-
+y
         {/* Workout Completion */}
         {!isRestDay && showCompletionPrompt && (
           <TouchableOpacity style={styles.completeBtn} onPress={handleCompleteWorkout}>
@@ -295,12 +293,15 @@ const MyWorkoutScreen = ({ navigation }) => {
 
         {/* Weekly Overview — Expandable */}
         <Text style={styles.sectionTitle}>Weekly Overview</Text>
-        {DAY_NAMES.slice(1).concat(DAY_NAMES.slice(0, 1)).map(day => {
-          const dayExercises = allExercises.filter(e => e.dayOfWeek === day);
+        {ORDERED_DAYS.map(day => {
+          const dayData = getExercisesForDay(day);
+          const dayExercises = dayData.exercises;
           const isToday = day === todayDay;
           const isExpanded = expandedDays[day] || false;
           const hasExercises = dayExercises.length > 0;
           const dayCals = dayExercises.reduce((s, e) => s + (e.caloriesBurned || 0), 0);
+          const isRest = dayData.isRest || (day === planRestDay);
+          const isCycled = dayData.sourceDay != null;
 
           return (
             <View key={day}>
@@ -322,15 +323,26 @@ const MyWorkoutScreen = ({ navigation }) => {
                   </Text>
                 </View>
                 <Text style={styles.weekDayExercises}>
-                  {hasExercises
-                    ? `${dayExercises.length} exercises • ~${dayCals} cal`
-                    : 'Rest Day 😴'}
+                  {isRest
+                    ? 'Rest Day 😴'
+                    : hasExercises
+                      ? isCycled
+                        ? `${dayExercises.length} exercises (${formatLabel(dayData.sourceDay)}'s plan) • ~${dayCals} cal`
+                        : `${dayExercises.length} exercises • ~${dayCals} cal`
+                      : 'Rest Day 😴'}
                 </Text>
               </TouchableOpacity>
 
               {/* Expanded exercise list */}
               {isExpanded && hasExercises && (
                 <View style={styles.expandedExercises}>
+                  {isCycled && (
+                    <View style={styles.cycleNotice}>
+                      <Text style={styles.cycleNoticeText}>
+                        🔄 Following {formatLabel(dayData.sourceDay)}'s workout
+                      </Text>
+                    </View>
+                  )}
                   {dayExercises
                     .sort((a, b) => (a.order || 0) - (b.order || 0))
                     .map((ex, idx) => (
@@ -417,12 +429,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.md,
     marginBottom: spacing.sm, ...shadows.sm,
   },
-  exerciseCardDone: { opacity: 0.6, borderLeftWidth: 3, borderLeftColor: colors.success },
+  exerciseCardDone: { opacity: 0.85 },
   exerciseRow: { flexDirection: 'row', alignItems: 'center' },
   exerciseIcon: { fontSize: 24, marginRight: spacing.sm },
   exerciseInfo: { flex: 1 },
   exerciseName: { ...typography.body, fontWeight: '600', color: colors.text.primary },
-  exerciseNameDone: { textDecorationLine: 'line-through', color: colors.text.secondary },
+  exerciseNameDone: { color: colors.success },
   exerciseDetail: { ...typography.caption, color: colors.text.secondary },
   exerciseCal: { ...typography.bodySmall, color: colors.warning, fontWeight: '600' },
   completeBtn: {
@@ -460,6 +472,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, marginBottom: spacing.sm, marginLeft: spacing.md,
     borderLeftWidth: 2, borderLeftColor: colors.primary + '40', paddingLeft: spacing.sm,
     borderBottomLeftRadius: borderRadius.md, borderBottomRightRadius: borderRadius.md,
+  },
+  cycleNotice: {
+    backgroundColor: (colors.info || colors.primary) + '12',
+    borderRadius: borderRadius.sm, padding: spacing.sm,
+    marginBottom: spacing.sm, marginHorizontal: spacing.sm,
+    borderLeftWidth: 3, borderLeftColor: colors.info || colors.primary,
+  },
+  cycleNoticeText: {
+    ...typography.caption, color: colors.info || colors.primary, fontWeight: '600',
   },
   expandedExRow: {
     flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm,

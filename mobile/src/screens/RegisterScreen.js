@@ -4,6 +4,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -131,48 +132,66 @@ const RegisterScreen = ({ navigation }) => {
   const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
   const allCriteriaMet = hasMinLength && hasUppercase && hasLowercase && hasNumber && hasSpecial;
 
+  const [validationError, setValidationError] = useState('');
+
   const handleRegister = async () => {
+    console.log('handleRegister called', formData);
+    setValidationError('');
+
     // Validation
     if (!formData.email || !formData.password || !formData.firstName || !formData.lastName) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      const msg = 'Please fill in all required fields';
+      setValidationError(msg);
+      if (Platform.OS !== 'web') Alert.alert('Error', msg);
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      const msg = 'Please enter a valid email address';
+      setValidationError(msg);
+      if (Platform.OS !== 'web') Alert.alert('Error', msg);
       return;
     }
 
     if (!allCriteriaMet) {
-      Alert.alert('Error', 'Please ensure your password meets all the criteria listed below the password field');
+      const msg = 'Please ensure your password meets all the criteria listed below the password field';
+      setValidationError(msg);
+      if (Platform.OS !== 'web') Alert.alert('Error', msg);
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      const msg = 'Passwords do not match';
+      setValidationError(msg);
+      if (Platform.OS !== 'web') Alert.alert('Error', msg);
       return;
     }
 
     try {
+      console.log('Dispatching register...');
       const { confirmPassword, ...registrationData } = formData;
       await dispatch(register(registrationData)).unwrap();
+      console.log('Register succeeded');
       // Navigation handled automatically after registration
     } catch (err) {
+      console.log('Register error:', err);
       const errorMessage = err || 'Something went wrong';
       // Check if the error is about existing email
-      if (errorMessage.toLowerCase().includes('already registered') || errorMessage.toLowerCase().includes('already exist')) {
-        Alert.alert(
-          'Already Registered',
-          'You are already registered. Please login. If you forgot your password, please reset your password.',
-          [
+      if (typeof errorMessage === 'string' && (errorMessage.toLowerCase().includes('already registered') || errorMessage.toLowerCase().includes('already exist'))) {
+        const msg = 'You are already registered. Please login. If you forgot your password, please reset your password.';
+        setValidationError(msg);
+        if (Platform.OS !== 'web') {
+          Alert.alert('Already Registered', msg, [
             { text: 'Login', onPress: () => navigation.navigate('Login') },
             { text: 'Reset Password', onPress: () => navigation.navigate('ForgotPassword') },
             { text: 'Cancel', style: 'cancel' },
-          ]
-        );
+          ]);
+        }
       } else {
-        Alert.alert('Registration Failed', errorMessage);
+        const msg = typeof errorMessage === 'string' ? errorMessage : 'Registration failed';
+        setValidationError(msg);
+        if (Platform.OS !== 'web') Alert.alert('Registration Failed', msg);
       }
     }
   };
@@ -319,15 +338,27 @@ const RegisterScreen = ({ navigation }) => {
             />
           </View>
 
-          <TouchableOpacity
-            style={[styles.button, isLoading && styles.buttonDisabled]}
-            onPress={handleRegister}
+          {validationError ? (
+            <Text style={styles.validationError}>{validationError}</Text>
+          ) : null}
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.button,
+              isLoading && styles.buttonDisabled,
+              Platform.OS === 'web' && { cursor: 'pointer' },
+              pressed && { opacity: 0.7 },
+            ]}
+            onPress={() => {
+              console.log('Sign Up button pressed');
+              handleRegister();
+            }}
             disabled={isLoading}
           >
             <Text style={styles.buttonText}>
               {isLoading ? 'Creating Account...' : 'Sign Up'}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Already have an account? </Text>
@@ -521,6 +552,17 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  validationError: {
+    color: '#D32F2F',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+    backgroundColor: '#FFEBEE',
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
   },
   buttonText: {
     ...typography.button,

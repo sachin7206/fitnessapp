@@ -29,5 +29,6 @@ public class WorkoutPlanDTO {
     private Integer cardioSteps;
     private Integer cardioCalories;
     private Boolean isTemplate;
+    private String restDay;
 }
 

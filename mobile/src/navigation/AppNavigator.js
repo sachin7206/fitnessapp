@@ -22,6 +22,9 @@ import MyNutritionPlanScreen from '../screens/MyNutritionPlanScreen';
 import WorkoutSetupScreen from '../screens/WorkoutSetupScreen';
 import GeneratedWorkoutPlanViewScreen from '../screens/GeneratedWorkoutPlanViewScreen';
 import MyWorkoutScreen from '../screens/MyWorkoutScreen';
+import WorkoutChoiceScreen from '../screens/WorkoutChoiceScreen';
+import FreeWorkoutBuilderScreen from '../screens/FreeWorkoutBuilderScreen';
+import FreeWorkoutViewScreen from '../screens/FreeWorkoutViewScreen';
 import StepHistoryScreen from '../screens/StepHistoryScreen';
 import ProgressDashboardScreen from '../screens/ProgressDashboardScreen';
 import WellnessHomeScreen from '../screens/WellnessHomeScreen';
@@ -29,6 +32,7 @@ import FoodPhotoLogScreen from '../screens/FoodPhotoLogScreen';
 import GroceryListScreen from '../screens/GroceryListScreen';
 import WeeklyReportScreen from '../screens/WeeklyReportScreen';
 import WorkoutFeedbackScreen from '../screens/WorkoutFeedbackScreen';
+import ExerciseProgressScreen from '../screens/ExerciseProgressScreen';
 
 import { colors, spacing } from '../config/theme';
 
@@ -104,6 +108,9 @@ const MainStack = () => (
     <Stack.Screen name="WorkoutSetup" component={WorkoutSetupScreen} />
     <Stack.Screen name="GeneratedWorkoutPlanView" component={GeneratedWorkoutPlanViewScreen} />
     <Stack.Screen name="MyWorkout" component={MyWorkoutScreen} />
+    <Stack.Screen name="WorkoutChoice" component={WorkoutChoiceScreen} />
+    <Stack.Screen name="FreeWorkoutBuilder" component={FreeWorkoutBuilderScreen} />
+    <Stack.Screen name="FreeWorkoutView" component={FreeWorkoutViewScreen} />
     <Stack.Screen name="StepHistory" component={StepHistoryScreen} />
     <Stack.Screen name="ProgressDashboard" component={ProgressDashboardScreen} />
     <Stack.Screen name="WellnessHome" component={WellnessHomeScreen} />
@@ -111,6 +118,7 @@ const MainStack = () => (
     <Stack.Screen name="GroceryList" component={GroceryListScreen} />
     <Stack.Screen name="WeeklyReport" component={WeeklyReportScreen} />
     <Stack.Screen name="WorkoutFeedback" component={WorkoutFeedbackScreen} />
+    <Stack.Screen name="ExerciseProgress" component={ExerciseProgressScreen} />
   </Stack.Navigator>
 );
 

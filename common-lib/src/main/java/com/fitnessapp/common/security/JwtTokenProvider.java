@@ -61,9 +61,38 @@ public class JwtTokenProvider {
         return createToken(claims, userDetails.getUsername(), jwtExpiration);
     }
 
+    public String generateAccessToken(UserDetails userDetails, Long userId) {
+        Map<String, Object> claims = new HashMap<>();
+        if (userId != null) {
+            claims.put("userId", userId);
+        }
+        return createToken(claims, userDetails.getUsername(), jwtExpiration);
+    }
+
     public String generateRefreshToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
         return createToken(claims, userDetails.getUsername(), refreshExpiration);
+    }
+
+    public String generateRefreshToken(UserDetails userDetails, Long userId) {
+        Map<String, Object> claims = new HashMap<>();
+        if (userId != null) {
+            claims.put("userId", userId);
+        }
+        return createToken(claims, userDetails.getUsername(), refreshExpiration);
+    }
+
+    public Long extractUserId(String token) {
+        try {
+            Claims claims = extractAllClaims(token);
+            Object userId = claims.get("userId");
+            if (userId instanceof Number) {
+                return ((Number) userId).longValue();
+            }
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private String createToken(Map<String, Object> claims, String subject, Long expiration) {
