@@ -149,4 +149,9 @@ public class NutritionController implements NutritionApi {
     public ResponseEntity<GroceryListResponseDTO> getGroceryList(Integer weekNumber) {
         return ResponseEntity.ok(groceryListService.getGroceryList(getCurrentEmail(), weekNumber != null ? weekNumber : 1));
     }
+
+    @Override
+    public ResponseEntity<UserNutritionPlanDTO> saveFreePlan(FreePlanRequestDTO request) {
+        return ResponseEntity.ok(nutritionService.saveFreePlan(getCurrentEmail(), request));
+    }
 }

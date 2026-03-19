@@ -148,6 +148,130 @@ public class NutritionService implements NutritionOperations {
         userNutritionPlanRepository.save(up);
     }
 
+    @Transactional
+    @SuppressWarnings("unchecked")
+    public UserNutritionPlanDTO saveFreePlan(String email, FreePlanRequestDTO request) {
+        UserDto user = userServiceSalClient.getUserByEmail(email);
+
+        // Cancel any existing active plan
+        userNutritionPlanRepository.findActiveByUserId(user.getId()).ifPresent(existing -> {
+            existing.setStatus("CANCELLED");
+            userNutritionPlanRepository.save(existing);
+        });
+        // Cancel any scheduled plan
+        userNutritionPlanRepository.cancelScheduledForUser(user.getId());
+        // Cancel any ENDING_TODAY plan
+        userNutritionPlanRepository.findEndingTodayByUserId(user.getId()).ifPresent(ending -> {
+            ending.setStatus("CANCELLED");
+            userNutritionPlanRepository.save(ending);
+        });
+
+        // Build NutritionPlan entity from free plan request
+        NutritionPlan plan = new NutritionPlan();
+        plan.setName(request.getPlanName() != null ? request.getPlanName() : "My Custom Diet Plan");
+        plan.setDescription("Custom free plan created by user");
+        plan.setRegion("CUSTOM");
+        plan.setDietType("CUSTOM");
+        plan.setGoal("CUSTOM");
+        plan.setTotalCalories(request.getTotalCalories() != null ? request.getTotalCalories() : 0);
+        plan.setProteinGrams(request.getProteinGrams() != null ? request.getProteinGrams() : 0.0);
+        plan.setCarbsGrams(request.getCarbsGrams() != null ? request.getCarbsGrams() : 0.0);
+        plan.setFatGrams(request.getFatGrams() != null ? request.getFatGrams() : 0.0);
+        plan.setFiberGrams(0.0);
+        plan.setDifficulty("CUSTOM");
+        plan.setDurationDays(30);
+        plan.setIsActive(true);
+
+        // Build meals from Map-based structure
+        java.util.Set<Meal> mealEntities = new java.util.LinkedHashSet<>();
+        if (request.getMeals() != null) {
+            for (java.util.Map<String, Object> mealMap : request.getMeals()) {
+                Meal meal = new Meal();
+                meal.setName(getStringVal(mealMap, "name"));
+                meal.setMealType(getStringVal(mealMap, "mealType"));
+                meal.setTimeOfDay(getStringVal(mealMap, "timeOfDay"));
+                meal.setDayNumber(1);
+
+                // Build food items
+                java.util.Set<FoodItem> foodItemEntities = new java.util.LinkedHashSet<>();
+                int mealCalories = 0;
+                double mealProtein = 0, mealCarbs = 0, mealFat = 0;
+
+                Object foodItemsObj = mealMap.get("foodItems");
+                if (foodItemsObj instanceof java.util.List) {
+                    for (Object itemObj : (java.util.List<?>) foodItemsObj) {
+                        if (itemObj instanceof java.util.Map) {
+                            java.util.Map<String, Object> itemMap = (java.util.Map<String, Object>) itemObj;
+                            FoodItem foodItem = new FoodItem();
+                            foodItem.setName(getStringVal(itemMap, "name"));
+                            foodItem.setQuantity(getStringVal(itemMap, "quantity") != null ? getStringVal(itemMap, "quantity") : "1 serving");
+                            foodItem.setCalories(getIntVal(itemMap, "calories"));
+                            foodItem.setProteinGrams(getDoubleVal(itemMap, "proteinGrams"));
+                            foodItem.setCarbsGrams(getDoubleVal(itemMap, "carbsGrams"));
+                            foodItem.setFatGrams(getDoubleVal(itemMap, "fatGrams"));
+                            foodItem.setIsVegetarian(true);
+                            foodItem.setRegion("CUSTOM");
+
+                            mealCalories += foodItem.getCalories() != null ? foodItem.getCalories() : 0;
+                            mealProtein += foodItem.getProteinGrams() != null ? foodItem.getProteinGrams() : 0.0;
+                            mealCarbs += foodItem.getCarbsGrams() != null ? foodItem.getCarbsGrams() : 0.0;
+                            mealFat += foodItem.getFatGrams() != null ? foodItem.getFatGrams() : 0.0;
+
+                            foodItemEntities.add(foodItem);
+                        }
+                    }
+                }
+
+                meal.setFoodItems(foodItemEntities);
+                meal.setCalories(mealCalories);
+                meal.setProteinGrams(mealProtein);
+                meal.setCarbsGrams(mealCarbs);
+                meal.setFatGrams(mealFat);
+
+                mealEntities.add(meal);
+            }
+        }
+        plan.setMeals(mealEntities);
+
+        // Save the plan
+        plan = nutritionPlanRepository.save(plan);
+
+        // Enroll user in the plan
+        UserNutritionPlan userPlan = new UserNutritionPlan();
+        userPlan.setUserId(user.getId());
+        userPlan.setNutritionPlan(plan);
+        userPlan.setStartDate(LocalDate.now());
+        userPlan.setEndDate(LocalDate.now().plusDays(30));
+        userPlan.setStatus("ACTIVE");
+        userPlan.setCurrentDay(1);
+        userPlan.setTotalMeals(mealEntities.size() * 30);
+
+        return convertUserPlanToDTO(userNutritionPlanRepository.save(userPlan));
+    }
+
+    private String getStringVal(java.util.Map<String, Object> map, String key) {
+        Object val = map.get(key);
+        return val != null ? val.toString() : null;
+    }
+
+    private int getIntVal(java.util.Map<String, Object> map, String key) {
+        Object val = map.get(key);
+        if (val instanceof Number) return ((Number) val).intValue();
+        if (val instanceof String) {
+            try { return Integer.parseInt((String) val); } catch (NumberFormatException e) { return 0; }
+        }
+        return 0;
+    }
+
+    private double getDoubleVal(java.util.Map<String, Object> map, String key) {
+        Object val = map.get(key);
+        if (val instanceof Number) return ((Number) val).doubleValue();
+        if (val instanceof String) {
+            try { return Double.parseDouble((String) val); } catch (NumberFormatException e) { return 0.0; }
+        }
+        return 0.0;
+    }
+
     // ========== Conversion Methods ==========
     public NutritionPlanDTO convertToDTO(NutritionPlan p) {
         NutritionPlanDTO d = new NutritionPlanDTO();

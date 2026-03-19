@@ -365,6 +365,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/GroceryListResponseDTO'
 
+  /nutrition/free-plan:
+    post:
+      tags: [Nutrition]
+      operationId: saveFreePlan
+      summary: Save a free/custom nutrition plan created manually by the user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FreePlanRequestDTO'
+      responses:
+        '200':
+          description: Free plan saved and activated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserNutritionPlanDTO'
+
 components:
   schemas:
     NutritionPlanDTO:
@@ -689,4 +708,17 @@ components:
           items:
             type: object
         fromAi: { type: boolean }
+
+    FreePlanRequestDTO:
+      type: object
+      properties:
+        planName: { type: string }
+        totalCalories: { type: integer }
+        proteinGrams: { type: number, format: double }
+        carbsGrams: { type: number, format: double }
+        fatGrams: { type: number, format: double }
+        meals:
+          type: array
+          items:
+            type: object
 

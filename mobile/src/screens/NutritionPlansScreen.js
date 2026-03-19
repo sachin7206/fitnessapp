@@ -94,9 +94,8 @@ const NutritionPlansScreen = ({ navigation }) => {
         return;
       }
 
-      // Profile is complete, load plans
-      setCheckingProfile(false);
-      loadData();
+      // Profile is complete, navigate to choice screen
+      navigation.replace('NutritionChoice');
     } catch (error) {
       console.error('Error checking profile:', error);
       setCheckingProfile(false);

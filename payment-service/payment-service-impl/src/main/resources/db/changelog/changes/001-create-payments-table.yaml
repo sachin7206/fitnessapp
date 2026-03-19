@@ -1,0 +1,45 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-payments-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: payments
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_id, type: BIGINT }
+              - column: { name: user_email, type: VARCHAR(255), constraints: { nullable: false } }
+              - column: { name: subscription_id, type: BIGINT }
+              - column: { name: amount, type: "DECIMAL(10,2)", constraints: { nullable: false } }
+              - column: { name: currency, type: VARCHAR(10), defaultValue: 'INR', constraints: { nullable: false } }
+              - column: { name: payment_method, type: VARCHAR(50), constraints: { nullable: false } }
+              - column: { name: status, type: VARCHAR(50), constraints: { nullable: false } }
+              - column: { name: transaction_ref, type: VARCHAR(255) }
+              - column: { name: upi_id, type: VARCHAR(255) }
+              - column: { name: merchant_upi_id, type: VARCHAR(255) }
+              - column: { name: merchant_name, type: VARCHAR(255) }
+              - column: { name: description, type: TEXT }
+              - column: { name: created_at, type: DATETIME }
+              - column: { name: updated_at, type: DATETIME }
+        - createIndex:
+            tableName: payments
+            indexName: idx_payments_user_email
+            columns:
+              - column: { name: user_email }
+        - createIndex:
+            tableName: payments
+            indexName: idx_payments_subscription_id
+            columns:
+              - column: { name: subscription_id }
+        - createIndex:
+            tableName: payments
+            indexName: idx_payments_status
+            columns:
+              - column: { name: status }
+        - createIndex:
+            tableName: payments
+            indexName: idx_payments_transaction_ref
+            columns:
+              - column: { name: transaction_ref }
+
+

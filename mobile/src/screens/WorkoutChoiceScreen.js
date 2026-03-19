@@ -22,7 +22,7 @@ const WorkoutChoiceScreen = ({ navigation }) => {
         {/* Subscribe Now - AI Generated */}
         <TouchableOpacity
           style={styles.optionCard}
-          onPress={() => navigation.navigate('WorkoutSetup')}
+          onPress={() => navigation.navigate('SubscriptionPlans')}
           activeOpacity={0.85}
         >
           <View style={styles.optionIconContainer}>

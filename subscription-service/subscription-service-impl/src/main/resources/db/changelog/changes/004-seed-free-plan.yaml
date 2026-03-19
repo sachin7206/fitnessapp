@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-seed-free-plan
+      author: fitnessapp
+      changes:
+        - insert:
+            tableName: subscription_plans
+            columns:
+              - column: { name: name, value: "Free Plan" }
+              - column: { name: description, value: "Get started for free! Explore basic workout plans and track your progress for 1 month. No payment required." }
+              - column: { name: duration_months, valueNumeric: 1 }
+              - column: { name: price, valueNumeric: 0 }
+              - column: { name: currency, value: "INR" }
+              - column: { name: features, value: '["Basic Workout Plans","Progress Tracking","Step Counter","Community Access"]' }
+              - column: { name: is_active, valueBoolean: true }
+              - column: { name: created_at, valueComputed: "NOW()" }
+

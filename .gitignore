@@ -19,6 +19,8 @@ mobile/web-build/
 
 # Environment & Secrets (NEVER commit these)
 .env
+# Environment & Secrets (NEVER commit these)
+.env
 .env.local
 .env.*.local
 **/application-local.yml

@@ -33,6 +33,13 @@ import GroceryListScreen from '../screens/GroceryListScreen';
 import WeeklyReportScreen from '../screens/WeeklyReportScreen';
 import WorkoutFeedbackScreen from '../screens/WorkoutFeedbackScreen';
 import ExerciseProgressScreen from '../screens/ExerciseProgressScreen';
+import SubscriptionPlansScreen from '../screens/SubscriptionPlansScreen';
+import PaymentScreen from '../screens/PaymentScreen';
+import PaymentSuccessScreen from '../screens/PaymentSuccessScreen';
+import PaymentHistoryScreen from '../screens/PaymentHistoryScreen';
+import RazorpayCheckoutScreen from '../screens/RazorpayCheckoutScreen';
+import NutritionChoiceScreen from '../screens/NutritionChoiceScreen';
+import FreeNutritionBuilderScreen from '../screens/FreeNutritionBuilderScreen';
 
 import { colors, spacing } from '../config/theme';
 
@@ -100,10 +107,12 @@ const MainStack = () => (
   >
     <Stack.Screen name="MainTabs" component={MainTabs} />
     <Stack.Screen name="NutritionPlans" component={NutritionPlansScreen} />
+    <Stack.Screen name="NutritionChoice" component={NutritionChoiceScreen} />
     <Stack.Screen name="NutritionProfileSetup" component={NutritionProfileSetupScreen} />
     <Stack.Screen name="NutritionRegionSelect" component={NutritionRegionSelectScreen} />
     <Stack.Screen name="FoodPreferences" component={FoodPreferencesScreen} />
     <Stack.Screen name="GeneratedPlanView" component={GeneratedPlanViewScreen} />
+    <Stack.Screen name="FreeNutritionBuilder" component={FreeNutritionBuilderScreen} />
     <Stack.Screen name="MyNutritionPlan" component={MyNutritionPlanScreen} />
     <Stack.Screen name="WorkoutSetup" component={WorkoutSetupScreen} />
     <Stack.Screen name="GeneratedWorkoutPlanView" component={GeneratedWorkoutPlanViewScreen} />
@@ -119,6 +128,11 @@ const MainStack = () => (
     <Stack.Screen name="WeeklyReport" component={WeeklyReportScreen} />
     <Stack.Screen name="WorkoutFeedback" component={WorkoutFeedbackScreen} />
     <Stack.Screen name="ExerciseProgress" component={ExerciseProgressScreen} />
+    <Stack.Screen name="SubscriptionPlans" component={SubscriptionPlansScreen} />
+    <Stack.Screen name="Payment" component={PaymentScreen} />
+    <Stack.Screen name="RazorpayCheckout" component={RazorpayCheckoutScreen} />
+    <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
+    <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreen} />
   </Stack.Navigator>
 );
 

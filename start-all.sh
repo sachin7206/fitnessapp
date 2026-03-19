@@ -6,7 +6,7 @@ JVM="-Djava.net.preferIPv4Stack=true -Djdk.net.usePlainSocketImpl=true"
 mkdir -p logs
 
 # Kill existing
-for port in 8761 8081 8082 8083 8084 8085 8086 8080; do
+for port in 8761 8081 8082 8083 8084 8085 8086 8087 8088 8080; do
   lsof -ti:$port | xargs kill -9 2>/dev/null
 done
 sleep 2
@@ -56,6 +56,16 @@ java $JVM -jar ai-service/ai-service-impl/build/libs/ai-service-impl-1.0.0.jar >
 echo "PID: $!"
 sleep 10
 
+echo "Starting Subscription Service..."
+java $JVM -jar subscription-service/subscription-service-impl/build/libs/subscription-service-impl-1.0.0.jar > logs/subscription-service.log 2>&1 &
+echo "PID: $!"
+sleep 10
+
+echo "Starting Payment Service..."
+java $JVM -jar payment-service/payment-service-impl/build/libs/payment-service-impl-1.0.0.jar > logs/payment-service.log 2>&1 &
+echo "PID: $!"
+sleep 10
+
 echo "Starting API Gateway..."
 java $JVM -jar api-gateway/build/libs/api-gateway-1.0.0.jar > logs/api-gateway.log 2>&1 &
 echo "PID: $!"
@@ -63,7 +73,7 @@ sleep 5
 
 echo ""
 echo "=== Service Status ==="
-for pn in "8761:Service Registry" "8081:User Service" "8082:Nutrition Service" "8083:Exercise Service" "8084:Progress Service" "8085:Wellness Service" "8086:AI Service" "8080:API Gateway"; do
+for pn in "8761:Service Registry" "8081:User Service" "8082:Nutrition Service" "8083:Exercise Service" "8084:Progress Service" "8085:Wellness Service" "8086:AI Service" "8087:Subscription Service" "8088:Payment Service" "8080:API Gateway"; do
   p="${pn%%:*}"
   n="${pn##*:}"
   if curl -s http://localhost:$p > /dev/null 2>&1; then

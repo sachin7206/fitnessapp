@@ -161,7 +161,7 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
   const handleCreateNewPlan = () => {
     if (Platform.OS === 'web') {
       if (window.confirm('Create a new nutrition plan? Your current plan will be replaced immediately.')) {
-        navigation.navigate('NutritionProfileSetup');
+        navigation.navigate('NutritionChoice');
       }
     } else {
       Alert.alert(
@@ -169,7 +169,7 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
         'Your current plan will be replaced immediately. Continue?',
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Continue', onPress: () => navigation.navigate('NutritionProfileSetup') },
+          { text: 'Continue', onPress: () => navigation.navigate('NutritionChoice') },
         ]
       );
     }

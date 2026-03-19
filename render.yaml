@@ -27,6 +27,10 @@ services:
         value: https://fitnessapp-wellness.onrender.com
       - key: AI_SERVICE_URL
         value: https://fitnessapp-ai.onrender.com
+      - key: SUBSCRIPTION_SERVICE_URL
+        value: https://fitnessapp-subscription.onrender.com
+      - key: PAYMENT_SERVICE_URL
+        value: https://fitnessapp-payment.onrender.com
 
   # ========== User Service ==========
   - type: web
@@ -157,4 +161,48 @@ services:
         sync: false
       - key: GEMINI_MODEL
         value: gemma-3-27b-it
+
+  # ========== Subscription Service ==========
+  - type: web
+    name: fitnessapp-subscription
+    runtime: docker
+    dockerfilePath: subscription-service/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+  # ========== Payment Service ==========
+  - type: web
+    name: fitnessapp-payment
+    runtime: docker
+    dockerfilePath: payment-service/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: MERCHANT_UPI_ID
+        sync: false
+      - key: MERCHANT_NAME
+        value: FitnessApp
+      - key: SUBSCRIPTION_SERVICE_URL
+        value: https://fitnessapp-subscription.onrender.com
 

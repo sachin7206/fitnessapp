@@ -1,0 +1,6 @@
+rootProject.name = 'subscription-service'
+
+include 'subscription-service-common'
+include 'subscription-service-rest'
+include 'subscription-service-impl'
+

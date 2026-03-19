@@ -555,6 +555,22 @@ const FreeWorkoutViewScreen = ({ navigation }) => {
           </View>
         </View>
 
+        {/* Subscribe Now Banner */}
+        <TouchableOpacity
+          style={styles.upgradeBanner}
+          onPress={() => navigation.navigate('SubscriptionPlans')}
+          activeOpacity={0.85}
+        >
+          <View style={styles.upgradeBannerLeft}>
+            <Text style={styles.upgradeBannerIcon}>🚀</Text>
+          </View>
+          <View style={styles.upgradeBannerContent}>
+            <Text style={styles.upgradeBannerTitle}>Upgrade to Premium</Text>
+            <Text style={styles.upgradeBannerDesc}>Get AI-powered personalized plans, smart progression & more</Text>
+          </View>
+          <Text style={styles.upgradeBannerArrow}>→</Text>
+        </TouchableOpacity>
+
 
         {/* Check Your Progress */}
         <TouchableOpacity
@@ -955,6 +971,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   editExBtnText: { fontSize: 16 },
+  upgradeBanner: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF5F0',
+    borderRadius: borderRadius.lg, padding: spacing.md, marginTop: spacing.md,
+    borderWidth: 1.5, borderColor: colors.primary + '40', ...shadows.sm,
+  },
+  upgradeBannerLeft: {
+    width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primary + '15',
+    justifyContent: 'center', alignItems: 'center', marginRight: spacing.md,
+  },
+  upgradeBannerIcon: { fontSize: 22 },
+  upgradeBannerContent: { flex: 1 },
+  upgradeBannerTitle: { ...typography.body, fontWeight: '700', color: colors.primary, marginBottom: 2 },
+  upgradeBannerDesc: { ...typography.caption, color: colors.text.secondary, lineHeight: 16 },
+  upgradeBannerArrow: { fontSize: 20, color: colors.primary, fontWeight: 'bold' },
   progressBtn: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
     borderRadius: borderRadius.lg, padding: spacing.md, marginTop: spacing.md,

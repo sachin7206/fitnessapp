@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-add-razorpay-columns
+      author: fitnessapp
+      changes:
+        - addColumn:
+            tableName: payments
+            columns:
+              - column:
+                  name: payment_gateway
+                  type: VARCHAR(30)
+                  defaultValue: MANUAL_UPI
+              - column:
+                  name: razorpay_order_id
+                  type: VARCHAR(100)
+              - column:
+                  name: razorpay_payment_id
+                  type: VARCHAR(100)
+              - column:
+                  name: gateway_response
+                  type: TEXT

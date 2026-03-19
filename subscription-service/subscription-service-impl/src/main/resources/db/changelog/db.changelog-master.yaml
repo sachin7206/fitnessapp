@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - include:
+      file: changes/001-create-subscription-plans-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/002-create-subscriptions-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/003-seed-subscription-plans.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/004-seed-free-plan.yaml
+      relativeToChangelogFile: true
+
+

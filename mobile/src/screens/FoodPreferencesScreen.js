@@ -19,7 +19,7 @@ import nutritionService from '../services/nutritionService';
 
 const FoodPreferencesScreen = ({ navigation, route }) => {
   const { user } = useSelector((state) => state.auth);
-  const { region } = route.params || {};
+  const { region, freeMode } = route.params || {};
 
   const dietType = user?.healthMetrics?.dietaryPreferences?.[0] || 'VEGETARIAN';
   const isNonVeg = dietType === 'NON_VEGETARIAN';
@@ -112,11 +112,13 @@ const FoodPreferencesScreen = ({ navigation, route }) => {
     otherSupplements: [],
   });
 
-  const steps = [
-    { title: 'Food Items', icon: '🍽️' },
-    { title: 'Meals & Time', icon: '⏰' },
-    { title: 'Supplements', icon: '💪' },
-  ];
+  const steps = freeMode
+    ? [{ title: 'Meals & Time', icon: '⏰' }]
+    : [
+        { title: 'Food Items', icon: '🍽️' },
+        { title: 'Meals & Time', icon: '⏰' },
+        { title: 'Supplements', icon: '💪' },
+      ];
 
   const availableMealTypes = [
     { type: 'BREAKFAST', name: 'Breakfast', icon: '🌅', defaultTime: '8:00 AM' },
@@ -335,6 +337,14 @@ const FoodPreferencesScreen = ({ navigation, route }) => {
   };
 
   const validateStep = () => {
+    if (freeMode) {
+      // In free mode, step 0 is Meals & Time
+      if (currentStep === 0 && customMeals.filter(m => m.enabled).length === 0) {
+        showAlert('Add Meals', 'Please add at least one meal to your plan');
+        return false;
+      }
+      return true;
+    }
     if (currentStep === 1 && customMeals.length === 0) {
       showAlert('Add Meals', 'Please add at least one meal to your plan');
       return false;
@@ -365,6 +375,14 @@ const FoodPreferencesScreen = ({ navigation, route }) => {
 
     if (enabledMeals.length === 0) {
       showAlert('Add Meals', 'Please add at least one meal');
+      return;
+    }
+
+    // In free mode, skip food preferences/supplements and go directly to builder
+    if (freeMode) {
+      navigation.navigate('FreeNutritionBuilder', {
+        customMeals: enabledMeals,
+      });
       return;
     }
 
@@ -972,6 +990,10 @@ const FoodPreferencesScreen = ({ navigation, route }) => {
   );
 
   const renderCurrentStep = () => {
+    if (freeMode) {
+      // In free mode, only one step: Meals & Time
+      return renderMealsStep();
+    }
     switch (currentStep) {
       case 0: return renderFoodItemsStep();
       case 1: return renderMealsStep();
@@ -995,7 +1017,7 @@ const FoodPreferencesScreen = ({ navigation, route }) => {
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Food Preferences</Text>
+        <Text style={styles.headerTitle}>{freeMode ? 'Meal Setup' : 'Food Preferences'}</Text>
         <View style={{ width: 60 }} />
       </View>
 
@@ -1015,7 +1037,9 @@ const FoodPreferencesScreen = ({ navigation, route }) => {
             <ActivityIndicator color={colors.text.inverse} />
           ) : (
             <Text style={styles.nextButtonText}>
-              {currentStep === steps.length - 1 ? 'Generate My Plan 🚀' : 'Next'}
+              {currentStep === steps.length - 1
+                ? (freeMode ? 'Create Your Plan 📝' : 'Generate My Plan 🚀')
+                : 'Next'}
             </Text>
           )}
         </TouchableOpacity>

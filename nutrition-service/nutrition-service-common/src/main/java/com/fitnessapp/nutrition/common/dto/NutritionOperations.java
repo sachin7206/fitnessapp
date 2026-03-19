@@ -14,5 +14,6 @@ public interface NutritionOperations {
     List<UserNutritionPlanDTO> getUserPlanHistory(String email);
     UserNutritionPlanDTO updatePlanProgress(String email, Long userPlanId, Integer completedMeals);
     void cancelPlan(String email, Long userPlanId);
+    UserNutritionPlanDTO saveFreePlan(String email, FreePlanRequestDTO request);
 }
 

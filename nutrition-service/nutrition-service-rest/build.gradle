@@ -56,7 +56,8 @@ openApiGenerate {
         "MealSwapRequestDTO"          : "MealSwapRequestDTO",
         "MealSwapResponseDTO"         : "MealSwapResponseDTO",
         "ApplyMealSwapRequest"        : "ApplyMealSwapRequest",
-        "GroceryListResponseDTO"      : "GroceryListResponseDTO"
+        "GroceryListResponseDTO"      : "GroceryListResponseDTO",
+        "FreePlanRequestDTO"          : "FreePlanRequestDTO"
     ])
     importMappings.set([
         "NutritionPlanDTO"            : "com.fitnessapp.nutrition.common.dto.NutritionPlanDTO",
@@ -75,7 +76,8 @@ openApiGenerate {
         "MealSwapRequestDTO"          : "com.fitnessapp.nutrition.common.dto.MealSwapRequestDTO",
         "MealSwapResponseDTO"         : "com.fitnessapp.nutrition.common.dto.MealSwapResponseDTO",
         "ApplyMealSwapRequest"        : "com.fitnessapp.nutrition.common.dto.ApplyMealSwapRequest",
-        "GroceryListResponseDTO"      : "com.fitnessapp.nutrition.common.dto.GroceryListResponseDTO"
+        "GroceryListResponseDTO"      : "com.fitnessapp.nutrition.common.dto.GroceryListResponseDTO",
+        "FreePlanRequestDTO"          : "com.fitnessapp.nutrition.common.dto.FreePlanRequestDTO"
     ])
 }
 

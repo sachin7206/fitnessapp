@@ -158,6 +158,12 @@ export const nutritionService = {
     const response = await apiClient.get(`/nutrition/my-plan/grocery-list?weekNumber=${weekNumber}`);
     return response.data;
   },
+
+  // Save a free/custom nutrition plan (no AI)
+  saveFreePlan: async (planData) => {
+    const response = await apiClient.post('/nutrition/free-plan', planData);
+    return response.data;
+  },
 };
 
 export default nutritionService;
