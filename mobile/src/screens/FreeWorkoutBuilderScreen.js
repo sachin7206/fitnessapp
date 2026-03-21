@@ -204,7 +204,6 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
       }
     }
 
-    const numSets = parseInt(newSets) || 3;
     const setDetails = newSetDetails.slice(0, numSets).map(s => ({
       reps: parseInt(s.reps) || 12,
       weight: s.weight ? parseFloat(s.weight) : null,
