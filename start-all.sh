@@ -11,6 +11,44 @@ for port in 8761 8081 8082 8083 8084 8085 8086 8087 8088 8080; do
 done
 sleep 2
 
+echo "=== Building All Services ==="
+
+echo "Building common-lib..."
+cd common-lib && ./gradlew clean publishToMavenLocal -x test && cd ..
+
+echo "Building service-registry..."
+cd service-registry && ./gradlew clean bootJar -x test && cd ..
+
+echo "Building user-service..."
+cd user-service && ./gradlew clean :user-service-impl:bootJar -x test && cd ..
+
+echo "Building nutrition-service..."
+cd nutrition-service && ./gradlew clean :nutrition-service-impl:bootJar -x test && cd ..
+
+echo "Building exercise-service..."
+cd exercise-service && ./gradlew clean :exercise-service-impl:bootJar -x test && cd ..
+
+echo "Building progress-service..."
+cd progress-service && ./gradlew clean :progress-service-impl:bootJar -x test && cd ..
+
+echo "Building wellness-service..."
+cd wellness-service && ./gradlew clean :wellness-service-impl:bootJar -x test && cd ..
+
+echo "Building ai-service..."
+cd ai-service && ./gradlew clean :ai-service-impl:bootJar -x test && cd ..
+
+echo "Building subscription-service..."
+cd subscription-service && ./gradlew clean :subscription-service-impl:bootJar -x test && cd ..
+
+echo "Building payment-service..."
+cd payment-service && ./gradlew clean :payment-service-impl:bootJar -x test && cd ..
+
+echo "Building api-gateway..."
+cd api-gateway && ./gradlew clean bootJar -x test && cd ..
+
+echo "=== All Builds Complete ==="
+echo ""
+
 echo "Starting Service Registry..."
 java $JVM -jar service-registry/build/libs/service-registry-1.0.0.jar > logs/service-registry.log 2>&1 &
 SR_PID=$!
