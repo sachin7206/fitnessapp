@@ -6,6 +6,6 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 public interface DailyNutritionSummaryRepository extends JpaRepository<DailyNutritionSummary, Long> {
-    Optional<DailyNutritionSummary> findByUserEmailAndTrackingDate(String userEmail, LocalDate trackingDate);
+    Optional<DailyNutritionSummary> findByUserIdAndTrackingDate(Long userId, LocalDate trackingDate);
+    void deleteByUserId(Long userId);
 }
-

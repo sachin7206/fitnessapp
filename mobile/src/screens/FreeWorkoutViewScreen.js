@@ -355,6 +355,47 @@ const FreeWorkoutViewScreen = ({ navigation }) => {
     const exercise = dayExercises[editExerciseIndex];
     if (!exercise) return;
 
+    // Validate inputs before saving
+    if (editIsCardio) {
+      const durationMin = parseInt(editDurationMinutes) || 0;
+      if (durationMin < 1 || durationMin > 1440) {
+        const msg = 'Duration must be between 1 and 1440 minutes';
+        Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
+        return;
+      }
+    } else {
+      const setsCount = parseInt(editSets) || 0;
+      if (setsCount < 1 || setsCount > 50) {
+        const msg = 'Sets must be between 1 and 50';
+        Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
+        return;
+      }
+      // Validate per-set details
+      for (let i = 0; i < setsCount; i++) {
+        const detail = editSetDetails[i];
+        if (!detail) continue;
+        const reps = parseInt(detail.reps) || 0;
+        const weight = detail.weight ? parseFloat(detail.weight) : null;
+        if (reps < 1 || reps > 500) {
+          const msg = `Set ${i + 1}: Reps must be between 1 and 500`;
+          Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
+          return;
+        }
+        if (weight !== null && (weight < 0 || weight > 1000)) {
+          const msg = `Set ${i + 1}: Weight must be between 0 and 1000 kg`;
+          Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
+          return;
+        }
+      }
+    }
+    // Validate rest time
+    const restSec = parseInt(editRestSeconds) || 0;
+    if (restSec < 0 || restSec > 600) {
+      const msg = 'Rest time must be between 0 and 600 seconds';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
+      return;
+    }
+
     setEditSaving(true);
 
     let updateRequest;

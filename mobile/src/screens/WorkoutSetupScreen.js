@@ -124,11 +124,61 @@ const WorkoutSetupScreen = ({ navigation }) => {
   };
 
   const handleGenerate = async () => {
-    if (!exerciseType || !goal) {
-      const msg = 'Please select exercise type and goal';
+    // Validate exercise type
+    if (!exerciseType) {
+      const msg = 'Please select an exercise type';
       Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Info', msg);
       return;
     }
+    // Validate goal
+    if (!goal) {
+      const msg = 'Please select a fitness goal';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Info', msg);
+      return;
+    }
+    // Validate difficulty
+    if (!difficulty) {
+      const msg = 'Please select a difficulty level';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Info', msg);
+      return;
+    }
+    // Validate days per week
+    if (daysPerWeek < 1 || daysPerWeek > 6) {
+      const msg = 'Days per week must be between 1 and 6';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
+      return;
+    }
+    // Validate duration
+    if (durationMinutes < 15 || durationMinutes > 120) {
+      const msg = 'Workout duration must be between 15 and 120 minutes';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
+      return;
+    }
+    // Validate exercise time
+    if (!exerciseTime) {
+      const msg = 'Please select a workout time';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Info', msg);
+      return;
+    }
+    // Validate cardio settings if included
+    if (includeCardio) {
+      if (!cardioType) {
+        const msg = 'Please select a cardio type';
+        Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Info', msg);
+        return;
+      }
+      if (cardioDuration < 5 || cardioDuration > 60) {
+        const msg = 'Cardio duration must be between 5 and 60 minutes';
+        Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
+        return;
+      }
+      if ((cardioType === 'RUNNING' || cardioType === 'WALKING') && cardioSteps < 0) {
+        const msg = 'Cardio steps cannot be negative';
+        Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
+        return;
+      }
+    }
+    // Validate gender if needed
     if (needsGender && !gender) {
       const msg = 'Please select your gender to personalize your plan';
       Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Info', msg);

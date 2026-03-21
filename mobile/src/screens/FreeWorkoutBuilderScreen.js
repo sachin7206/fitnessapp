@@ -148,10 +148,60 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
   };
 
   const saveExercise = () => {
+    // Validate exercise name
     if (!newExerciseName.trim()) {
       const msg = 'Please enter exercise name';
       Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Info', msg);
       return;
+    }
+    if (newExerciseName.trim().length > 200) {
+      const msg = 'Exercise name must be 200 characters or less';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
+      return;
+    }
+
+    const numSets = parseInt(newSets) || 0;
+    // Validate sets
+    if (numSets < 1 || numSets > 50) {
+      const msg = 'Sets must be between 1 and 50';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
+      return;
+    }
+
+    // Validate cardio duration if applicable
+    if (newIsCardio) {
+      const duration = parseInt(newDurationMinutes) || 0;
+      if (duration < 1 || duration > 180) {
+        const msg = 'Cardio duration must be between 1 and 180 minutes';
+        Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
+        return;
+      }
+    }
+
+    // Validate rest time
+    const restSec = parseInt(newRestSeconds) || 0;
+    if (restSec < 0 || restSec > 600) {
+      const msg = 'Rest time must be between 0 and 600 seconds';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
+      return;
+    }
+
+    // Validate per-set details (reps and weight)
+    for (let i = 0; i < numSets; i++) {
+      const detail = newSetDetails[i];
+      if (!detail) continue;
+      const reps = parseInt(detail.reps) || 0;
+      const weight = detail.weight ? parseFloat(detail.weight) : null;
+      if (!newIsCardio && (reps < 1 || reps > 500)) {
+        const msg = `Set ${i + 1}: Reps must be between 1 and 500`;
+        Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
+        return;
+      }
+      if (weight !== null && (weight < 0 || weight > 1000)) {
+        const msg = `Set ${i + 1}: Weight must be between 0 and 1000 kg`;
+        Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
+        return;
+      }
     }
 
     const numSets = parseInt(newSets) || 3;
@@ -275,6 +325,19 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
   };
 
   const handleSavePlan = async () => {
+    // Validate plan name
+    const trimmedName = planName.trim();
+    if (!trimmedName) {
+      const msg = 'Please enter a plan name';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Info', msg);
+      return;
+    }
+    if (trimmedName.length > 100) {
+      const msg = 'Plan name must be 100 characters or less';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
+      return;
+    }
+
     // Validate at least one day is selected
     if (selectedDays.length === 0) {
       const msg = 'Please select at least one workout day';
@@ -370,6 +433,7 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
           value={planName}
           onChangeText={setPlanName}
           placeholder="My Custom Workout"
+          maxLength={100}
           placeholderTextColor={colors.text.light}
         />
 

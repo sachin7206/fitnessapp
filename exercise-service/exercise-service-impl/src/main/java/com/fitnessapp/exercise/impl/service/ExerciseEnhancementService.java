@@ -21,7 +21,7 @@ public class ExerciseEnhancementService implements ExerciseEnhancementOperations
     private final WorkoutFeedbackRepository feedbackRepo;
     private final UserWorkoutPlanRepository userPlanRepo;
 
-    public ExerciseSubstitutionResponseDTO suggestExerciseSubstitutes(String email, ExerciseSubstitutionRequestDTO request) {
+    public ExerciseSubstitutionResponseDTO suggestExerciseSubstitutes(Long userId, ExerciseSubstitutionRequestDTO request) {
         try {
             AiExerciseSubstitutionRequest aiRequest = new AiExerciseSubstitutionRequest();
             aiRequest.setExerciseName(request.getExerciseName());
@@ -49,17 +49,18 @@ public class ExerciseEnhancementService implements ExerciseEnhancementOperations
     }
 
     @Transactional
-    public Map<String, Object> submitWorkoutFeedback(String email, WorkoutFeedbackRequest request) {
-        UserWorkoutPlan activePlan = userPlanRepo.findByUserEmailAndStatus(email, "ACTIVE")
+    public Map<String, Object> submitWorkoutFeedback(Long userId, WorkoutFeedbackRequest request) {
+        UserWorkoutPlan activePlan = userPlanRepo.findByUserIdAndStatus(userId, "ACTIVE")
                 .orElse(null);
 
         WorkoutFeedback feedback = new WorkoutFeedback();
-        feedback.setUserEmail(email);
+        feedback.setUserId(userId);
         feedback.setWorkoutPlanId(activePlan != null ? activePlan.getWorkoutPlan().getId() : null);
         feedback.setDifficulty(request.getDifficulty());
         feedback.setEnergyLevel(request.getEnergyLevel());
         feedback.setCompletionPercentage(request.getCompletionPercentage());
-        feedback.setNotes(request.getNotes());
+        // Sanitize notes to prevent XSS
+        feedback.setNotes(sanitizeInput(request.getNotes()));
 
         feedbackRepo.save(feedback);
 
@@ -70,8 +71,8 @@ public class ExerciseEnhancementService implements ExerciseEnhancementOperations
         return result;
     }
 
-    public WorkoutAdjustmentResponseDTO adjustWorkoutProgression(String email) {
-        UserWorkoutPlan activePlan = userPlanRepo.findByUserEmailAndStatus(email, "ACTIVE")
+    public WorkoutAdjustmentResponseDTO adjustWorkoutProgression(Long userId) {
+        UserWorkoutPlan activePlan = userPlanRepo.findByUserIdAndStatus(userId, "ACTIVE")
                 .orElse(null);
 
         if (activePlan == null) {
@@ -82,8 +83,8 @@ public class ExerciseEnhancementService implements ExerciseEnhancementOperations
             return noplan;
         }
 
-        List<WorkoutFeedback> feedbacks = feedbackRepo.findByUserEmailAndWorkoutPlanIdOrderByCreatedAtDesc(
-                email, activePlan.getWorkoutPlan().getId());
+        List<WorkoutFeedback> feedbacks = feedbackRepo.findByUserIdAndWorkoutPlanIdOrderByCreatedAtDesc(
+                userId, activePlan.getWorkoutPlan().getId());
 
         try {
             AiWorkoutAdjustRequest aiRequest = new AiWorkoutAdjustRequest();
@@ -131,11 +132,19 @@ public class ExerciseEnhancementService implements ExerciseEnhancementOperations
         }
     }
 
-    public List<WorkoutFeedbackDTO> getWorkoutFeedbackHistory(String email) {
-        return feedbackRepo.findByUserEmailOrderByCreatedAtDesc(email).stream()
+    public List<WorkoutFeedbackDTO> getWorkoutFeedbackHistory(Long userId) {
+        return feedbackRepo.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(f -> new WorkoutFeedbackDTO(f.getId(), f.getDifficulty(), f.getEnergyLevel(),
                         f.getCompletionPercentage(), f.getNotes(), f.getCreatedAt()))
                 .collect(Collectors.toList());
     }
-}
 
+    /**
+     * Sanitize user input to prevent XSS attacks.
+     * Strips HTML tags and trims whitespace.
+     */
+    private String sanitizeInput(String input) {
+        if (input == null) return null;
+        return input.replaceAll("<[^>]*>", "").replaceAll("[<>\"']", "").trim();
+    }
+}

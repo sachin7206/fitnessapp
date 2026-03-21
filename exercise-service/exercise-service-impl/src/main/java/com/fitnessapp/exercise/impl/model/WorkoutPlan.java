@@ -1,9 +1,12 @@
 package com.fitnessapp.exercise.impl.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -27,9 +30,18 @@ public class WorkoutPlan {
     private String planName;
     private String planType;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "workout_plan_id")
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "workoutPlan")
     private List<WorkoutExercise> exercises = new ArrayList<>();
+
+    /**
+     * Set exercises and maintain bi-directional relationship.
+     */
+    public void setExercises(List<WorkoutExercise> exercises) {
+        this.exercises = exercises != null ? exercises : new ArrayList<>();
+        for (WorkoutExercise ex : this.exercises) {
+            ex.setWorkoutPlan(this);
+        }
+    }
 
     private String frequency;
     private String difficulty;
@@ -81,5 +93,12 @@ public class WorkoutPlan {
 
         @Column(name = "set_details_json", columnDefinition = "TEXT")
         private String setDetailsJson; // JSON: [{"reps":12,"weight":50},{"reps":10,"weight":55}]
+
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "workout_plan_id")
+        @JsonIgnore
+        @ToString.Exclude
+        @EqualsAndHashCode.Exclude
+        private WorkoutPlan workoutPlan;
     }
 }

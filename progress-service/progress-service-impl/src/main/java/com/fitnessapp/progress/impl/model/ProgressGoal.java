@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 public class ProgressGoal {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "user_email") private String userEmail;
+    @Column(name = "user_id", nullable = false) private Long userId;
     @Column(name = "goal_type") private String goalType;
     @Column(name = "target_value") private Double targetValue;
     @Column(name = "current_value") private Double currentValue;

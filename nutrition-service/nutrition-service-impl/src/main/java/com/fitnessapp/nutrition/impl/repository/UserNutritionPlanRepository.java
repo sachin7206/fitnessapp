@@ -37,5 +37,9 @@ public interface UserNutritionPlanRepository extends JpaRepository<UserNutrition
     @Modifying
     @Query("UPDATE UserNutritionPlan unp SET unp.status = 'ENDING_TODAY', unp.endDate = CURRENT_DATE WHERE unp.userId = :userId AND unp.status = 'ACTIVE'")
     void markActiveAsEndingToday(@Param("userId") Long userId);
+
+    @Modifying
+    @Query("DELETE FROM UserNutritionPlan unp WHERE unp.userId = :userId")
+    void deleteAllByUserId(@Param("userId") Long userId);
 }
 

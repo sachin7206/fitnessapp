@@ -215,6 +215,14 @@ const NutritionProfileSetupScreen = ({ navigation, route }) => {
           showAlert('Required Fields', 'Please fill in your name, age, and gender');
           return false;
         }
+        if (formData.firstName.trim().length > 50) {
+          showAlert('Invalid Name', 'First name must be ≤ 50 characters');
+          return false;
+        }
+        if (formData.lastName && formData.lastName.trim().length > 50) {
+          showAlert('Invalid Name', 'Last name must be ≤ 50 characters');
+          return false;
+        }
         if (parseInt(formData.age) < 10 || parseInt(formData.age) > 100) {
           showAlert('Invalid Age', 'Please enter a valid age between 10 and 100');
           return false;
@@ -224,6 +232,25 @@ const NutritionProfileSetupScreen = ({ navigation, route }) => {
         if (!formData.height || !formData.currentWeight) {
           showAlert('Required Fields', 'Please enter your height and weight');
           return false;
+        }
+        {
+          const h = parseFloat(formData.height);
+          if (isNaN(h) || h < 50 || h > 300) {
+            showAlert('Invalid Height', 'Height must be between 50 and 300 cm');
+            return false;
+          }
+          const w = parseFloat(formData.currentWeight);
+          if (isNaN(w) || w < 20 || w > 500) {
+            showAlert('Invalid Weight', 'Current weight must be between 20 and 500 kg');
+            return false;
+          }
+          if (formData.targetWeight) {
+            const tw = parseFloat(formData.targetWeight);
+            if (isNaN(tw) || tw < 20 || tw > 500) {
+              showAlert('Invalid Target Weight', 'Target weight must be between 20 and 500 kg');
+              return false;
+            }
+          }
         }
         return true;
       case 2: // Activity Level
@@ -339,6 +366,7 @@ const NutritionProfileSetupScreen = ({ navigation, route }) => {
           value={formData.firstName}
           onChangeText={(v) => updateField('firstName', v)}
           placeholder="Enter your first name"
+          maxLength={50}
           placeholderTextColor={colors.text.secondary}
         />
       </View>
@@ -350,6 +378,7 @@ const NutritionProfileSetupScreen = ({ navigation, route }) => {
           value={formData.lastName}
           onChangeText={(v) => updateField('lastName', v)}
           placeholder="Enter your last name"
+          maxLength={50}
           placeholderTextColor={colors.text.secondary}
         />
       </View>
@@ -362,6 +391,7 @@ const NutritionProfileSetupScreen = ({ navigation, route }) => {
           onChangeText={(v) => updateField('age', v.replace(/[^0-9]/g, ''))}
           placeholder="Enter your age"
           keyboardType="numeric"
+          maxLength={3}
           placeholderTextColor={colors.text.secondary}
         />
       </View>
@@ -403,6 +433,7 @@ const NutritionProfileSetupScreen = ({ navigation, route }) => {
           onChangeText={(v) => updateField('height', v.replace(/[^0-9.]/g, ''))}
           placeholder="e.g., 170"
           keyboardType="numeric"
+          maxLength={5}
           placeholderTextColor={colors.text.secondary}
         />
       </View>
@@ -415,6 +446,7 @@ const NutritionProfileSetupScreen = ({ navigation, route }) => {
           onChangeText={(v) => updateField('currentWeight', v.replace(/[^0-9.]/g, ''))}
           placeholder="e.g., 70"
           keyboardType="numeric"
+          maxLength={5}
           placeholderTextColor={colors.text.secondary}
         />
       </View>
@@ -427,6 +459,7 @@ const NutritionProfileSetupScreen = ({ navigation, route }) => {
           onChangeText={(v) => updateField('targetWeight', v.replace(/[^0-9.]/g, ''))}
           placeholder="e.g., 65"
           keyboardType="numeric"
+          maxLength={5}
           placeholderTextColor={colors.text.secondary}
         />
       </View>

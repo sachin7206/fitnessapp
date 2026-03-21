@@ -21,7 +21,7 @@ public class AIBasedWorkoutService implements AIBasedWorkoutOperations {
 
     @Override
     @Transactional
-    public WorkoutPlanDTO generatePersonalizedWorkoutPlan(String email, Long userId, GenerateWorkoutPlanRequest request) {
+    public WorkoutPlanDTO generatePersonalizedWorkoutPlan(Long userId, GenerateWorkoutPlanRequest request) {
         List<WorkoutPlan.WorkoutExercise> exercises = null;
 
         // Try AI service first
@@ -87,7 +87,7 @@ public class AIBasedWorkoutService implements AIBasedWorkoutOperations {
     }
 
     @Override
-    public String getMotivationalQuote(String email) {
+    public String getMotivationalQuote(Long userId) {
         // Try AI service first
         if (aiServiceSalClient.isAvailable()) {
             try {

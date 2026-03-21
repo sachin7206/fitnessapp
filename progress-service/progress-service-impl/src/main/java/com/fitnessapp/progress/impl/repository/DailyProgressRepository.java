@@ -7,9 +7,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface DailyProgressRepository extends JpaRepository<DailyProgress, Long> {
-    List<DailyProgress> findByUserEmailAndEntryDateAfterOrderByEntryDateDesc(String userEmail, LocalDate after);
-    Optional<DailyProgress> findTopByUserEmailOrderByEntryDateDesc(String userEmail);
-    Optional<DailyProgress> findByUserEmailAndEntryDate(String userEmail, LocalDate entryDate);
-    long countByUserEmailAndEntryDateAfter(String userEmail, LocalDate after);
+    List<DailyProgress> findByUserIdAndEntryDateAfterOrderByEntryDateDesc(Long userId, LocalDate after);
+    Optional<DailyProgress> findTopByUserIdOrderByEntryDateDesc(Long userId);
+    Optional<DailyProgress> findByUserIdAndEntryDate(Long userId, LocalDate entryDate);
+    long countByUserIdAndEntryDateAfter(Long userId, LocalDate after);
 }
-

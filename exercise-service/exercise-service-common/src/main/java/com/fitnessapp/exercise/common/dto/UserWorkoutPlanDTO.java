@@ -10,7 +10,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class UserWorkoutPlanDTO {
     private Long id;
-    private String userEmail;
+    private Long userId;
     private WorkoutPlanDTO workoutPlan;
     private LocalDate startDate;
     private LocalDate endDate;

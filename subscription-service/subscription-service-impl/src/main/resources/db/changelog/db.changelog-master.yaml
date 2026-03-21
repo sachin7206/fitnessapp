@@ -1,15 +1,97 @@
 databaseChangeLog:
-  - include:
-      file: changes/001-create-subscription-plans-table.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/002-create-subscriptions-table.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/003-seed-subscription-plans.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/004-seed-free-plan.yaml
-      relativeToChangelogFile: true
-
-
+  - changeSet:
+      id: 001-create-subscription-plans-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: subscription_plans
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: name, type: VARCHAR(255), constraints: { nullable: false } }
+              - column: { name: description, type: TEXT }
+              - column: { name: duration_months, type: INT, defaultValueNumeric: 3, constraints: { nullable: false } }
+              - column: { name: price, type: "DECIMAL(10,2)", constraints: { nullable: false } }
+              - column: { name: currency, type: VARCHAR(10), defaultValue: INR, constraints: { nullable: false } }
+              - column: { name: features, type: TEXT }
+              - column: { name: is_active, type: BOOLEAN, defaultValueBoolean: true }
+              - column: { name: created_at, type: DATETIME }
+  - changeSet:
+      id: 002-create-subscriptions-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: subscriptions
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: plan_id, type: BIGINT }
+              - column: { name: start_date, type: DATE }
+              - column: { name: end_date, type: DATE }
+              - column: { name: status, type: VARCHAR(50), constraints: { nullable: false } }
+              - column: { name: transaction_ref, type: VARCHAR(255) }
+              - column: { name: created_at, type: DATETIME }
+              - column: { name: updated_at, type: DATETIME }
+        - addForeignKeyConstraint:
+            baseTableName: subscriptions
+            baseColumnNames: plan_id
+            referencedTableName: subscription_plans
+            referencedColumnNames: id
+            constraintName: fk_subscriptions_plan
+        - createIndex:
+            tableName: subscriptions
+            indexName: idx_subscriptions_user_id
+            columns:
+              - column: { name: user_id }
+        - createIndex:
+            tableName: subscriptions
+            indexName: idx_subscriptions_status
+            columns:
+              - column: { name: status }
+  - changeSet:
+      id: 003-seed-subscription-plans
+      author: fitnessapp
+      changes:
+        - insert:
+            tableName: subscription_plans
+            columns:
+              - column: { name: name, value: "Free Plan" }
+              - column: { name: description, value: "Get started for free! Basic workout plans and progress tracking for 1 month." }
+              - column: { name: duration_months, valueNumeric: 1 }
+              - column: { name: price, valueNumeric: 0 }
+              - column: { name: currency, value: INR }
+              - column: { name: features, value: '["Basic Workout Plans","Progress Tracking","Step Counter","Community Access"]' }
+              - column: { name: is_active, valueBoolean: true }
+              - column: { name: created_at, valueComputed: "NOW()" }
+        - insert:
+            tableName: subscription_plans
+            columns:
+              - column: { name: name, value: "Starter Plan" }
+              - column: { name: description, value: "AI workout plans, basic nutrition guidance, and progress tracking for 1 month." }
+              - column: { name: duration_months, valueNumeric: 1 }
+              - column: { name: price, valueNumeric: 299.00 }
+              - column: { name: currency, value: INR }
+              - column: { name: features, value: '["AI Workout Plans","Basic Nutrition Plans","Progress Tracking","Step Counter"]' }
+              - column: { name: is_active, valueBoolean: true }
+              - column: { name: created_at, valueComputed: "NOW()" }
+        - insert:
+            tableName: subscription_plans
+            columns:
+              - column: { name: name, value: "Pro Plan" }
+              - column: { name: description, value: "3 months full access with AI workout and nutrition plans, regional cuisine, and wellness tools." }
+              - column: { name: duration_months, valueNumeric: 3 }
+              - column: { name: price, valueNumeric: 699.00 }
+              - column: { name: currency, value: INR }
+              - column: { name: features, value: '["AI Workout Plans","AI Nutrition Plans","Regional Cuisine","Progress Tracking","Step Counter","Wellness Tools","Priority Support"]' }
+              - column: { name: is_active, valueBoolean: true }
+              - column: { name: created_at, valueComputed: "NOW()" }
+        - insert:
+            tableName: subscription_plans
+            columns:
+              - column: { name: name, value: "Elite Plan" }
+              - column: { name: description, value: "6 months unlimited access with personal AI coaching, advanced analytics, and all Pro features." }
+              - column: { name: duration_months, valueNumeric: 6 }
+              - column: { name: price, valueNumeric: 1199.00 }
+              - column: { name: currency, value: INR }
+              - column: { name: features, value: '["Everything in Pro","Personal AI Coach","Advanced Analytics","Custom Workout Builder","Early Feature Access"]' }
+              - column: { name: is_active, valueBoolean: true }
+              - column: { name: created_at, valueComputed: "NOW()" }

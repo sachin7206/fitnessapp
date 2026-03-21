@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface BodyMeasurementRepository extends JpaRepository<BodyMeasurement, Long> {
-    List<BodyMeasurement> findByUserEmailAndMeasurementDateAfterOrderByMeasurementDateDesc(String email, LocalDate after);
-    Optional<BodyMeasurement> findTopByUserEmailOrderByMeasurementDateDesc(String email);
+    List<BodyMeasurement> findByUserIdAndMeasurementDateAfterOrderByMeasurementDateDesc(Long userId, LocalDate after);
+    Optional<BodyMeasurement> findTopByUserIdOrderByMeasurementDateDesc(Long userId);
 }
-

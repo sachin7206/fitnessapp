@@ -23,6 +23,18 @@ const WorkoutFeedbackScreen = ({ navigation }) => {
       Alert.alert('Required', 'Please select workout difficulty');
       return;
     }
+    if (energyLevel < 1 || energyLevel > 10) {
+      Alert.alert('Invalid Input', 'Energy level must be between 1 and 10');
+      return;
+    }
+    if (completionPct < 0 || completionPct > 100) {
+      Alert.alert('Invalid Input', 'Completion percentage must be between 0 and 100');
+      return;
+    }
+    if (notes.length > 1000) {
+      Alert.alert('Too Long', 'Notes must be 1000 characters or less');
+      return;
+    }
     setLoading(true);
     try {
       await workoutService.submitWorkoutFeedback({
@@ -123,6 +135,7 @@ const WorkoutFeedbackScreen = ({ navigation }) => {
           value={notes}
           onChangeText={setNotes}
           multiline
+          maxLength={1000}
           placeholderTextColor={colors.text.secondary}
         />
       </View>

@@ -16,16 +16,12 @@ public class NutritionProfileService implements NutritionProfileOperations {
 
     private final UserServiceSalClient userServiceSalClient;
 
-    public UserDto getUserByEmail(String email) {
-        return userServiceSalClient.getUserByEmail(email);
-    }
-
-    public ProfileCompletionStatusDTO getProfileCompletion(String email) {
-        return userServiceSalClient.getProfileCompletion(email);
+    public ProfileCompletionStatusDTO getProfileCompletion(Long userId) {
+        UserDto user = userServiceSalClient.getUserById(userId);
+        return userServiceSalClient.getProfileCompletion(user.getEmail());
     }
 
     public Boolean isProfileCompleteForNutrition(String email) {
         return userServiceSalClient.isProfileCompleteForNutrition(email);
     }
 }
-

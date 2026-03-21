@@ -8,7 +8,7 @@ import java.time.LocalDate;
 @Data @NoArgsConstructor @AllArgsConstructor
 public class UserWellnessPlanDTO {
     private Long id;
-    private String userEmail;
+    private Long userId;
     private WellnessPlanDTO wellnessPlan;
     private LocalDate startDate;
     private LocalDate endDate;

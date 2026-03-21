@@ -202,6 +202,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserDto'
 
+  /internal/users/by-id:
+    get:
+      tags: [InternalUser]
+      operationId: getUserById
+      summary: Get user by ID (internal)
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDto'
+
   /internal/users/{email}/profile-completion:
     get:
       tags: [InternalUser]

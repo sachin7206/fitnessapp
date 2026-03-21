@@ -5,8 +5,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fitnessapp.nutrition.common.dto.FoodPreferenceOperations;
 import com.fitnessapp.nutrition.common.dto.UserFoodPreferenceDTO;
-import com.fitnessapp.user.common.dto.UserDto;
-import com.fitnessapp.user.sal.UserServiceSalClient;
 import com.fitnessapp.nutrition.impl.model.UserFoodPreference;
 import com.fitnessapp.nutrition.impl.repository.UserFoodPreferenceRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,19 +17,16 @@ import java.util.List;
 @Service @RequiredArgsConstructor @Slf4j
 public class UserFoodPreferenceService implements FoodPreferenceOperations {
     private final UserFoodPreferenceRepository repo;
-    private final UserServiceSalClient userServiceSalClient;
     private final ObjectMapper objectMapper;
 
-    public UserFoodPreferenceDTO getFoodPreferences(String email) {
-        UserDto user = userServiceSalClient.getUserByEmail(email);
-        return repo.findByUserId(user.getId()).map(this::toDTO).orElse(null);
+    public UserFoodPreferenceDTO getFoodPreferences(Long userId) {
+        return repo.findByUserId(userId).map(this::toDTO).orElse(null);
     }
 
     @Transactional
-    public UserFoodPreferenceDTO saveFoodPreferences(String email, UserFoodPreferenceDTO dto) {
-        UserDto user = userServiceSalClient.getUserByEmail(email);
-        UserFoodPreference pref = repo.findByUserId(user.getId()).orElse(new UserFoodPreference());
-        pref.setUserId(user.getId());
+    public UserFoodPreferenceDTO saveFoodPreferences(Long userId, UserFoodPreferenceDTO dto) {
+        UserFoodPreference pref = repo.findByUserId(userId).orElse(new UserFoodPreference());
+        pref.setUserId(userId);
         pref.setIncludeChicken(dto.getIncludeChicken()); pref.setIncludeFish(dto.getIncludeFish());
         pref.setIncludeRedMeat(dto.getIncludeRedMeat()); pref.setEggsPerDay(dto.getEggsPerDay());
         pref.setIncludeRice(dto.getIncludeRice()); pref.setIncludeRoti(dto.getIncludeRoti());
@@ -75,4 +70,3 @@ public class UserFoodPreferenceService implements FoodPreferenceOperations {
         return d;
     }
 }
-

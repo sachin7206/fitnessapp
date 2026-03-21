@@ -24,8 +24,8 @@ public class AIBasedNutritionService implements AIBasedNutritionOperations {
     private final UserServiceSalClient userServiceSalClient;
 
     @Transactional
-    public NutritionPlanDTO generatePersonalizedPlan(String email, GenerateNutritionPlanRequest request) {
-        UserDto user = userServiceSalClient.getUserByEmail(email);
+    public NutritionPlanDTO generatePersonalizedPlan(Long userId, GenerateNutritionPlanRequest request) {
+        UserDto user = userServiceSalClient.getUserById(userId);
         String dietType = determineDietType(user, request);
         String goal = determineGoal(user, request);
         int targetCalories = request.getTargetCalories() != null ? request.getTargetCalories() : calculateCalories(user, goal);
@@ -56,20 +56,20 @@ public class AIBasedNutritionService implements AIBasedNutritionOperations {
                     }
                     plan.setProteinGrams(totalProtein); plan.setCarbsGrams(totalCarbs); plan.setFatGrams(totalFat);
                     plan = planRepo.save(plan);
-                    log.info("AI-generated nutrition plan created for user: {}", email);
+                    log.info("AI-generated nutrition plan created for user: {}", userId);
                 }
             } catch (Exception e) {
                 log.warn("AI plan generation failed, falling back to pre-built plans: {}", e.getMessage());
                 plan = null;
             }
         } else {
-            log.info("AI service not available, using pre-built plans for user: {}", email);
+            log.info("AI service not available, using pre-built plans for user: {}", userId);
         }
 
         // Fallback: build a personalized plan from pre-built data using food preferences
         if (plan == null) {
             plan = buildFallbackPlan(request, user, region, dietType, goal, targetCalories);
-            log.info("Using fallback plan '{}' for user: {}", plan.getName(), email);
+            log.info("Using fallback plan '{}' for user: {}", plan.getName(), userId);
         }
 
         // Auto-enroll user

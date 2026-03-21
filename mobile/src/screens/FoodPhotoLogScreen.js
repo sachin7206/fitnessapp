@@ -10,14 +10,43 @@ const FoodPhotoLogScreen = ({ navigation }) => {
   const [result, setResult] = useState(null);
   const [todayLogs, setTodayLogs] = useState([]);
   const [showLogs, setShowLogs] = useState(false);
+  const [descError, setDescError] = useState('');
+  const [descTouched, setDescTouched] = useState(false);
 
   const mealTypes = ['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'];
 
-  const logFood = async () => {
-    if (!description.trim()) {
-      Alert.alert('Error', 'Please describe the food you ate');
-      return;
+  const showAlert = (title, message) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}\n${message}`);
+    } else {
+      Alert.alert(title, message);
     }
+  };
+
+  const validateDescription = (val) => {
+    if (!val || !val.trim()) return 'Please describe the food you ate';
+    if (val.trim().length > 1000) return 'Description must be ≤ 1000 characters';
+    return '';
+  };
+
+  const handleDescChange = (val) => {
+    setDescription(val);
+    if (descTouched) {
+      setDescError(validateDescription(val));
+    }
+  };
+
+  const handleDescBlur = () => {
+    setDescTouched(true);
+    setDescError(validateDescription(description));
+  };
+
+  const logFood = async () => {
+    setDescTouched(true);
+    const err = validateDescription(description);
+    setDescError(err);
+    if (err) return;
+
     setLoading(true);
     try {
       const response = await nutritionService.logFoodPhoto({
@@ -26,10 +55,12 @@ const FoodPhotoLogScreen = ({ navigation }) => {
         source: 'MANUAL',
       });
       setResult(response);
-      Alert.alert('Success', `Food logged! ${response.totalCalories} calories estimated.`);
+      showAlert('Success', `Food logged! ${response.totalCalories} calories estimated.`);
       setDescription('');
+      setDescError('');
+      setDescTouched(false);
     } catch (error) {
-      Alert.alert('Error', 'Failed to log food. Please try again.');
+      showAlert('Error', error.response?.data?.message || 'Failed to log food. Please try again.');
     }
     setLoading(false);
   };
@@ -80,14 +111,20 @@ const FoodPhotoLogScreen = ({ navigation }) => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>What did you eat?</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, descTouched && descError ? styles.inputError : null]}
           placeholder="e.g., 2 rotis with dal and rice, 1 banana..."
           value={description}
-          onChangeText={setDescription}
+          onChangeText={handleDescChange}
+          onBlur={handleDescBlur}
           multiline
           numberOfLines={3}
+          maxLength={1000}
           placeholderTextColor={colors.text.secondary}
         />
+        {descTouched && descError ? (
+          <Text style={styles.fieldError}>{descError}</Text>
+        ) : null}
+        <Text style={styles.charCount}>{description.length}/1000</Text>
       </View>
 
       {/* Log Button */}
@@ -182,6 +219,9 @@ const styles = StyleSheet.create({
   mealTypeText: { fontSize: 12, color: colors.text.secondary },
   mealTypeTextActive: { color: '#fff', fontWeight: '600' },
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: borderRadius.md, padding: spacing.md, fontSize: 15, color: colors.text.primary, backgroundColor: '#fff', minHeight: 80, textAlignVertical: 'top' },
+  inputError: { borderColor: '#FF6B6B', borderWidth: 1.5 },
+  fieldError: { color: '#FF6B6B', fontSize: 12, marginTop: 4, fontWeight: '500' },
+  charCount: { color: colors.text.secondary, fontSize: 11, textAlign: 'right', marginTop: 2 },
   logBtn: { marginHorizontal: spacing.lg, backgroundColor: colors.primary, paddingVertical: 14, borderRadius: borderRadius.md, alignItems: 'center' },
   logBtnDisabled: { opacity: 0.6 },
   logBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },

@@ -23,9 +23,8 @@ public class MealSwapService implements MealSwapOperations {
     private final UserNutritionPlanRepository userPlanRepo;
     private final UserServiceSalClient userServiceSalClient;
 
-    public MealSwapResponseDTO suggestMealSwap(String email, MealSwapRequestDTO request) {
-        UserDto user = userServiceSalClient.getUserByEmail(email);
-        UserNutritionPlan userPlan = userPlanRepo.findActiveByUserId(user.getId()).orElse(null);
+    public MealSwapResponseDTO suggestMealSwap(Long userId, MealSwapRequestDTO request) {
+        UserNutritionPlan userPlan = userPlanRepo.findActiveByUserId(userId).orElse(null);
 
         String dietType = "BALANCED";
         String region = "NORTH";

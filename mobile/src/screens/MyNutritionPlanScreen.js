@@ -11,6 +11,7 @@ import {
   Platform,
   Modal,
   TextInput,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/core';
 import { useDispatch, useSelector } from 'react-redux';
@@ -22,6 +23,7 @@ import {
   uncompleteMeal,
   replaceMeal,
   persistTracking,
+  persistTrackingNow,
   loadTrackingFromStorage,
   loadTrackingLocal,
   getLocalDateString,
@@ -41,6 +43,11 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
   const [replaceModalVisible, setReplaceModalVisible] = useState(false);
   const [replaceMealTarget, setReplaceMealTarget] = useState(null); // the meal being replaced
   const [replaceFoodText, setReplaceFoodText] = useState('');
+  const [replaceProtein, setReplaceProtein] = useState('');
+  const [replaceCarbs, setReplaceCarbs] = useState('');
+  const [replaceFat, setReplaceFat] = useState('');
+  const [replaceErrors, setReplaceErrors] = useState({});
+  const [replaceTouched, setReplaceTouched] = useState({});
   const [estimating, setEstimating] = useState(false);
 
   // Format strings: "WEIGHT_LOSS" → "Weight Loss", "NON_VEGETARIAN" → "Non Vegetarian"
@@ -220,7 +227,7 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
 
   const handleCheckMeal = (meal) => {
     dispatch(completeMeal({ mealId: meal.id || meal.mealId }));
-    dispatch(persistTracking());
+    dispatch(persistTrackingNow());
   };
 
   const handleUncheckMeal = (meal) => {
@@ -228,7 +235,7 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
     if (Platform.OS === 'web') {
       if (window.confirm('Undo this meal? Calories will be subtracted.')) {
         dispatch(uncompleteMeal({ mealId }));
-        dispatch(persistTracking());
+        dispatch(persistTrackingNow());
       }
     } else {
       Alert.alert('Undo Meal', 'Undo this meal? Calories will be subtracted.', [
@@ -238,7 +245,7 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
           style: 'destructive',
           onPress: () => {
             dispatch(uncompleteMeal({ mealId }));
-            dispatch(persistTracking());
+            dispatch(persistTrackingNow());
           },
         },
       ]);
@@ -249,37 +256,101 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
   const handleAteSomethingElse = (meal) => {
     setReplaceMealTarget(meal);
     setReplaceFoodText('');
+    setReplaceProtein('');
+    setReplaceCarbs('');
+    setReplaceFat('');
+    setReplaceErrors({});
+    setReplaceTouched({});
     setReplaceModalVisible(true);
   };
 
-  // Submit the replacement food — estimate macros via AI, then replace
+  // Inline validation for the replacement food form
+  const validateReplaceField = (field, value) => {
+    const errors = {};
+    if (field === 'foodName') {
+      if (!value || !value.trim()) errors.foodName = 'Food name is required';
+    }
+    if (field === 'protein') {
+      if (!value && value !== 0 && value !== '0') errors.protein = 'Protein is required';
+      else if (isNaN(Number(value)) || Number(value) < 0) errors.protein = 'Must be a valid number ≥ 0';
+      else if (Number(value) > 500) errors.protein = 'Must be ≤ 500g';
+    }
+    if (field === 'carbs') {
+      if (!value && value !== 0 && value !== '0') errors.carbs = 'Carbs is required';
+      else if (isNaN(Number(value)) || Number(value) < 0) errors.carbs = 'Must be a valid number ≥ 0';
+      else if (Number(value) > 1000) errors.carbs = 'Must be ≤ 1000g';
+    }
+    if (field === 'fat') {
+      if (!value && value !== 0 && value !== '0') errors.fat = 'Fat is required';
+      else if (isNaN(Number(value)) || Number(value) < 0) errors.fat = 'Must be a valid number ≥ 0';
+      else if (Number(value) > 500) errors.fat = 'Must be ≤ 500g';
+    }
+    return errors;
+  };
+
+  const validateAllReplaceFields = () => {
+    const errors = {
+      ...validateReplaceField('foodName', replaceFoodText),
+      ...validateReplaceField('protein', replaceProtein),
+      ...validateReplaceField('carbs', replaceCarbs),
+      ...validateReplaceField('fat', replaceFat),
+    };
+    setReplaceErrors(errors);
+    setReplaceTouched({ foodName: true, protein: true, carbs: true, fat: true });
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleReplaceFieldChange = (field, value, setter) => {
+    setter(value);
+    if (replaceTouched[field]) {
+      setReplaceErrors(prev => ({ ...prev, ...validateReplaceField(field, value) }));
+      // Clear error if valid
+      const fieldErrors = validateReplaceField(field, value);
+      if (!fieldErrors[field]) {
+        setReplaceErrors(prev => { const next = { ...prev }; delete next[field]; return next; });
+      }
+    }
+  };
+
+  const handleReplaceFieldBlur = (field, value) => {
+    setReplaceTouched(prev => ({ ...prev, [field]: true }));
+    const fieldErrors = validateReplaceField(field, value);
+    if (fieldErrors[field]) {
+      setReplaceErrors(prev => ({ ...prev, ...fieldErrors }));
+    } else {
+      setReplaceErrors(prev => { const next = { ...prev }; delete next[field]; return next; });
+    }
+  };
+
+  // Submit the replacement food with user-provided macros
   const handleSubmitReplacement = async () => {
-    if (!replaceFoodText.trim()) return;
+    if (!validateAllReplaceFields()) return;
+
+    const proteinVal = parseFloat(replaceProtein) || 0;
+    const carbsVal = parseFloat(replaceCarbs) || 0;
+    const fatVal = parseFloat(replaceFat) || 0;
+    // Calculate calories: protein 4 kcal/g, carbs 4 kcal/g, fat 9 kcal/g
+    const estimatedCalories = Math.round(proteinVal * 4 + carbsVal * 4 + fatVal * 9);
+
     setEstimating(true);
     try {
-      const macros = await nutritionService.estimateMacros(replaceFoodText.trim());
-      dispatch(replaceMeal({
-        mealId: replaceMealTarget.id || replaceMealTarget.mealId,
-        foodName: macros.name || replaceFoodText.trim(),
-        calories: macros.calories || 400,
-        proteinGrams: macros.proteinGrams || 15,
-        carbsGrams: macros.carbsGrams || 45,
-        fatGrams: macros.fatGrams || 12,
-      }));
-      dispatch(persistTracking());
-      setReplaceModalVisible(false);
-    } catch (err) {
-      // Fallback defaults
       dispatch(replaceMeal({
         mealId: replaceMealTarget.id || replaceMealTarget.mealId,
         foodName: replaceFoodText.trim(),
-        calories: 400,
-        proteinGrams: 15,
-        carbsGrams: 45,
-        fatGrams: 12,
+        calories: estimatedCalories,
+        proteinGrams: proteinVal,
+        carbsGrams: carbsVal,
+        fatGrams: fatVal,
       }));
-      dispatch(persistTracking());
+      dispatch(persistTrackingNow());
       setReplaceModalVisible(false);
+    } catch (err) {
+      const errorMsg = 'Failed to save replacement. Please try again.';
+      if (Platform.OS === 'web') {
+        window.alert(errorMsg);
+      } else {
+        Alert.alert('Error', errorMsg);
+      }
     } finally {
       setEstimating(false);
     }
@@ -571,30 +642,6 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
           </Text>
         </View>
 
-        {/* Quick Action Buttons */}
-        <View style={styles.quickActionsRow}>
-          <TouchableOpacity
-            style={styles.quickActionBtn}
-            onPress={() => navigation.navigate('GroceryList')}
-          >
-            <Text style={styles.quickActionIcon}>🛒</Text>
-            <Text style={styles.quickActionLabel}>Grocery List</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickActionBtn}
-            onPress={() => navigation.navigate('FoodPhotoLog')}
-          >
-            <Text style={styles.quickActionIcon}>📸</Text>
-            <Text style={styles.quickActionLabel}>Food Log</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickActionBtn}
-            onPress={() => navigation.navigate('WeeklyReport')}
-          >
-            <Text style={styles.quickActionIcon}>📊</Text>
-            <Text style={styles.quickActionLabel}>Report</Text>
-          </TouchableOpacity>
-        </View>
 
         {/* Today's Meals */}
         <Text style={styles.sectionTitle}>Today's Meals ({todaysMeals.length})</Text>
@@ -618,6 +665,10 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
         animationType="slide"
         onRequestClose={() => setReplaceModalVisible(false)}
       >
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>🍔 What did you eat instead?</Text>
@@ -625,19 +676,79 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
               Instead of: {replaceMealTarget?.name}
             </Text>
 
+            {/* Food Name */}
+            <Text style={styles.fieldLabel}>Food Name *</Text>
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput, styles.modalInputSingle, replaceTouched.foodName && replaceErrors.foodName && styles.modalInputError]}
               placeholder="e.g. 2 parathas with curd, dal rice..."
               placeholderTextColor={colors.text.light}
               value={replaceFoodText}
-              onChangeText={setReplaceFoodText}
-              multiline
+              onChangeText={(v) => handleReplaceFieldChange('foodName', v, setReplaceFoodText)}
+              onBlur={() => handleReplaceFieldBlur('foodName', replaceFoodText)}
+              maxLength={200}
               autoFocus
             />
+            {replaceTouched.foodName && replaceErrors.foodName && (
+              <Text style={styles.fieldError}>{replaceErrors.foodName}</Text>
+            )}
 
-            <Text style={styles.modalHint}>
-              💡 We'll estimate the calories & macros using AI
-            </Text>
+            {/* Macros Row */}
+            <Text style={styles.fieldLabel}>Nutritional Details *</Text>
+            <View style={styles.macroRow}>
+              <View style={styles.macroField}>
+                <Text style={styles.macroLabel}>Protein (g)</Text>
+                <TextInput
+                  style={[styles.macroInput, replaceTouched.protein && replaceErrors.protein && styles.modalInputError]}
+                  placeholder="0"
+                  placeholderTextColor={colors.text.light}
+                  keyboardType="decimal-pad"
+                  value={replaceProtein}
+                  onChangeText={(v) => handleReplaceFieldChange('protein', v, setReplaceProtein)}
+                  onBlur={() => handleReplaceFieldBlur('protein', replaceProtein)}
+                />
+                {replaceTouched.protein && replaceErrors.protein && (
+                  <Text style={styles.fieldError}>{replaceErrors.protein}</Text>
+                )}
+              </View>
+              <View style={styles.macroField}>
+                <Text style={styles.macroLabel}>Carbs (g)</Text>
+                <TextInput
+                  style={[styles.macroInput, replaceTouched.carbs && replaceErrors.carbs && styles.modalInputError]}
+                  placeholder="0"
+                  placeholderTextColor={colors.text.light}
+                  keyboardType="decimal-pad"
+                  value={replaceCarbs}
+                  onChangeText={(v) => handleReplaceFieldChange('carbs', v, setReplaceCarbs)}
+                  onBlur={() => handleReplaceFieldBlur('carbs', replaceCarbs)}
+                />
+                {replaceTouched.carbs && replaceErrors.carbs && (
+                  <Text style={styles.fieldError}>{replaceErrors.carbs}</Text>
+                )}
+              </View>
+              <View style={styles.macroField}>
+                <Text style={styles.macroLabel}>Fat (g)</Text>
+                <TextInput
+                  style={[styles.macroInput, replaceTouched.fat && replaceErrors.fat && styles.modalInputError]}
+                  placeholder="0"
+                  placeholderTextColor={colors.text.light}
+                  keyboardType="decimal-pad"
+                  value={replaceFat}
+                  onChangeText={(v) => handleReplaceFieldChange('fat', v, setReplaceFat)}
+                  onBlur={() => handleReplaceFieldBlur('fat', replaceFat)}
+                />
+                {replaceTouched.fat && replaceErrors.fat && (
+                  <Text style={styles.fieldError}>{replaceErrors.fat}</Text>
+                )}
+              </View>
+            </View>
+
+            {/* Estimated calories preview */}
+            {replaceProtein !== '' && replaceCarbs !== '' && replaceFat !== '' &&
+              !replaceErrors.protein && !replaceErrors.carbs && !replaceErrors.fat && (
+              <Text style={styles.caloriePreview}>
+                🔥 Estimated: {Math.round((parseFloat(replaceProtein) || 0) * 4 + (parseFloat(replaceCarbs) || 0) * 4 + (parseFloat(replaceFat) || 0) * 9)} kcal
+              </Text>
+            )}
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -649,10 +760,10 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
               <TouchableOpacity
                 style={[
                   styles.modalSubmitBtn,
-                  (!replaceFoodText.trim() || estimating) && styles.modalSubmitDisabled,
+                  estimating && styles.modalSubmitDisabled,
                 ]}
                 onPress={handleSubmitReplacement}
-                disabled={!replaceFoodText.trim() || estimating}
+                disabled={estimating}
               >
                 {estimating ? (
                   <ActivityIndicator size="small" color="#FFF" />
@@ -663,6 +774,7 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
             </View>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -1133,7 +1245,62 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     borderWidth: 1,
     borderColor: colors.text.light + '40',
+    marginBottom: spacing.xs,
+  },
+  modalInputSingle: {
+    minHeight: 44,
+    textAlignVertical: 'center',
+  },
+  modalInputError: {
+    borderColor: '#E53935',
+    borderWidth: 1.5,
+  },
+  fieldLabel: {
+    ...typography.bodySmall,
+    fontWeight: '700',
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  fieldError: {
+    ...typography.caption,
+    color: '#E53935',
+    marginBottom: spacing.xs,
+    marginTop: 2,
+  },
+  macroRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: spacing.sm,
+  },
+  macroField: {
+    flex: 1,
+    marginHorizontal: 3,
+  },
+  macroLabel: {
+    ...typography.caption,
+    color: colors.text.secondary,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  macroInput: {
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    ...typography.body,
+    color: colors.text.primary,
+    borderWidth: 1,
+    borderColor: colors.text.light + '40',
+    textAlign: 'center',
+  },
+  caloriePreview: {
+    ...typography.bodySmall,
+    color: colors.primary,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: spacing.md,
+    marginTop: spacing.xs,
   },
   modalHint: {
     ...typography.caption,

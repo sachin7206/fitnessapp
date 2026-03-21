@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface DailyMealTrackingRepository extends JpaRepository<DailyMealTracking, Long> {
-    List<DailyMealTracking> findByUserEmailAndTrackingDate(String userEmail, LocalDate trackingDate);
-    Optional<DailyMealTracking> findByUserEmailAndTrackingDateAndMealId(String userEmail, LocalDate trackingDate, Long mealId);
+    List<DailyMealTracking> findByUserIdAndTrackingDate(Long userId, LocalDate trackingDate);
+    Optional<DailyMealTracking> findByUserIdAndTrackingDateAndMealId(Long userId, LocalDate trackingDate, Long mealId);
+    void deleteByUserId(Long userId);
 }
-

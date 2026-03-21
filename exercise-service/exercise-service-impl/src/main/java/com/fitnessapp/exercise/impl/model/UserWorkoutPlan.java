@@ -17,7 +17,8 @@ public class UserWorkoutPlan {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String userEmail;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "workout_plan_id")
@@ -39,4 +40,3 @@ public class UserWorkoutPlan {
         if (currentWeek == null) currentWeek = 1;
     }
 }
-

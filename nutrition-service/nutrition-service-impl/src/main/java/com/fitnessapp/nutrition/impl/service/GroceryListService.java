@@ -26,9 +26,8 @@ public class GroceryListService implements GroceryListOperations {
     private final UserServiceSalClient userServiceSalClient;
     private final ObjectMapper objectMapper;
 
-    public GroceryListResponseDTO getGroceryList(String email, int weekNumber) {
-        UserDto user = userServiceSalClient.getUserByEmail(email);
-        UserNutritionPlan userPlan = userPlanRepo.findActiveByUserId(user.getId())
+    public GroceryListResponseDTO getGroceryList(Long userId, int weekNumber) {
+        UserNutritionPlan userPlan = userPlanRepo.findActiveByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("No active nutrition plan found"));
 
         NutritionPlan plan = userPlan.getNutritionPlan();

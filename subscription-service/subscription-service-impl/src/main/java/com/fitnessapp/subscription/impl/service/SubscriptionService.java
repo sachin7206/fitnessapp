@@ -37,8 +37,8 @@ public class SubscriptionService implements SubscriptionOperations {
     }
 
     @Override
-    public SubscriptionDTO getActiveSubscription(String email) {
-        return subscriptionRepo.findFirstByUserEmailAndStatusOrderByCreatedAtDesc(email, "ACTIVE")
+    public SubscriptionDTO getActiveSubscription(Long userId) {
+        return subscriptionRepo.findFirstByUserIdAndStatusOrderByCreatedAtDesc(userId, "ACTIVE")
                 .filter(s -> s.getEndDate() == null || !s.getEndDate().isBefore(LocalDate.now()))
                 .map(this::toDTO)
                 .orElse(null);
@@ -46,22 +46,21 @@ public class SubscriptionService implements SubscriptionOperations {
 
     @Override
     @Transactional
-    public SubscriptionDTO createSubscription(String email, Long userId, CreateSubscriptionRequest request) {
+    public SubscriptionDTO createSubscription(Long userId, CreateSubscriptionRequest request) {
         SubscriptionPlan newPlan = planRepo.findById(request.getPlanId())
                 .orElseThrow(() -> new RuntimeException("Plan not found: " + request.getPlanId()));
 
         // If user already has an active subscription, cancel it (upgrade flow)
-        subscriptionRepo.findFirstByUserEmailAndStatusOrderByCreatedAtDesc(email, "ACTIVE")
+        subscriptionRepo.findFirstByUserIdAndStatusOrderByCreatedAtDesc(userId, "ACTIVE")
                 .filter(s -> s.getEndDate() == null || !s.getEndDate().isBefore(LocalDate.now()))
                 .ifPresent(existing -> {
                     existing.setStatus("UPGRADED");
                     subscriptionRepo.save(existing);
-                    log.info("Cancelled existing subscription {} for user {} (upgrading to plan {})",
-                            existing.getId(), email, newPlan.getName());
+                    log.info("Cancelled existing subscription {} for userId {} (upgrading to plan {})",
+                            existing.getId(), userId, newPlan.getName());
                 });
 
         Subscription subscription = new Subscription();
-        subscription.setUserEmail(email);
         subscription.setUserId(userId);
         subscription.setPlan(newPlan);
 
@@ -75,11 +74,11 @@ public class SubscriptionService implements SubscriptionOperations {
             subscription.setEndDate(startDate.plusMonths(months));
             subscription.setTransactionRef("FREE");
             subscription = subscriptionRepo.save(subscription);
-            log.info("Auto-activated FREE subscription {} for user {} until {}", subscription.getId(), email, subscription.getEndDate());
+            log.info("Auto-activated FREE subscription {} for userId {} until {}", subscription.getId(), userId, subscription.getEndDate());
         } else {
             subscription.setStatus("PENDING_PAYMENT");
             subscription = subscriptionRepo.save(subscription);
-            log.info("Created pending subscription {} for user {}", subscription.getId(), email);
+            log.info("Created pending subscription {} for userId {}", subscription.getId(), userId);
         }
 
         return toDTO(subscription);
@@ -104,32 +103,31 @@ public class SubscriptionService implements SubscriptionOperations {
         subscription.setTransactionRef(transactionRef);
 
         subscription = subscriptionRepo.save(subscription);
-        log.info("Activated subscription {} for user {} until {}", subscriptionId, subscription.getUserEmail(), subscription.getEndDate());
+        log.info("Activated subscription {} for userId {} until {}", subscriptionId, subscription.getUserId(), subscription.getEndDate());
         return toDTO(subscription);
     }
 
     @Override
-    public List<SubscriptionDTO> getSubscriptionHistory(String email) {
-        return subscriptionRepo.findByUserEmailOrderByCreatedAtDesc(email).stream()
+    public List<SubscriptionDTO> getSubscriptionHistory(Long userId) {
+        return subscriptionRepo.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public void cancelSubscription(String email, Long subscriptionId) {
-        Subscription subscription = subscriptionRepo.findByIdAndUserEmail(subscriptionId, email)
+    public void cancelSubscription(Long userId, Long subscriptionId) {
+        Subscription subscription = subscriptionRepo.findByIdAndUserId(subscriptionId, userId)
                 .orElseThrow(() -> new RuntimeException("Subscription not found"));
         subscription.setStatus("CANCELLED");
         subscriptionRepo.save(subscription);
-        log.info("Cancelled subscription {} for user {}", subscriptionId, email);
+        log.info("Cancelled subscription {} for userId {}", subscriptionId, userId);
     }
 
     private SubscriptionDTO toDTO(Subscription s) {
         SubscriptionDTO dto = new SubscriptionDTO();
         dto.setId(s.getId());
         dto.setUserId(s.getUserId());
-        dto.setUserEmail(s.getUserEmail());
         dto.setStartDate(s.getStartDate());
         dto.setEndDate(s.getEndDate());
         dto.setStatus(s.getStatus());

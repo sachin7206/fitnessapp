@@ -13,16 +13,15 @@ import java.util.Optional;
 @Repository
 public interface CustomWorkoutLogRepository extends JpaRepository<CustomWorkoutLog, Long> {
 
-    Optional<CustomWorkoutLog> findByUserEmailAndLogDateAndDayOfWeekAndExerciseIndex(
-            String userEmail, LocalDate logDate, String dayOfWeek, Integer exerciseIndex);
+    Optional<CustomWorkoutLog> findByUserIdAndLogDateAndDayOfWeekAndExerciseIndex(
+            Long userId, LocalDate logDate, String dayOfWeek, Integer exerciseIndex);
 
-    List<CustomWorkoutLog> findByUserEmailAndLogDateBetweenOrderByLogDateDesc(
-            String userEmail, LocalDate start, LocalDate end);
+    List<CustomWorkoutLog> findByUserIdAndLogDateBetweenOrderByLogDateDesc(
+            Long userId, LocalDate start, LocalDate end);
 
-    List<CustomWorkoutLog> findByUserEmailAndLogDate(String userEmail, LocalDate logDate);
+    List<CustomWorkoutLog> findByUserIdAndLogDate(Long userId, LocalDate logDate);
 
     @Modifying
-    @Query("DELETE FROM CustomWorkoutLog c WHERE c.userEmail = :userEmail")
-    void deleteByUserEmail(String userEmail);
+    @Query("DELETE FROM CustomWorkoutLog c WHERE c.userId = :userId")
+    void deleteByUserId(Long userId);
 }
-

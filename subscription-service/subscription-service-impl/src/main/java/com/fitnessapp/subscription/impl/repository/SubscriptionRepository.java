@@ -9,8 +9,8 @@ import java.util.Optional;
 
 @Repository
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
-    Optional<Subscription> findFirstByUserEmailAndStatusOrderByCreatedAtDesc(String userEmail, String status);
-    List<Subscription> findByUserEmailOrderByCreatedAtDesc(String userEmail);
-    Optional<Subscription> findByIdAndUserEmail(Long id, String userEmail);
+    Optional<Subscription> findFirstByUserIdAndStatusOrderByCreatedAtDesc(Long userId, String status);
+    List<Subscription> findByUserIdOrderByCreatedAtDesc(Long userId);
+    Optional<Subscription> findByIdAndUserId(Long id, Long userId);
 }
 

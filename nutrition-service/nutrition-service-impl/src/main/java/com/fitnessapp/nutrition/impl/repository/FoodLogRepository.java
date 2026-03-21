@@ -8,7 +8,7 @@ import java.util.List;
 
 @Repository
 public interface FoodLogRepository extends JpaRepository<FoodLog, Long> {
-    List<FoodLog> findByUserEmailAndLogDateOrderByCreatedAtDesc(String userEmail, LocalDate logDate);
-    List<FoodLog> findByUserEmailAndLogDateAfterOrderByLogDateDescCreatedAtDesc(String userEmail, LocalDate afterDate);
+    List<FoodLog> findByUserIdAndLogDateOrderByCreatedAtDesc(Long userId, LocalDate logDate);
+    List<FoodLog> findByUserIdAndLogDateAfterOrderByLogDateDescCreatedAtDesc(Long userId, LocalDate afterDate);
+    void deleteByUserId(Long userId);
 }
-

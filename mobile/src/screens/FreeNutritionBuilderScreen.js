@@ -20,6 +20,7 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
     }))
   );
   const [saving, setSaving] = useState(false);
+  const [validationAttempted, setValidationAttempted] = useState(false);
 
   // Add food item modal
   const [addModalVisible, setAddModalVisible] = useState(false);
@@ -28,6 +29,8 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
   const [foodForm, setFoodForm] = useState({
     name: '', quantity: '', protein: '', carbs: '', fat: '', calories: '',
   });
+  const [foodErrors, setFoodErrors] = useState({});
+  const [foodTouched, setFoodTouched] = useState({});
 
   const showAlert = (title, message) => {
     if (Platform.OS === 'web') {
@@ -37,10 +40,92 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
     }
   };
 
+  // Validate a single food form field
+  const validateFoodField = (field, value) => {
+    if (field === 'name') {
+      if (!value || !value.trim()) return 'Food name is required';
+      if (value.trim().length > 200) return 'Must be ≤ 200 characters';
+    }
+    if (field === 'quantity') {
+      if (value && value.length > 100) return 'Must be ≤ 100 characters';
+    }
+    if (field === 'protein') {
+      if (value !== '' && value !== undefined) {
+        const n = Number(value);
+        if (isNaN(n)) return 'Must be a valid number';
+        if (n < 0) return 'Must be ≥ 0';
+        if (n > 500) return 'Must be ≤ 500g';
+      }
+    }
+    if (field === 'carbs') {
+      if (value !== '' && value !== undefined) {
+        const n = Number(value);
+        if (isNaN(n)) return 'Must be a valid number';
+        if (n < 0) return 'Must be ≥ 0';
+        if (n > 1000) return 'Must be ≤ 1000g';
+      }
+    }
+    if (field === 'fat') {
+      if (value !== '' && value !== undefined) {
+        const n = Number(value);
+        if (isNaN(n)) return 'Must be a valid number';
+        if (n < 0) return 'Must be ≥ 0';
+        if (n > 500) return 'Must be ≤ 500g';
+      }
+    }
+    if (field === 'calories') {
+      if (value !== '' && value !== undefined) {
+        const n = Number(value);
+        if (isNaN(n)) return 'Must be a valid number';
+        if (n < 0) return 'Must be ≥ 0';
+        if (n > 10000) return 'Must be ≤ 10000';
+      }
+    }
+    return null;
+  };
+
+  const validateAllFoodFields = () => {
+    const errs = {};
+    const fields = ['name', 'quantity', 'protein', 'carbs', 'fat', 'calories'];
+    fields.forEach(f => {
+      const err = validateFoodField(f, foodForm[f]);
+      if (err) errs[f] = err;
+    });
+    setFoodErrors(errs);
+    setFoodTouched({ name: true, quantity: true, protein: true, carbs: true, fat: true, calories: true });
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleFoodFieldChange = (field, value) => {
+    setFoodForm(p => ({ ...p, [field]: value }));
+    if (foodTouched[field]) {
+      const err = validateFoodField(field, value);
+      setFoodErrors(prev => {
+        const next = { ...prev };
+        if (err) next[field] = err;
+        else delete next[field];
+        return next;
+      });
+    }
+  };
+
+  const handleFoodFieldBlur = (field) => {
+    setFoodTouched(prev => ({ ...prev, [field]: true }));
+    const err = validateFoodField(field, foodForm[field]);
+    setFoodErrors(prev => {
+      const next = { ...prev };
+      if (err) next[field] = err;
+      else delete next[field];
+      return next;
+    });
+  };
+
   const openAddFoodModal = (mealIndex) => {
     setEditingMealIndex(mealIndex);
     setEditingFoodIndex(null);
     setFoodForm({ name: '', quantity: '', protein: '', carbs: '', fat: '', calories: '' });
+    setFoodErrors({});
+    setFoodTouched({});
     setAddModalVisible(true);
   };
 
@@ -56,14 +141,13 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
       fat: String(food.fatGrams || ''),
       calories: String(food.calories || ''),
     });
+    setFoodErrors({});
+    setFoodTouched({});
     setAddModalVisible(true);
   };
 
   const handleSaveFood = () => {
-    if (!foodForm.name.trim()) {
-      showAlert('Required', 'Please enter food item name');
-      return;
-    }
+    if (!validateAllFoodFields()) return;
 
     const protein = parseFloat(foodForm.protein) || 0;
     const carbs = parseFloat(foodForm.carbs) || 0;
@@ -139,10 +223,13 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
   };
 
   const handleStartPlan = async () => {
-    // Validate: at least one food item in at least one meal
-    const hasFoodItems = meals.some(m => m.foodItems.length > 0);
-    if (!hasFoodItems) {
-      showAlert('Add Food Items', 'Please add at least one food item to any meal');
+    setValidationAttempted(true);
+
+    // Validate: every meal must have at least one food item
+    const emptyMeals = meals.filter(m => m.foodItems.length === 0);
+    if (emptyMeals.length > 0) {
+      const names = emptyMeals.map(m => m.name).join(', ');
+      showAlert('Add Food Items', `Please add at least one food item to each meal.\n\nMissing: ${names}`);
       return;
     }
 
@@ -227,9 +314,11 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
 
   const renderMeal = (meal, mealIndex) => {
     const mealTotals = calculateMealTotals(meal.foodItems);
+    const isEmpty = meal.foodItems.length === 0;
+    const showError = validationAttempted && isEmpty;
 
     return (
-      <View key={meal.id} style={styles.mealCard}>
+      <View key={meal.id} style={[styles.mealCard, showError && styles.mealCardError]}>
         {/* Meal Header */}
         <View style={styles.mealHeader}>
           <Text style={styles.mealIcon}>{getMealTypeIcon(meal.mealType)}</Text>
@@ -246,6 +335,13 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
         </View>
 
         <Text style={styles.mealName}>{meal.name}</Text>
+
+        {/* Inline validation error */}
+        {showError && (
+          <View style={styles.inlineError}>
+            <Text style={styles.inlineErrorText}>⚠️ Please add at least one food item</Text>
+          </View>
+        )}
 
         {/* Food Items */}
         {meal.foodItems.length > 0 && (
@@ -306,8 +402,9 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
           <TextInput
             style={styles.planNameInput}
             value={planName}
-            onChangeText={setPlanName}
+            onChangeText={(t) => setPlanName(t.slice(0, 100))}
             placeholder="Enter plan name"
+            maxLength={100}
             placeholderTextColor={colors.text.secondary}
           />
         </View>
@@ -372,47 +469,65 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>Food Name *</Text>
               <TextInput
-                style={styles.formInput}
+                style={[styles.formInput, foodErrors.name && styles.formInputError]}
                 value={foodForm.name}
-                onChangeText={(t) => setFoodForm(p => ({ ...p, name: t }))}
+                onChangeText={(t) => handleFoodFieldChange('name', t)}
+                onBlur={() => handleFoodFieldBlur('name')}
                 placeholder="e.g., Grilled Chicken Breast"
+                maxLength={200}
                 placeholderTextColor={colors.text.secondary}
               />
+              {foodTouched.name && foodErrors.name && (
+                <Text style={styles.fieldError}>{foodErrors.name}</Text>
+              )}
             </View>
 
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>Quantity</Text>
               <TextInput
-                style={styles.formInput}
+                style={[styles.formInput, foodErrors.quantity && styles.formInputError]}
                 value={foodForm.quantity}
-                onChangeText={(t) => setFoodForm(p => ({ ...p, quantity: t }))}
+                onChangeText={(t) => handleFoodFieldChange('quantity', t)}
+                onBlur={() => handleFoodFieldBlur('quantity')}
                 placeholder="e.g., 150g, 1 cup, 2 pieces"
+                maxLength={100}
                 placeholderTextColor={colors.text.secondary}
               />
+              {foodTouched.quantity && foodErrors.quantity && (
+                <Text style={styles.fieldError}>{foodErrors.quantity}</Text>
+              )}
             </View>
 
             <View style={styles.macroInputRow}>
               <View style={styles.macroInputGroup}>
                 <Text style={[styles.formLabel, { color: '#FF6B6B' }]}>Protein (g)</Text>
                 <TextInput
-                  style={[styles.formInput, styles.macroInput]}
+                  style={[styles.formInput, styles.macroInput, foodErrors.protein && styles.formInputError]}
                   value={foodForm.protein}
-                  onChangeText={(t) => setFoodForm(p => ({ ...p, protein: t }))}
+                  onChangeText={(t) => handleFoodFieldChange('protein', t)}
+                  onBlur={() => handleFoodFieldBlur('protein')}
                   keyboardType="numeric"
                   placeholder="0"
                   placeholderTextColor={colors.text.secondary}
                 />
+                {foodTouched.protein && foodErrors.protein && (
+                  <Text style={styles.fieldError}>{foodErrors.protein}</Text>
+                )}
               </View>
               <View style={styles.macroInputGroup}>
                 <Text style={[styles.formLabel, { color: '#4ECDC4' }]}>Carbs (g)</Text>
                 <TextInput
-                  style={[styles.formInput, styles.macroInput]}
+                  style={[styles.formInput, styles.macroInput, foodErrors.carbs && styles.formInputError]}
                   value={foodForm.carbs}
-                  onChangeText={(t) => setFoodForm(p => ({ ...p, carbs: t }))}
+                  onChangeText={(t) => handleFoodFieldChange('carbs', t)}
+                  onBlur={() => handleFoodFieldBlur('carbs')}
                   keyboardType="numeric"
                   placeholder="0"
                   placeholderTextColor={colors.text.secondary}
                 />
+                {foodTouched.carbs && foodErrors.carbs && (
+                  <Text style={styles.fieldError}>{foodErrors.carbs}</Text>
+                )}
               </View>
             </View>
 
@@ -420,24 +535,32 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
               <View style={styles.macroInputGroup}>
                 <Text style={[styles.formLabel, { color: '#FFE66D' }]}>Fat (g)</Text>
                 <TextInput
-                  style={[styles.formInput, styles.macroInput]}
+                  style={[styles.formInput, styles.macroInput, foodErrors.fat && styles.formInputError]}
                   value={foodForm.fat}
-                  onChangeText={(t) => setFoodForm(p => ({ ...p, fat: t }))}
+                  onChangeText={(t) => handleFoodFieldChange('fat', t)}
+                  onBlur={() => handleFoodFieldBlur('fat')}
                   keyboardType="numeric"
                   placeholder="0"
                   placeholderTextColor={colors.text.secondary}
                 />
+                {foodTouched.fat && foodErrors.fat && (
+                  <Text style={styles.fieldError}>{foodErrors.fat}</Text>
+                )}
               </View>
               <View style={styles.macroInputGroup}>
                 <Text style={[styles.formLabel, { color: colors.primary }]}>Calories</Text>
                 <TextInput
-                  style={[styles.formInput, styles.macroInput]}
+                  style={[styles.formInput, styles.macroInput, foodErrors.calories && styles.formInputError]}
                   value={foodForm.calories}
-                  onChangeText={(t) => setFoodForm(p => ({ ...p, calories: t }))}
+                  onChangeText={(t) => handleFoodFieldChange('calories', t)}
+                  onBlur={() => handleFoodFieldBlur('calories')}
                   keyboardType="numeric"
                   placeholder="Auto"
                   placeholderTextColor={colors.text.secondary}
                 />
+                {foodTouched.calories && foodErrors.calories && (
+                  <Text style={styles.fieldError}>{foodErrors.calories}</Text>
+                )}
               </View>
             </View>
 
@@ -511,6 +634,16 @@ const styles = StyleSheet.create({
   mealCard: {
     backgroundColor: colors.surface, borderRadius: borderRadius.lg,
     padding: spacing.md, marginBottom: spacing.md, ...shadows.sm,
+  },
+  mealCardError: {
+    borderWidth: 2, borderColor: '#FF6B6B',
+  },
+  inlineError: {
+    backgroundColor: '#FF6B6B15', borderRadius: borderRadius.sm,
+    padding: spacing.sm, marginBottom: spacing.sm,
+  },
+  inlineErrorText: {
+    ...typography.bodySmall, color: '#FF6B6B', fontWeight: '600',
   },
   mealHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
   mealIcon: { fontSize: 28, marginRight: spacing.sm },
@@ -592,6 +725,12 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.md,
     padding: spacing.sm, ...typography.body, color: colors.text.primary,
     backgroundColor: colors.background,
+  },
+  formInputError: {
+    borderColor: '#FF6B6B', borderWidth: 1.5,
+  },
+  fieldError: {
+    ...typography.caption, color: '#FF6B6B', marginTop: 2, fontWeight: '500',
   },
   macroInputRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   macroInputGroup: { flex: 1 },

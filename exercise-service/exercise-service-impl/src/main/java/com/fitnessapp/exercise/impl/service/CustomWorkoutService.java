@@ -30,8 +30,8 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
 
     @Override
     @Transactional
-    public WorkoutPlanDTO saveCustomWorkoutPlan(String email, Long userId, CustomWorkoutPlanRequest request) {
-        log.info("Saving custom workout plan for user: {} (id: {})", email, userId);
+    public WorkoutPlanDTO saveCustomWorkoutPlan(Long userId, CustomWorkoutPlanRequest request) {
+        log.info("Saving custom workout plan for user id: {}", userId);
 
         // --- Validation ---
         if (request.getExercises() == null || request.getExercises().isEmpty()) {
@@ -86,6 +86,14 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
                 ex.setDayOfWeek(entry.getDayOfWeek());
                 ex.setOrder(entry.getOrder() != null ? entry.getOrder() : 1);
                 ex.setCaloriesBurned(entry.getCaloriesBurned() != null ? entry.getCaloriesBurned() : 0);
+                // Validate setDetailsJson is valid JSON
+                if (entry.getSetDetailsJson() != null) {
+                    try {
+                        objectMapper.readTree(entry.getSetDetailsJson());
+                    } catch (Exception e) {
+                        throw new IllegalArgumentException("Invalid JSON in setDetailsJson for exercise: " + entry.getExerciseName());
+                    }
+                }
                 ex.setSetDetailsJson(entry.getSetDetailsJson());
                 exercises.add(ex);
             }
@@ -104,11 +112,17 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
 
     @Override
     @Transactional
-    public WorkoutExerciseDTO updateExercise(String email, Long exerciseId, UpdateExerciseRequest request) {
-        log.info("Updating exercise {} for user: {}", exerciseId, email);
+    public WorkoutExerciseDTO updateExercise(Long userId, Long exerciseId, UpdateExerciseRequest request) {
+        log.info("Updating exercise {} for user: {}", exerciseId, userId);
 
         WorkoutPlan.WorkoutExercise exercise = workoutExerciseRepo.findById(exerciseId)
                 .orElseThrow(() -> new RuntimeException("Exercise not found: " + exerciseId));
+
+        // SECURITY: Verify this exercise belongs to the current user's plan
+        WorkoutPlan plan = exercise.getWorkoutPlan();
+        if (plan == null || !userId.equals(plan.getUserId())) {
+            throw new IllegalArgumentException("You do not have permission to modify this exercise");
+        }
 
         if (request.getSets() != null) {
             exercise.setSets(request.getSets());
@@ -123,6 +137,12 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
             exercise.setRestTimeSeconds(request.getRestTimeSeconds());
         }
         if (request.getSetDetailsJson() != null) {
+            // Validate JSON before saving
+            try {
+                objectMapper.readTree(request.getSetDetailsJson());
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Invalid JSON in setDetailsJson");
+            }
             exercise.setSetDetailsJson(request.getSetDetailsJson());
         }
         if (request.getDurationSeconds() != null) {
@@ -134,7 +154,7 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
                 exerciseId, exercise.getSets(), exercise.getReps(), exercise.getWeight(), exercise.getSetDetailsJson());
 
         // Append edit entry to exercise log history
-        appendToExerciseLog(email, exercise);
+        appendToExerciseLog(userId, exercise);
 
         WorkoutExerciseDTO dto = new WorkoutExerciseDTO();
         dto.setId(exercise.getId());
@@ -160,7 +180,7 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
      * Log setsData stores a JSON array of history entries:
      * [ {"sets":[{"reps":15,"weight":90},...], "loggedAt":"..."}, ... ]
      */
-    private void appendToExerciseLog(String email, WorkoutPlan.WorkoutExercise exercise) {
+    private void appendToExerciseLog(Long userId, WorkoutPlan.WorkoutExercise exercise) {
         try {
             String dayOfWeek = exercise.getDayOfWeek();
             // Determine exercise index within its day by querying the exercise's order
@@ -170,7 +190,7 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
 
             // Find existing log for this exercise
             Optional<CustomWorkoutLog> existingLogOpt = customLogRepo
-                    .findByUserEmailAndLogDateAndDayOfWeekAndExerciseIndex(email, today, dayOfWeek, exerciseIndex);
+                    .findByUserIdAndLogDateAndDayOfWeekAndExerciseIndex(userId, today, dayOfWeek, exerciseIndex);
 
             // Parse current sets data from setDetailsJson
             List<Map<String, Object>> currentSets;
@@ -230,7 +250,7 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
             // Save
             CustomWorkoutLog logRecord = existingLogOpt.orElseGet(() -> {
                 CustomWorkoutLog newLog = new CustomWorkoutLog();
-                newLog.setUserEmail(email);
+                newLog.setUserId(userId);
                 newLog.setLogDate(today);
                 newLog.setDayOfWeek(dayOfWeek);
                 newLog.setExerciseIndex(exerciseIndex);
@@ -251,8 +271,8 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
 
     @Override
     @Transactional
-    public Map<String, Object> syncCustomWorkoutLog(String email, CustomWorkoutLogSyncRequest request) {
-        log.info("Syncing custom workout logs for user: {} on date: {}", email, request.getDate());
+    public Map<String, Object> syncCustomWorkoutLog(Long userId, CustomWorkoutLogSyncRequest request) {
+        log.info("Syncing custom workout logs for user: {} on date: {}", userId, request.getDate());
 
         LocalDate logDate;
         try {
@@ -285,11 +305,11 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
 
                 // Find or create log
                 CustomWorkoutLog logRecord = customLogRepo
-                        .findByUserEmailAndLogDateAndDayOfWeekAndExerciseIndex(
-                                email, finalLogDate, dayOfWeek, exerciseIndex)
+                        .findByUserIdAndLogDateAndDayOfWeekAndExerciseIndex(
+                                userId, finalLogDate, dayOfWeek, exerciseIndex)
                         .orElseGet(() -> {
                             CustomWorkoutLog newLog = new CustomWorkoutLog();
-                            newLog.setUserEmail(email);
+                            newLog.setUserId(userId);
                             newLog.setLogDate(finalLogDate);
                             newLog.setDayOfWeek(dayOfWeek);
                             newLog.setExerciseIndex(exerciseIndex);
@@ -328,10 +348,10 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
     }
 
     @Override
-    public List<CustomWorkoutLogDTO> getCustomWorkoutLogs(String email, int days) {
+    public List<CustomWorkoutLogDTO> getCustomWorkoutLogs(Long userId, int days) {
         LocalDate end = LocalDate.now();
         LocalDate start = end.minusDays(days);
-        return customLogRepo.findByUserEmailAndLogDateBetweenOrderByLogDateDesc(email, start, end)
+        return customLogRepo.findByUserIdAndLogDateBetweenOrderByLogDateDesc(userId, start, end)
                 .stream()
                 .map(this::toLogDTO)
                 .collect(Collectors.toList());
@@ -339,7 +359,7 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
 
     private CustomWorkoutLogDTO toLogDTO(CustomWorkoutLog log) {
         return new CustomWorkoutLogDTO(
-                log.getId(), log.getUserEmail(), log.getLogDate(),
+                log.getId(), log.getUserId(), log.getLogDate(),
                 log.getDayOfWeek(), log.getExerciseIndex(), log.getExerciseName(),
                 log.getSetsData(), log.getCompletedAt()
         );

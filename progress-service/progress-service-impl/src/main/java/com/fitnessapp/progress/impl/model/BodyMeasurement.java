@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 public class BodyMeasurement {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "user_email") private String userEmail;
+    @Column(name = "user_id", nullable = false) private Long userId;
     @Column(name = "measurement_date") private LocalDate measurementDate;
     private Double chest;
     private Double waist;

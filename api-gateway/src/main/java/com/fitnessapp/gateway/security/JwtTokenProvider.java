@@ -29,6 +29,15 @@ public class JwtTokenProvider {
         return extractClaim(token, Claims::getSubject);
     }
 
+    public Long extractUserId(String token) {
+        Claims claims = extractAllClaims(token);
+        Object userIdObj = claims.get("userId");
+        if (userIdObj instanceof Number) {
+            return ((Number) userIdObj).longValue();
+        }
+        return null;
+    }
+
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }

@@ -5,10 +5,10 @@ import java.util.List;
 public interface SubscriptionOperations {
     List<SubscriptionPlanDTO> getAllPlans();
     SubscriptionPlanDTO getPlanById(Long planId);
-    SubscriptionDTO getActiveSubscription(String email);
-    SubscriptionDTO createSubscription(String email, Long userId, CreateSubscriptionRequest request);
+    SubscriptionDTO getActiveSubscription(Long userId);
+    SubscriptionDTO createSubscription(Long userId, CreateSubscriptionRequest request);
     SubscriptionDTO activateSubscription(Long subscriptionId, String transactionRef);
-    List<SubscriptionDTO> getSubscriptionHistory(String email);
-    void cancelSubscription(String email, Long subscriptionId);
+    List<SubscriptionDTO> getSubscriptionHistory(Long userId);
+    void cancelSubscription(Long userId, Long subscriptionId);
 }
 

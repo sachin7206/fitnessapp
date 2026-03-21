@@ -15,6 +15,7 @@ import {
   completeMeal,
   uncompleteMeal,
   persistTracking,
+  persistTrackingNow,
   loadTrackingFromStorage,
   loadTrackingLocal,
   getLocalDateString,
@@ -235,19 +236,19 @@ const HomeScreen = ({ navigation }) => {
 
   const handleCheckMeal = (mealId) => {
     dispatch(completeMeal({ mealId }));
-    dispatch(persistTracking());
+    dispatch(persistTrackingNow());
   };
 
   const handleUncheckMeal = (mealId) => {
     if (Platform.OS === 'web') {
       if (window.confirm('Undo this meal? Calories will be subtracted.')) {
         dispatch(uncompleteMeal({ mealId }));
-        dispatch(persistTracking());
+        dispatch(persistTrackingNow());
       }
     } else {
       Alert.alert('Undo Meal', 'Undo this meal? Calories will be subtracted.', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Undo', style: 'destructive', onPress: () => { dispatch(uncompleteMeal({ mealId })); dispatch(persistTracking()); } },
+        { text: 'Undo', style: 'destructive', onPress: () => { dispatch(uncompleteMeal({ mealId })); dispatch(persistTrackingNow()); } },
       ]);
     }
   };

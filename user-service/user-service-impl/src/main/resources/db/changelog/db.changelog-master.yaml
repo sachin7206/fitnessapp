@@ -1,20 +1,87 @@
 databaseChangeLog:
-  - include:
-      file: changes/001-create-users-table.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/002-create-user-goals-table.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/003-create-user-roles-table.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/004-create-user-health-conditions-table.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/005-create-user-dietary-preferences-table.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/006-add-password-reset-columns.yaml
-      relativeToChangelogFile: true
-
+  - changeSet:
+      id: 001-create-users-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: users
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: email, type: VARCHAR(255), constraints: { nullable: false, unique: true } }
+              - column: { name: password, type: VARCHAR(255), constraints: { nullable: false } }
+              - column: { name: first_name, type: VARCHAR(255) }
+              - column: { name: last_name, type: VARCHAR(255) }
+              - column: { name: age, type: INT }
+              - column: { name: gender, type: VARCHAR(50) }
+              - column: { name: phone, type: VARCHAR(50) }
+              - column: { name: language, type: VARCHAR(10) }
+              - column: { name: region, type: VARCHAR(50) }
+              - column: { name: avatar_url, type: VARCHAR(500) }
+              - column: { name: height, type: DOUBLE }
+              - column: { name: current_weight, type: DOUBLE }
+              - column: { name: target_weight, type: DOUBLE }
+              - column: { name: activity_level, type: VARCHAR(50) }
+              - column: { name: password_reset_token, type: VARCHAR(255) }
+              - column: { name: password_reset_expiry, type: TIMESTAMP }
+              - column: { name: created_at, type: DATETIME }
+              - column: { name: updated_at, type: DATETIME }
+  - changeSet:
+      id: 002-create-user-goals-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: user_goals
+            columns:
+              - column: { name: user_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: goal, type: VARCHAR(255) }
+        - addForeignKeyConstraint:
+            baseTableName: user_goals
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_user_goals_user
+  - changeSet:
+      id: 003-create-user-roles-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: user_roles
+            columns:
+              - column: { name: user_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: role, type: VARCHAR(50) }
+        - addForeignKeyConstraint:
+            baseTableName: user_roles
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_user_roles_user
+  - changeSet:
+      id: 004-create-user-health-conditions-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: user_health_conditions
+            columns:
+              - column: { name: user_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: condition_name, type: VARCHAR(255) }
+        - addForeignKeyConstraint:
+            baseTableName: user_health_conditions
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_user_health_conditions_user
+  - changeSet:
+      id: 005-create-user-dietary-preferences-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: user_dietary_preferences
+            columns:
+              - column: { name: user_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: preference, type: VARCHAR(255) }
+        - addForeignKeyConstraint:
+            baseTableName: user_dietary_preferences
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_user_dietary_prefs_user

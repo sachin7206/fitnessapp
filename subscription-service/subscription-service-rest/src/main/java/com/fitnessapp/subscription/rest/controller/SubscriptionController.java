@@ -6,8 +6,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,10 +19,6 @@ public class SubscriptionController {
     private final SubscriptionOperations subscriptionOperations;
     private final HttpServletRequest httpServletRequest;
 
-    private String getCurrentEmail() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth.getName();
-    }
 
     private Long getCurrentUserId() {
         Object userId = httpServletRequest.getAttribute("userId");
@@ -45,7 +39,7 @@ public class SubscriptionController {
 
     @GetMapping("/my-subscription")
     public ResponseEntity<ApiResponse<SubscriptionDTO>> getActiveSubscription() {
-        SubscriptionDTO subscription = subscriptionOperations.getActiveSubscription(getCurrentEmail());
+        SubscriptionDTO subscription = subscriptionOperations.getActiveSubscription(getCurrentUserId());
         if (subscription == null) {
             return ResponseEntity.ok(ApiResponse.success("No active subscription", null));
         }
@@ -55,7 +49,7 @@ public class SubscriptionController {
     @PostMapping("/subscribe")
     public ResponseEntity<ApiResponse<SubscriptionDTO>> subscribe(@RequestBody CreateSubscriptionRequest request) {
         SubscriptionDTO subscription = subscriptionOperations.createSubscription(
-                getCurrentEmail(), getCurrentUserId(), request);
+                getCurrentUserId(), request);
         return ResponseEntity.ok(ApiResponse.success("Subscription created. Please complete payment.", subscription));
     }
 
@@ -69,13 +63,13 @@ public class SubscriptionController {
 
     @GetMapping("/history")
     public ResponseEntity<ApiResponse<List<SubscriptionDTO>>> getHistory() {
-        List<SubscriptionDTO> history = subscriptionOperations.getSubscriptionHistory(getCurrentEmail());
+        List<SubscriptionDTO> history = subscriptionOperations.getSubscriptionHistory(getCurrentUserId());
         return ResponseEntity.ok(ApiResponse.success("Subscription history retrieved", history));
     }
 
     @DeleteMapping("/{subscriptionId}")
     public ResponseEntity<ApiResponse<Void>> cancelSubscription(@PathVariable Long subscriptionId) {
-        subscriptionOperations.cancelSubscription(getCurrentEmail(), subscriptionId);
+        subscriptionOperations.cancelSubscription(getCurrentUserId(), subscriptionId);
         return ResponseEntity.ok(ApiResponse.success("Subscription cancelled", null));
     }
 }

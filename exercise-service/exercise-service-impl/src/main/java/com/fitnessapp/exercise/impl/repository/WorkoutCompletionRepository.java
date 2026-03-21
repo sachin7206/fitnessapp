@@ -10,11 +10,10 @@ import java.util.Optional;
 
 @Repository
 public interface WorkoutCompletionRepository extends JpaRepository<WorkoutCompletion, Long> {
-    Optional<WorkoutCompletion> findByUserEmailAndCompletionDate(String userEmail, LocalDate completionDate);
-    long countByUserEmailAndCompletedTrue(String userEmail);
+    Optional<WorkoutCompletion> findByUserIdAndCompletionDate(Long userId, LocalDate completionDate);
+    long countByUserIdAndCompletedTrue(Long userId);
 
     @Modifying
-    @Query("DELETE FROM WorkoutCompletion w WHERE w.userEmail = :userEmail")
-    void deleteByUserEmail(String userEmail);
+    @Query("DELETE FROM WorkoutCompletion w WHERE w.userId = :userId")
+    void deleteByUserId(Long userId);
 }
-

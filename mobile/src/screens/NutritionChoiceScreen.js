@@ -4,10 +4,12 @@ import {
 } from 'react-native';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import subscriptionService from '../services/subscriptionService';
+import nutritionService from '../services/nutritionService';
 
 const NutritionChoiceScreen = ({ navigation }) => {
   const [hasSubscription, setHasSubscription] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [navigating, setNavigating] = useState(false);
 
   useEffect(() => {
     checkSubscription();
@@ -22,6 +24,22 @@ const NutritionChoiceScreen = ({ navigation }) => {
       setHasSubscription(false);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubscribePress = async () => {
+    setNavigating(true);
+    try {
+      const status = await nutritionService.checkProfileStatus();
+      if (!status.isComplete) {
+        navigation.navigate('NutritionProfileSetup', { missingFields: status.missingFields });
+        return;
+      }
+      navigation.navigate('NutritionRegionSelect');
+    } catch (error) {
+      navigation.navigate('NutritionRegionSelect');
+    } finally {
+      setNavigating(false);
     }
   };
 
@@ -58,9 +76,10 @@ const NutritionChoiceScreen = ({ navigation }) => {
 
         {/* Subscribe Now - AI Generated */}
         <TouchableOpacity
-          style={styles.optionCard}
-          onPress={() => navigation.navigate('NutritionRegionSelect')}
+          style={[styles.optionCard, navigating && { opacity: 0.6 }]}
+          onPress={handleSubscribePress}
           activeOpacity={0.85}
+          disabled={navigating}
         >
           <View style={styles.optionIconContainer}>
             <Text style={styles.optionIcon}>🤖</Text>

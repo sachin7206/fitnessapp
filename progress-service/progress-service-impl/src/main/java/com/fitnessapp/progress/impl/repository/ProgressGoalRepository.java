@@ -5,7 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface ProgressGoalRepository extends JpaRepository<ProgressGoal, Long> {
-    List<ProgressGoal> findByUserEmailAndIsActiveTrue(String userEmail);
-    List<ProgressGoal> findByUserEmailAndGoalTypeAndIsActiveTrue(String userEmail, String goalType);
+    List<ProgressGoal> findByUserIdAndIsActiveTrue(Long userId);
+    List<ProgressGoal> findByUserIdAndGoalTypeAndIsActiveTrue(Long userId, String goalType);
 }
-

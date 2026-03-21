@@ -7,12 +7,12 @@ public interface WellnessOperations {
     List<YogaPoseDTO> getYogaPoses(String difficulty);
     List<MeditationSessionDTO> getMeditationSessions(String type);
     List<BreathingExerciseDTO> getBreathingExercises();
-    WellnessPlanDTO generatePlan(String email, Map<String, Object> request);
-    UserWellnessPlanDTO assignPlan(String email, Long planId);
-    UserWellnessPlanDTO getMyPlan(String email);
-    UserWellnessPlanDTO completeSession(String email, String sessionType, Long sessionId, Integer durationMinutes);
+    WellnessPlanDTO generatePlan(Long userId, Map<String, Object> request);
+    UserWellnessPlanDTO assignPlan(Long userId, Long planId);
+    UserWellnessPlanDTO getMyPlan(Long userId);
+    UserWellnessPlanDTO completeSession(Long userId, String sessionType, Long sessionId, Integer durationMinutes);
     WellnessTipDTO getDailyTip();
-    WellnessStreakDTO getStreak(String email);
-    List<Map<String, Object>> getTodayCompletions(String email);
+    WellnessStreakDTO getStreak(Long userId);
+    List<Map<String, Object>> getTodayCompletions(Long userId);
 }
 

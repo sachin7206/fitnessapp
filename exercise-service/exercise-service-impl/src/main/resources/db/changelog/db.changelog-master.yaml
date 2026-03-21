@@ -1,32 +1,230 @@
 databaseChangeLog:
-  - include:
-      file: changes/001-create-exercises-table.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/002-create-exercise-collections.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/003-create-workout-plans-table.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/004-workout-tracking-tables.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/005-seed-motivational-quotes.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/006-create-daily-step-tracking-table.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/007-create-workout-feedback-table.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/008-create-custom-workout-logs.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/009-add-weight-setdetails-to-exercises.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/010-add-rest-day-to-workout-plans.yaml
-      relativeToChangelogFile: true
-
+  - changeSet:
+      id: 001-create-exercises-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: exercises
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: category, type: VARCHAR(50) }
+              - column: { name: difficulty, type: VARCHAR(50) }
+              - column: { name: calories_burned_per_min, type: DOUBLE }
+              - column: { name: video_url, type: VARCHAR(500) }
+              - column: { name: thumbnail_url, type: VARCHAR(500) }
+              - column: { name: cultural_origin, type: VARCHAR(50) }
+  - changeSet:
+      id: 002-create-exercise-collections
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: exercise_names
+            columns:
+              - column: { name: exercise_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: language, type: VARCHAR(10) }
+              - column: { name: name, type: VARCHAR(255) }
+        - createTable:
+            tableName: exercise_descriptions
+            columns:
+              - column: { name: exercise_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: language, type: VARCHAR(10) }
+              - column: { name: description, type: VARCHAR(1000) }
+        - createTable:
+            tableName: exercise_equipment
+            columns:
+              - column: { name: exercise_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: equipment, type: VARCHAR(100) }
+        - createTable:
+            tableName: exercise_muscle_groups
+            columns:
+              - column: { name: exercise_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: muscle_group, type: VARCHAR(100) }
+        - createTable:
+            tableName: exercise_tags
+            columns:
+              - column: { name: exercise_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: tag, type: VARCHAR(100) }
+  - changeSet:
+      id: 003-create-workout-plans
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: workout_plans
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_id, type: BIGINT }
+              - column: { name: plan_name, type: VARCHAR(255) }
+              - column: { name: plan_type, type: VARCHAR(50) }
+              - column: { name: frequency, type: VARCHAR(50) }
+              - column: { name: difficulty, type: VARCHAR(50) }
+              - column: { name: duration_weeks, type: INT }
+              - column: { name: is_active, type: BOOLEAN }
+              - column: { name: exercise_type, type: VARCHAR(50) }
+              - column: { name: exercise_time, type: VARCHAR(20) }
+              - column: { name: exercise_duration_minutes, type: INT }
+              - column: { name: goal, type: VARCHAR(50) }
+              - column: { name: days_per_week, type: INT }
+              - column: { name: calories_per_session, type: INT }
+              - column: { name: cardio_type, type: VARCHAR(50) }
+              - column: { name: cardio_duration_minutes, type: INT }
+              - column: { name: cardio_steps, type: INT }
+              - column: { name: cardio_calories, type: INT }
+              - column: { name: is_template, type: BOOLEAN, defaultValueBoolean: false }
+              - column: { name: rest_day, type: VARCHAR(20) }
+              - column: { name: created_at, type: DATETIME }
+        - createTable:
+            tableName: workout_exercises
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: workout_plan_id, type: BIGINT }
+              - column: { name: exercise_id, type: BIGINT }
+              - column: { name: exercise_name, type: VARCHAR(255) }
+              - column: { name: sets, type: INT }
+              - column: { name: reps, type: INT }
+              - column: { name: duration_seconds, type: INT }
+              - column: { name: rest_time_seconds, type: INT }
+              - column: { name: exercise_order, type: INT }
+              - column: { name: day_of_week, type: VARCHAR(20) }
+              - column: { name: muscle_group, type: VARCHAR(50) }
+              - column: { name: calories_burned, type: INT }
+              - column: { name: is_cardio, type: BOOLEAN, defaultValueBoolean: false }
+              - column: { name: steps, type: INT }
+              - column: { name: weight, type: DOUBLE }
+              - column: { name: set_details_json, type: TEXT }
+        - addForeignKeyConstraint:
+            baseTableName: workout_exercises
+            baseColumnNames: workout_plan_id
+            referencedTableName: workout_plans
+            referencedColumnNames: id
+            constraintName: fk_workout_exercises_plan
+  - changeSet:
+      id: 004-create-user-workout-plans
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: user_workout_plans
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: workout_plan_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: start_date, type: DATE }
+              - column: { name: end_date, type: DATE }
+              - column: { name: status, type: VARCHAR(32), defaultValue: ACTIVE }
+              - column: { name: completed_workouts, type: INT, defaultValueNumeric: 0 }
+              - column: { name: total_workouts, type: INT, defaultValueNumeric: 0 }
+              - column: { name: current_week, type: INT, defaultValueNumeric: 1 }
+              - column: { name: created_at, type: DATETIME }
+        - addForeignKeyConstraint:
+            baseTableName: user_workout_plans
+            baseColumnNames: workout_plan_id
+            referencedTableName: workout_plans
+            referencedColumnNames: id
+            constraintName: fk_user_workout_plan
+        - createIndex:
+            tableName: user_workout_plans
+            indexName: idx_uwp_user_id
+            columns:
+              - column: { name: user_id }
+  - changeSet:
+      id: 005-create-workout-completions
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: workout_completions
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: user_workout_plan_id, type: BIGINT }
+              - column: { name: completion_date, type: DATE, constraints: { nullable: false } }
+              - column: { name: completed, type: BOOLEAN, defaultValueBoolean: false }
+              - column: { name: completed_at, type: DATETIME }
+        - addForeignKeyConstraint:
+            baseTableName: workout_completions
+            baseColumnNames: user_workout_plan_id
+            referencedTableName: user_workout_plans
+            referencedColumnNames: id
+            constraintName: fk_workout_completion_plan
+  - changeSet:
+      id: 006-create-motivational-quotes
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: motivational_quotes
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: quote_text, type: VARCHAR(500), constraints: { nullable: false } }
+              - column: { name: category, type: VARCHAR(50) }
+  - changeSet:
+      id: 007-create-daily-step-tracking
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: daily_step_tracking
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: tracking_date, type: DATE, constraints: { nullable: false } }
+              - column: { name: steps, type: INT, defaultValueNumeric: 0 }
+              - column: { name: step_goal, type: INT, defaultValueNumeric: 0 }
+              - column: { name: calories_burned, type: INT, defaultValueNumeric: 0 }
+              - column: { name: goal_completed, type: BOOLEAN, defaultValueBoolean: false }
+              - column: { name: created_at, type: DATETIME }
+              - column: { name: updated_at, type: DATETIME }
+        - addUniqueConstraint:
+            tableName: daily_step_tracking
+            columnNames: user_id, tracking_date
+            constraintName: uk_step_tracking_user_date
+  - changeSet:
+      id: 008-create-workout-feedback
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: workout_feedback
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: workout_plan_id, type: BIGINT }
+              - column: { name: difficulty, type: VARCHAR(32) }
+              - column: { name: energy_level, type: INT, defaultValueNumeric: 5 }
+              - column: { name: completion_percentage, type: INT, defaultValueNumeric: 100 }
+              - column: { name: notes, type: TEXT }
+              - column: { name: created_at, type: DATETIME }
+  - changeSet:
+      id: 009-create-custom-workout-logs
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: custom_workout_logs
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: log_date, type: DATE, constraints: { nullable: false } }
+              - column: { name: day_of_week, type: VARCHAR(16) }
+              - column: { name: exercise_index, type: INT }
+              - column: { name: exercise_name, type: VARCHAR(255) }
+              - column: { name: sets_data, type: TEXT }
+              - column: { name: completed_at, type: DATETIME }
+              - column: { name: created_at, type: DATETIME }
+        - addUniqueConstraint:
+            tableName: custom_workout_logs
+            columnNames: user_id, log_date, day_of_week, exercise_index
+            constraintName: uk_custom_workout_log
+  - changeSet:
+      id: 010-seed-motivational-quotes
+      author: fitnessapp
+      changes:
+        - insert: { tableName: motivational_quotes, columns: [ { column: { name: quote_text, value: "The only bad workout is the one that didn't happen. Let's go!" } }, { column: { name: category, value: PRE_WORKOUT } } ] }
+        - insert: { tableName: motivational_quotes, columns: [ { column: { name: quote_text, value: "Push yourself, because no one else is going to do it for you." } }, { column: { name: category, value: PRE_WORKOUT } } ] }
+        - insert: { tableName: motivational_quotes, columns: [ { column: { name: quote_text, value: "Your body can stand almost anything. It's your mind that you have to convince." } }, { column: { name: category, value: PRE_WORKOUT } } ] }
+        - insert: { tableName: motivational_quotes, columns: [ { column: { name: quote_text, value: "Today's workout is tomorrow's strength. Let's build!" } }, { column: { name: category, value: PRE_WORKOUT } } ] }
+        - insert: { tableName: motivational_quotes, columns: [ { column: { name: quote_text, value: "The pain you feel today will be the strength you feel tomorrow." } }, { column: { name: category, value: PRE_WORKOUT } } ] }
+        - insert: { tableName: motivational_quotes, columns: [ { column: { name: quote_text, value: "Don't wish for it. Work for it. Your future self will thank you!" } }, { column: { name: category, value: PRE_WORKOUT } } ] }
+        - insert: { tableName: motivational_quotes, columns: [ { column: { name: quote_text, value: "Discipline is choosing between what you want now and what you want most." } }, { column: { name: category, value: PRE_WORKOUT } } ] }
+        - insert: { tableName: motivational_quotes, columns: [ { column: { name: quote_text, value: "Every rep counts. Every set matters. Every workout shapes you." } }, { column: { name: category, value: PRE_WORKOUT } } ] }
+        - insert: { tableName: motivational_quotes, columns: [ { column: { name: quote_text, value: "You don't have to be great to start, but you have to start to be great." } }, { column: { name: category, value: PRE_WORKOUT } } ] }
+        - insert: { tableName: motivational_quotes, columns: [ { column: { name: quote_text, value: "Consistency is what transforms average into excellence. Day by day!" } }, { column: { name: category, value: PRE_WORKOUT } } ] }
+        - insert: { tableName: motivational_quotes, columns: [ { column: { name: quote_text, value: "Your health is an investment, not an expense. Invest in yourself!" } }, { column: { name: category, value: PRE_WORKOUT } } ] }
+        - insert: { tableName: motivational_quotes, columns: [ { column: { name: quote_text, value: "A one hour workout is 4% of your day. No excuses!" } }, { column: { name: category, value: PRE_WORKOUT } } ] }
+        - insert: { tableName: motivational_quotes, columns: [ { column: { name: quote_text, value: "It never gets easier. You just get stronger. Keep pushing!" } }, { column: { name: category, value: PRE_WORKOUT } } ] }
+        - insert: { tableName: motivational_quotes, columns: [ { column: { name: quote_text, value: "Strive for progress, not perfection. Every step counts!" } }, { column: { name: category, value: PRE_WORKOUT } } ] }
+        - insert: { tableName: motivational_quotes, columns: [ { column: { name: quote_text, value: "Fall in love with the process and the results will come." } }, { column: { name: category, value: PRE_WORKOUT } } ] }

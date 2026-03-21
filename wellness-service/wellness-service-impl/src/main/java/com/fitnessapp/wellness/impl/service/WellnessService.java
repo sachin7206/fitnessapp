@@ -45,7 +45,7 @@ public class WellnessService implements WellnessOperations {
     }
 
     @Override @Transactional
-    public WellnessPlanDTO generatePlan(String email, Map<String, Object> request) {
+    public WellnessPlanDTO generatePlan(Long userId, Map<String, Object> request) {
         String type = (String) request.getOrDefault("type", "MIXED");
         String level = (String) request.getOrDefault("level", "BEGINNER");
         int durationWeeks = request.get("durationWeeks") != null ? ((Number) request.get("durationWeeks")).intValue() : 4;
@@ -62,7 +62,7 @@ public class WellnessService implements WellnessOperations {
                 AiWellnessPlanResponse aiResponse = aiServiceSalClient.generateWellnessPlan(aiRequest);
                 if (aiResponse != null && aiResponse.getSessions() != null && !aiResponse.getSessions().isEmpty()) {
                     sessions = convertAiSessions(aiResponse.getSessions(), sessionDuration);
-                    log.info("AI-generated wellness plan for user: {}", email);
+                    log.info("AI-generated wellness plan for userId: {}", userId);
                 }
             } catch (Exception e) {
                 log.warn("AI wellness plan generation failed, using fallback: {}", e.getMessage());
@@ -191,22 +191,22 @@ public class WellnessService implements WellnessOperations {
     }
 
     @Override @Transactional
-    public UserWellnessPlanDTO assignPlan(String email, Long planId) {
+    public UserWellnessPlanDTO assignPlan(Long userId, Long planId) {
         WellnessPlan plan = planRepo.findById(planId).orElseThrow(() -> new RuntimeException("Wellness plan not found"));
-        boolean hasActive = userPlanRepo.findByUserEmailAndStatus(email, "ACTIVE").isPresent();
+        boolean hasActive = userPlanRepo.findByUserIdAndStatus(userId, "ACTIVE").isPresent();
         LocalDate startDate;
 
         if (hasActive) {
-            userPlanRepo.findByUserEmailAndStatus(email, "ACTIVE").ifPresent(old -> { old.setStatus("ENDING_TODAY"); old.setEndDate(LocalDate.now()); userPlanRepo.save(old); });
-            userPlanRepo.findByUserEmailAndStatus(email, "SCHEDULED").ifPresent(s -> { s.setStatus("CANCELLED"); userPlanRepo.save(s); });
+            userPlanRepo.findByUserIdAndStatus(userId, "ACTIVE").ifPresent(old -> { old.setStatus("ENDING_TODAY"); old.setEndDate(LocalDate.now()); userPlanRepo.save(old); });
+            userPlanRepo.findByUserIdAndStatus(userId, "SCHEDULED").ifPresent(s -> { s.setStatus("CANCELLED"); userPlanRepo.save(s); });
             startDate = LocalDate.now().plusDays(1);
         } else {
-            userPlanRepo.findByUserEmailAndStatus(email, "SCHEDULED").ifPresent(s -> { s.setStatus("CANCELLED"); userPlanRepo.save(s); });
+            userPlanRepo.findByUserIdAndStatus(userId, "SCHEDULED").ifPresent(s -> { s.setStatus("CANCELLED"); userPlanRepo.save(s); });
             startDate = LocalDate.now();
         }
 
         UserWellnessPlan up = new UserWellnessPlan();
-        up.setUserEmail(email);
+        up.setUserId(userId);
         up.setWellnessPlan(plan);
         up.setStartDate(startDate);
         up.setEndDate(startDate.plusWeeks(plan.getDurationWeeks() != null ? plan.getDurationWeeks() : 4));
@@ -220,30 +220,30 @@ public class WellnessService implements WellnessOperations {
     }
 
     @Override @Transactional
-    public UserWellnessPlanDTO getMyPlan(String email) {
+    public UserWellnessPlanDTO getMyPlan(Long userId) {
         LocalDate today = LocalDate.now();
         // Promote SCHEDULED, complete ENDING_TODAY
-        userPlanRepo.findByUserEmailAndStatus(email, "ENDING_TODAY").ifPresent(e -> {
+        userPlanRepo.findByUserIdAndStatus(userId, "ENDING_TODAY").ifPresent(e -> {
             if (e.getEndDate() != null && e.getEndDate().isBefore(today)) { e.setStatus("COMPLETED"); userPlanRepo.save(e); }
         });
-        userPlanRepo.findByUserEmailAndStatus(email, "SCHEDULED").ifPresent(s -> {
+        userPlanRepo.findByUserIdAndStatus(userId, "SCHEDULED").ifPresent(s -> {
             if (!s.getStartDate().isAfter(today)) { s.setStatus("ACTIVE"); userPlanRepo.save(s); }
         });
-        var ending = userPlanRepo.findByUserEmailAndStatus(email, "ENDING_TODAY");
+        var ending = userPlanRepo.findByUserIdAndStatus(userId, "ENDING_TODAY");
         if (ending.isPresent()) return toUserPlanDTO(ending.get());
-        return userPlanRepo.findByUserEmailAndStatus(email, "ACTIVE").map(this::toUserPlanDTO).orElse(null);
+        return userPlanRepo.findByUserIdAndStatus(userId, "ACTIVE").map(this::toUserPlanDTO).orElse(null);
     }
 
     @Override @Transactional
-    public UserWellnessPlanDTO completeSession(String email, String sessionType, Long sessionId, Integer durationMinutes) {
+    public UserWellnessPlanDTO completeSession(Long userId, String sessionType, Long sessionId, Integer durationMinutes) {
         SessionCompletion sc = new SessionCompletion();
-        sc.setUserEmail(email);
+        sc.setUserId(userId);
         sc.setSessionType(sessionType);
         sc.setSessionId(sessionId);
         sc.setDurationMinutes(durationMinutes);
         completionRepo.save(sc);
 
-        var plan = userPlanRepo.findByUserEmailAndStatus(email, "ACTIVE");
+        var plan = userPlanRepo.findByUserIdAndStatus(userId, "ACTIVE");
         if (plan.isPresent()) {
             plan.get().setCompletedSessions((plan.get().getCompletedSessions() != null ? plan.get().getCompletedSessions() : 0) + 1);
             return toUserPlanDTO(userPlanRepo.save(plan.get()));
@@ -263,8 +263,8 @@ public class WellnessService implements WellnessOperations {
     }
 
     @Override
-    public WellnessStreakDTO getStreak(String email) {
-        var completions = completionRepo.findByUserEmailOrderByCompletedDateDesc(email);
+    public WellnessStreakDTO getStreak(Long userId) {
+        var completions = completionRepo.findByUserIdOrderByCompletedDateDesc(userId);
         int current = 0, longest = 0;
         LocalDate date = LocalDate.now();
         Set<LocalDate> dates = completions.stream().map(SessionCompletion::getCompletedDate).collect(Collectors.toSet());
@@ -272,12 +272,12 @@ public class WellnessService implements WellnessOperations {
         // Calculate longest (simplified)
         longest = Math.max(current, 0);
         int totalMins = completions.stream().mapToInt(c -> c.getDurationMinutes() != null ? c.getDurationMinutes() : 0).sum();
-        return new WellnessStreakDTO(current, longest, (int) completionRepo.countByUserEmail(email), totalMins);
+        return new WellnessStreakDTO(current, longest, (int) completionRepo.countByUserId(userId), totalMins);
     }
 
     @Override
-    public List<Map<String, Object>> getTodayCompletions(String email) {
-        var completions = completionRepo.findByUserEmailAndCompletedDate(email, LocalDate.now());
+    public List<Map<String, Object>> getTodayCompletions(Long userId) {
+        var completions = completionRepo.findByUserIdAndCompletedDate(userId, LocalDate.now());
         return completions.stream().map(c -> {
             Map<String, Object> m = new java.util.HashMap<>();
             m.put("sessionType", c.getSessionType());
@@ -308,7 +308,7 @@ public class WellnessService implements WellnessOperations {
         return d;
     }
     private UserWellnessPlanDTO toUserPlanDTO(UserWellnessPlan up) {
-        return new UserWellnessPlanDTO(up.getId(), up.getUserEmail(), toPlanDTO(up.getWellnessPlan()),
+        return new UserWellnessPlanDTO(up.getId(), up.getUserId(), toPlanDTO(up.getWellnessPlan()),
                 up.getStartDate(), up.getEndDate(), up.getStatus(), up.getCompletedSessions(), up.getTotalSessions(), false);
     }
 }

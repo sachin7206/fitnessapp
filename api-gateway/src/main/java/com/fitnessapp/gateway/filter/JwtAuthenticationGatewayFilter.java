@@ -55,10 +55,14 @@ public class JwtAuthenticationGatewayFilter implements GlobalFilter, Ordered {
         try {
             if (jwtTokenProvider.validateToken(token)) {
                 String username = jwtTokenProvider.extractUsername(token);
-                // Add user email as header for downstream services
-                ServerHttpRequest modifiedRequest = request.mutate()
-                        .header("X-User-Email", username)
-                        .build();
+                Long userId = jwtTokenProvider.extractUserId(token);
+                // Add user email and userId as headers for downstream services
+                ServerHttpRequest.Builder requestBuilder = request.mutate()
+                        .header("X-User-Email", username);
+                if (userId != null) {
+                    requestBuilder.header("X-User-Id", String.valueOf(userId));
+                }
+                ServerHttpRequest modifiedRequest = requestBuilder.build();
                 return chain.filter(exchange.mutate().request(modifiedRequest).build());
             }
         } catch (Exception e) {

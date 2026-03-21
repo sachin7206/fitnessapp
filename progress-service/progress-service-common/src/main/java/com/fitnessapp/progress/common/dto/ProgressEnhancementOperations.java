@@ -1,8 +1,7 @@
 package com.fitnessapp.progress.common.dto;
 
 public interface ProgressEnhancementOperations {
-    WeeklyReportDTO getWeeklyReport(String email);
-    PlateauAnalysisDTO getPlateauAnalysis(String email, int days);
-    AchievementsDTO getAchievements(String email);
+    WeeklyReportDTO getWeeklyReport(Long userId);
+    PlateauAnalysisDTO getPlateauAnalysis(Long userId, int days);
+    AchievementsDTO getAchievements(Long userId);
 }
-

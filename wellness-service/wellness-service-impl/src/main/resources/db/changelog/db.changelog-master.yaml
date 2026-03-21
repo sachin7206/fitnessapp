@@ -1,16 +1,112 @@
 databaseChangeLog:
-  - include:
-      file: db/changelog/changes/001-create-yoga-poses-table.yaml
-  - include:
-      file: db/changelog/changes/002-create-meditation-sessions-table.yaml
-  - include:
-      file: db/changelog/changes/003-create-breathing-exercises-table.yaml
-  - include:
-      file: db/changelog/changes/004-create-wellness-plans-table.yaml
-  - include:
-      file: db/changelog/changes/005-create-user-wellness-plans-table.yaml
-  - include:
-      file: db/changelog/changes/006-create-session-completions-table.yaml
-  - include:
-      file: db/changelog/changes/007-create-wellness-tips-table.yaml
-
+  - changeSet:
+      id: 001-create-yoga-poses-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: yoga_poses
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true } }
+              - column: { name: name, type: VARCHAR(200), constraints: { nullable: false } }
+              - column: { name: sanskrit_name, type: VARCHAR(200) }
+              - column: { name: description, type: VARCHAR(1000) }
+              - column: { name: benefits, type: VARCHAR(500) }
+              - column: { name: difficulty, type: VARCHAR(20) }
+              - column: { name: duration_seconds, type: INT }
+              - column: { name: image_url, type: VARCHAR(500) }
+              - column: { name: category, type: VARCHAR(50) }
+              - column: { name: instructions, type: VARCHAR(2000) }
+  - changeSet:
+      id: 002-create-meditation-sessions-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: meditation_sessions
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true } }
+              - column: { name: name, type: VARCHAR(200), constraints: { nullable: false } }
+              - column: { name: type, type: VARCHAR(30) }
+              - column: { name: duration_minutes, type: INT }
+              - column: { name: description, type: VARCHAR(1000) }
+              - column: { name: audio_url, type: VARCHAR(500) }
+              - column: { name: difficulty, type: VARCHAR(20) }
+              - column: { name: benefits, type: VARCHAR(500) }
+  - changeSet:
+      id: 003-create-breathing-exercises-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: breathing_exercises
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true } }
+              - column: { name: name, type: VARCHAR(200), constraints: { nullable: false } }
+              - column: { name: technique, type: VARCHAR(50) }
+              - column: { name: pattern, type: VARCHAR(50) }
+              - column: { name: duration_minutes, type: INT }
+              - column: { name: description, type: VARCHAR(1000) }
+              - column: { name: benefits, type: VARCHAR(500) }
+              - column: { name: difficulty, type: VARCHAR(20) }
+  - changeSet:
+      id: 004-create-wellness-plans-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: wellness_plans
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true } }
+              - column: { name: plan_name, type: VARCHAR(300) }
+              - column: { name: type, type: VARCHAR(30) }
+              - column: { name: level, type: VARCHAR(20) }
+              - column: { name: duration_weeks, type: INT }
+              - column: { name: sessions_per_week, type: INT }
+              - column: { name: session_duration_minutes, type: INT }
+              - column: { name: description, type: VARCHAR(1000) }
+              - column: { name: sessions_json, type: TEXT }
+              - column: { name: total_calories_burned, type: INT }
+  - changeSet:
+      id: 005-create-wellness-tips-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: wellness_tips
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true } }
+              - column: { name: content, type: VARCHAR(1000) }
+              - column: { name: category, type: VARCHAR(30) }
+              - column: { name: day_number, type: INT }
+  - changeSet:
+      id: 006-create-user-wellness-plans-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: user_wellness_plans
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true } }
+              - column: { name: user_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: plan_id, type: BIGINT }
+              - column: { name: start_date, type: DATE }
+              - column: { name: end_date, type: DATE }
+              - column: { name: status, type: VARCHAR(20) }
+              - column: { name: completed_sessions, type: INT, defaultValueNumeric: 0 }
+              - column: { name: total_sessions, type: INT }
+              - column: { name: created_at, type: DATETIME }
+        - addForeignKeyConstraint:
+            baseTableName: user_wellness_plans
+            baseColumnNames: plan_id
+            referencedTableName: wellness_plans
+            referencedColumnNames: id
+            constraintName: fk_user_wellness_plan
+  - changeSet:
+      id: 007-create-session-completions-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: session_completions
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true } }
+              - column: { name: user_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: session_type, type: VARCHAR(30) }
+              - column: { name: session_id, type: BIGINT }
+              - column: { name: duration_minutes, type: INT }
+              - column: { name: completed_date, type: DATE }
+              - column: { name: completed_at, type: DATETIME }

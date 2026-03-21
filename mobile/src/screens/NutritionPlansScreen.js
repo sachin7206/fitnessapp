@@ -76,30 +76,12 @@ const NutritionPlansScreen = ({ navigation }) => {
         return;
       }
 
-      // No active plan, check profile completion
-      checkProfileCompletion();
-    } catch (error) {
-      console.log('No active plan, checking profile...');
-      checkProfileCompletion();
-    }
-  };
-
-  const checkProfileCompletion = async () => {
-    try {
-      const status = await nutritionService.checkProfileStatus();
-
-      if (!status.isComplete) {
-        // Profile is incomplete, navigate to setup
-        navigation.replace('NutritionProfileSetup', { missingFields: status.missingFields });
-        return;
-      }
-
-      // Profile is complete, navigate to choice screen
+      // No active plan — show choice screen (Subscribe / Free)
+      // Profile check will only happen inside the Subscribe (AI) flow
       navigation.replace('NutritionChoice');
     } catch (error) {
-      console.error('Error checking profile:', error);
-      setCheckingProfile(false);
-      loadData(); // Still try to load plans
+      console.log('No active plan, showing choice screen...');
+      navigation.replace('NutritionChoice');
     }
   };
 

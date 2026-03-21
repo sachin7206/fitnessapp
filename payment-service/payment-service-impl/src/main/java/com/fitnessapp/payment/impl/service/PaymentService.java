@@ -41,11 +41,10 @@ public class PaymentService implements PaymentOperations {
 
     @Override
     @Transactional
-    public PaymentResponse initiatePayment(String email, Long userId, InitiatePaymentRequest request) {
+    public PaymentResponse initiatePayment(Long userId, InitiatePaymentRequest request) {
         String transactionRef = "FA-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
         Payment payment = new Payment();
-        payment.setUserEmail(email);
         payment.setUserId(userId);
         payment.setSubscriptionId(request.getSubscriptionId());
         payment.setAmount(request.getAmount() != null ? request.getAmount() : BigDecimal.ZERO);
@@ -74,7 +73,7 @@ public class PaymentService implements PaymentOperations {
             }
 
             payment = paymentRepo.save(payment);
-            log.info("Payment {} initiated (Razorpay) for user {}, orderId={}", payment.getId(), email, payment.getRazorpayOrderId());
+            log.info("Payment {} initiated (Razorpay) for userId {}, orderId={}", payment.getId(), userId, payment.getRazorpayOrderId());
 
             PaymentResponse response = new PaymentResponse();
             response.setPayment(toDTO(payment));
@@ -86,7 +85,7 @@ public class PaymentService implements PaymentOperations {
         // Manual UPI / QR Code flow (existing)
         payment.setPaymentGateway("MANUAL_UPI");
         payment = paymentRepo.save(payment);
-        log.info("Payment {} initiated (Manual UPI) for user {}", payment.getId(), email);
+        log.info("Payment {} initiated (Manual UPI) for userId {}", payment.getId(), userId);
 
         String upiDeepLink = UpiQrCodeGenerator.generateUpiDeepLink(
                 merchantUpiId, merchantName, payment.getAmount(),
@@ -208,8 +207,8 @@ public class PaymentService implements PaymentOperations {
     }
 
     @Override
-    public List<PaymentDTO> getPaymentHistory(String email) {
-        return paymentRepo.findByUserEmailOrderByCreatedAtDesc(email).stream()
+    public List<PaymentDTO> getPaymentHistory(Long userId) {
+        return paymentRepo.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
@@ -241,7 +240,6 @@ public class PaymentService implements PaymentOperations {
         PaymentDTO dto = new PaymentDTO();
         dto.setId(p.getId());
         dto.setUserId(p.getUserId());
-        dto.setUserEmail(p.getUserEmail());
         dto.setSubscriptionId(p.getSubscriptionId());
         dto.setAmount(p.getAmount());
         dto.setCurrency(p.getCurrency());

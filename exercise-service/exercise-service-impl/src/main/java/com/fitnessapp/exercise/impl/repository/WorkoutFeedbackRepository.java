@@ -7,7 +7,6 @@ import java.util.List;
 
 @Repository
 public interface WorkoutFeedbackRepository extends JpaRepository<WorkoutFeedback, Long> {
-    List<WorkoutFeedback> findByUserEmailOrderByCreatedAtDesc(String userEmail);
-    List<WorkoutFeedback> findByUserEmailAndWorkoutPlanIdOrderByCreatedAtDesc(String userEmail, Long workoutPlanId);
+    List<WorkoutFeedback> findByUserIdOrderByCreatedAtDesc(Long userId);
+    List<WorkoutFeedback> findByUserIdAndWorkoutPlanIdOrderByCreatedAtDesc(Long userId, Long workoutPlanId);
 }
-

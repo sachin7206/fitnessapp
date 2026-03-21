@@ -1,9 +1,16 @@
 server:
   port: 8083
+  tomcat:
+    max-http-form-post-size: 1MB
+    max-swallow-size: 1MB
 
 spring:
   application:
     name: exercise-service
+  servlet:
+    multipart:
+      max-file-size: 1MB
+      max-request-size: 1MB
   datasource:
     url: jdbc:mysql://localhost:3306/fitnessapp_exercises?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: ${DB_USERNAME:root}

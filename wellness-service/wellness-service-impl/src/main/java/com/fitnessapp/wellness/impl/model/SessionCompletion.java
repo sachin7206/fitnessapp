@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 public class SessionCompletion {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "user_email") private String userEmail;
+    @Column(name = "user_id") private Long userId;
     @Column(name = "session_type") private String sessionType;
     @Column(name = "session_id") private Long sessionId;
     @Column(name = "duration_minutes") private Integer durationMinutes;

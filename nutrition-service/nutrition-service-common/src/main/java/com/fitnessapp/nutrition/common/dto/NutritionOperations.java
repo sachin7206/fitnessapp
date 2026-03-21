@@ -8,12 +8,11 @@ public interface NutritionOperations {
     List<NutritionPlanDTO> getAllPlans();
     List<NutritionPlanDTO> getPlansByFilters(String region, String dietType, String goal);
     NutritionPlanDTO getPlanById(Long id);
-    List<NutritionPlanDTO> getRecommendedPlans(String email);
-    UserNutritionPlanDTO enrollInPlan(String email, Long planId);
-    UserNutritionPlanDTO getActivePlan(String email);
-    List<UserNutritionPlanDTO> getUserPlanHistory(String email);
-    UserNutritionPlanDTO updatePlanProgress(String email, Long userPlanId, Integer completedMeals);
-    void cancelPlan(String email, Long userPlanId);
-    UserNutritionPlanDTO saveFreePlan(String email, FreePlanRequestDTO request);
+    List<NutritionPlanDTO> getRecommendedPlans(Long userId);
+    UserNutritionPlanDTO enrollInPlan(Long userId, Long planId);
+    UserNutritionPlanDTO getActivePlan(Long userId);
+    List<UserNutritionPlanDTO> getUserPlanHistory(Long userId);
+    UserNutritionPlanDTO updatePlanProgress(Long userId, Long userPlanId, Integer completedMeals);
+    void cancelPlan(Long userId, Long userPlanId);
+    UserNutritionPlanDTO saveFreePlan(Long userId, FreePlanRequestDTO request);
 }
-

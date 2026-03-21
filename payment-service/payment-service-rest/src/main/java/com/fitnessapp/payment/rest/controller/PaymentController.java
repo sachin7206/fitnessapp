@@ -6,8 +6,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,10 +20,6 @@ public class PaymentController {
     private final PaymentOperations paymentOperations;
     private final HttpServletRequest httpServletRequest;
 
-    private String getCurrentEmail() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth.getName();
-    }
 
     private Long getCurrentUserId() {
         Object userId = httpServletRequest.getAttribute("userId");
@@ -34,7 +28,7 @@ public class PaymentController {
 
     @PostMapping("/initiate")
     public ResponseEntity<ApiResponse<PaymentResponse>> initiatePayment(@RequestBody InitiatePaymentRequest request) {
-        PaymentResponse response = paymentOperations.initiatePayment(getCurrentEmail(), getCurrentUserId(), request);
+        PaymentResponse response = paymentOperations.initiatePayment(getCurrentUserId(), request);
         return ResponseEntity.ok(ApiResponse.success("Payment initiated", response));
     }
 
@@ -54,7 +48,7 @@ public class PaymentController {
 
     @GetMapping("/history")
     public ResponseEntity<ApiResponse<List<PaymentDTO>>> getPaymentHistory() {
-        List<PaymentDTO> history = paymentOperations.getPaymentHistory(getCurrentEmail());
+        List<PaymentDTO> history = paymentOperations.getPaymentHistory(getCurrentUserId());
         return ResponseEntity.ok(ApiResponse.success("Payment history retrieved", history));
     }
 

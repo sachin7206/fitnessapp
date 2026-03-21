@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 public class DailyProgress {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "user_email") private String userEmail;
+    @Column(name = "user_id", nullable = false) private Long userId;
     @Column(name = "entry_date") private LocalDate entryDate;
     private Double weight;
     @Column(name = "weight_unit") private String weightUnit;
@@ -26,4 +26,3 @@ public class DailyProgress {
     @PrePersist
     protected void onCreate() { createdAt = LocalDateTime.now(); }
 }
-

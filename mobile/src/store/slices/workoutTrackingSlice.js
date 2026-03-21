@@ -268,7 +268,24 @@ export const loadWorkoutTrackingFromStorage = () => async (dispatch, getState) =
       dispatch(loadWorkoutTracking(null));
     }
 
-    // 2. Merge step history from backend (one-time on mount)
+    // 2. Fetch active workout plan from backend to ensure state is accurate
+    try {
+      const activePlan = await workoutService.getActiveWorkoutPlan();
+      if (activePlan && activePlan.id) {
+        dispatch(setActivePlan(activePlan));
+      } else {
+        // No active plan in DB — clear any stale cached plan
+        dispatch(setActivePlan(null));
+      }
+    } catch (e) {
+      if (e.response && (e.response.status === 204 || e.response.status === 404)) {
+        dispatch(setActivePlan(null));
+      }
+      // On network error, keep whatever was in the cache
+      console.log('Active plan check failed, using local cache:', e.message);
+    }
+
+    // 3. Merge step history from backend (one-time on mount)
     try {
       const [todayData, historyData] = await Promise.all([
         workoutService.getTodaySteps(),

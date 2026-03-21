@@ -25,15 +25,15 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
 
     @Override
     @Transactional
-    public UserWorkoutPlanDTO getActiveWorkoutPlan(String email) {
-        return userPlanRepo.findByUserEmailAndStatus(email, "ACTIVE")
+    public UserWorkoutPlanDTO getActiveWorkoutPlan(Long userId) {
+        return userPlanRepo.findByUserIdAndStatus(userId, "ACTIVE")
                 .map(this::toDTO)
                 .orElse(null);
     }
 
     @Override
     @Transactional
-    public UserWorkoutPlanDTO assignWorkoutPlan(String email, Long planId) {
+    public UserWorkoutPlanDTO assignWorkoutPlan(Long userId, Long planId) {
         WorkoutPlan plan = workoutPlanRepo.findById(planId)
                 .orElseThrow(() -> new RuntimeException("Workout plan not found: " + planId));
 
@@ -41,11 +41,11 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
         int daysPerWeek = plan.getDaysPerWeek() != null ? plan.getDaysPerWeek() : 4;
 
         // Delete all exercise log data and completions for this user first
-        customLogRepo.deleteByUserEmail(email);
-        completionRepo.deleteByUserEmail(email);
+        customLogRepo.deleteByUserId(userId);
+        completionRepo.deleteByUserId(userId);
 
         // Collect old workout plan IDs to delete (but not the new plan being assigned)
-        List<UserWorkoutPlan> existingPlans = userPlanRepo.findByUserEmail(email);
+        List<UserWorkoutPlan> existingPlans = userPlanRepo.findByUserId(userId);
         List<Long> oldWorkoutPlanIds = new ArrayList<>();
         for (UserWorkoutPlan oldUserPlan : existingPlans) {
             if (oldUserPlan.getWorkoutPlan() != null && !oldUserPlan.getWorkoutPlan().getId().equals(planId)) {
@@ -67,7 +67,7 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
         LocalDate startDate = LocalDate.now();
 
         UserWorkoutPlan userPlan = new UserWorkoutPlan();
-        userPlan.setUserEmail(email);
+        userPlan.setUserId(userId);
         userPlan.setWorkoutPlan(plan);
         userPlan.setStartDate(startDate);
         userPlan.setEndDate(startDate.plusWeeks(durationWeeks));
@@ -80,14 +80,14 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
         dto.setScheduledForTomorrow(false);
 
         // Create initial log entries for each exercise
-        createInitialExerciseLogs(email, plan, startDate);
+        createInitialExerciseLogs(userId, plan, startDate);
 
-        log.info("Assigned new workout plan {} to user {} immediately. Old plans and logs deleted.", planId, email);
+        log.info("Assigned new workout plan {} to user {} immediately. Old plans and logs deleted.", planId, userId);
 
         return dto;
     }
 
-    private void createInitialExerciseLogs(String email, WorkoutPlan plan, LocalDate logDate) {
+    private void createInitialExerciseLogs(Long userId, WorkoutPlan plan, LocalDate logDate) {
         if (plan.getExercises() == null || plan.getExercises().isEmpty()) return;
 
         // Group exercises by dayOfWeek
@@ -137,10 +137,10 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
                 try {
                     // Find or create log record
                     CustomWorkoutLog logRecord = customLogRepo
-                            .findByUserEmailAndLogDateAndDayOfWeekAndExerciseIndex(email, logDate, dayOfWeek, exerciseIdx)
+                            .findByUserIdAndLogDateAndDayOfWeekAndExerciseIndex(userId, logDate, dayOfWeek, exerciseIdx)
                             .orElseGet(() -> {
                                 CustomWorkoutLog newLog = new CustomWorkoutLog();
-                                newLog.setUserEmail(email);
+                                newLog.setUserId(userId);
                                 newLog.setLogDate(logDate);
                                 newLog.setDayOfWeek(dayOfWeek);
                                 newLog.setExerciseIndex(exerciseIdx);
@@ -156,7 +156,7 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
                 }
             }
         }
-        log.info("Created initial exercise logs for user: {}", email);
+        log.info("Created initial exercise logs for user: {}", userId);
     }
 
     private List<Map<String, Object>> buildFlatSets(WorkoutPlan.WorkoutExercise ex) {
@@ -173,20 +173,20 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
 
     @Override
     @Transactional
-    public UserWorkoutPlanDTO markWorkoutComplete(String email) {
-        UserWorkoutPlan userPlan = userPlanRepo.findByUserEmailAndStatus(email, "ACTIVE")
+    public UserWorkoutPlanDTO markWorkoutComplete(Long userId) {
+        UserWorkoutPlan userPlan = userPlanRepo.findByUserIdAndStatus(userId, "ACTIVE")
                 .orElseThrow(() -> new RuntimeException("No active workout plan"));
 
         LocalDate today = LocalDate.now();
 
         // Check if already completed today
-        if (completionRepo.findByUserEmailAndCompletionDate(email, today).isPresent()) {
+        if (completionRepo.findByUserIdAndCompletionDate(userId, today).isPresent()) {
             return toDTO(userPlan); // Already completed
         }
 
         // Record completion
         WorkoutCompletion completion = new WorkoutCompletion();
-        completion.setUserEmail(email);
+        completion.setUserId(userId);
         completion.setUserWorkoutPlan(userPlan);
         completion.setCompletionDate(today);
         completion.setCompleted(true);
@@ -204,14 +204,14 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
     }
 
     @Override
-    public Integer getWorkoutCount(String email) {
-        return (int) completionRepo.countByUserEmailAndCompletedTrue(email);
+    public Integer getWorkoutCount(Long userId) {
+        return (int) completionRepo.countByUserIdAndCompletedTrue(userId);
     }
 
     @Override
     @Transactional
-    public void cancelPlan(String email) {
-        userPlanRepo.findByUserEmailAndStatus(email, "ACTIVE").ifPresent(plan -> {
+    public void cancelPlan(Long userId) {
+        userPlanRepo.findByUserIdAndStatus(userId, "ACTIVE").ifPresent(plan -> {
             plan.setStatus("CANCELLED");
             userPlanRepo.save(plan);
         });
@@ -221,12 +221,12 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
 
     @Override
     @Transactional
-    public DailyStepTrackingDTO syncSteps(String email, StepTrackingSyncRequest request) {
+    public DailyStepTrackingDTO syncSteps(Long userId, StepTrackingSyncRequest request) {
         LocalDate today = LocalDate.now();
-        DailyStepTracking record = stepTrackingRepo.findByUserEmailAndTrackingDate(email, today)
+        DailyStepTracking record = stepTrackingRepo.findByUserIdAndTrackingDate(userId, today)
                 .orElseGet(() -> {
                     DailyStepTracking r = new DailyStepTracking();
-                    r.setUserEmail(email);
+                    r.setUserId(userId);
                     r.setTrackingDate(today);
                     return r;
                 });
@@ -238,29 +238,29 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
     }
 
     @Override
-    public DailyStepTrackingDTO getTodaySteps(String email) {
-        return stepTrackingRepo.findByUserEmailAndTrackingDate(email, LocalDate.now())
+    public DailyStepTrackingDTO getTodaySteps(Long userId) {
+        return stepTrackingRepo.findByUserIdAndTrackingDate(userId, LocalDate.now())
                 .map(this::toStepDTO)
-                .orElse(new DailyStepTrackingDTO(null, email, LocalDate.now(), 0, 0, 0, false));
+                .orElse(new DailyStepTrackingDTO(null, userId, LocalDate.now(), 0, 0, 0, false));
     }
 
     @Override
-    public List<DailyStepTrackingDTO> getStepHistory(String email, int days) {
+    public List<DailyStepTrackingDTO> getStepHistory(Long userId, int days) {
         LocalDate end = LocalDate.now();
         LocalDate start = end.minusDays(days);
-        return stepTrackingRepo.findByUserEmailAndTrackingDateBetweenOrderByTrackingDateDesc(email, start, end)
+        return stepTrackingRepo.findByUserIdAndTrackingDateBetweenOrderByTrackingDateDesc(userId, start, end)
                 .stream().map(this::toStepDTO).collect(Collectors.toList());
     }
 
     private DailyStepTrackingDTO toStepDTO(DailyStepTracking e) {
-        return new DailyStepTrackingDTO(e.getId(), e.getUserEmail(), e.getTrackingDate(),
+        return new DailyStepTrackingDTO(e.getId(), e.getUserId(), e.getTrackingDate(),
                 e.getSteps(), e.getStepGoal(), e.getCaloriesBurned(), e.getGoalCompleted());
     }
 
     private UserWorkoutPlanDTO toDTO(UserWorkoutPlan up) {
         UserWorkoutPlanDTO dto = new UserWorkoutPlanDTO();
         dto.setId(up.getId());
-        dto.setUserEmail(up.getUserEmail());
+        dto.setUserId(up.getUserId());
         dto.setStartDate(up.getStartDate());
         dto.setEndDate(up.getEndDate());
         dto.setStatus(up.getStatus());

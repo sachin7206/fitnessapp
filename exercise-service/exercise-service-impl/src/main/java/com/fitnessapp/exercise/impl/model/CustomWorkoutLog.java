@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @Table(name = "custom_workout_logs",
        uniqueConstraints = @UniqueConstraint(
            name = "uk_custom_workout_log",
-           columnNames = {"user_email", "log_date", "day_of_week", "exercise_index"}
+           columnNames = {"user_id", "log_date", "day_of_week", "exercise_index"}
        ))
 @EntityListeners(AuditingEntityListener.class)
 @Data
@@ -26,8 +26,8 @@ public class CustomWorkoutLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_email", nullable = false)
-    private String userEmail;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     @Column(name = "log_date", nullable = false)
     private LocalDate logDate;
@@ -51,4 +51,3 @@ public class CustomWorkoutLog {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 }
-

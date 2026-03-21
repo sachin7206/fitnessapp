@@ -2,9 +2,9 @@ package com.fitnessapp.wellness.rest.controller;
 
 import com.fitnessapp.wellness.common.dto.*;
 import com.fitnessapp.wellness.rest.api.WellnessApi;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
@@ -13,9 +13,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class WellnessController implements WellnessApi {
     private final WellnessOperations wellnessService;
+    private final HttpServletRequest httpServletRequest;
 
-    private String getCurrentEmail() {
-        return SecurityContextHolder.getContext().getAuthentication().getName();
+    private Long getCurrentUserId() {
+        Object userId = httpServletRequest.getAttribute("userId");
+        return userId instanceof Long ? (Long) userId : null;
     }
 
     @Override
@@ -36,17 +38,17 @@ public class WellnessController implements WellnessApi {
     @Override
     public ResponseEntity<WellnessPlanDTO> generatePlan(Object request) {
         Map<String, Object> map = (Map<String, Object>) request;
-        return ResponseEntity.ok(wellnessService.generatePlan(getCurrentEmail(), map));
+        return ResponseEntity.ok(wellnessService.generatePlan(getCurrentUserId(), map));
     }
 
     @Override
     public ResponseEntity<UserWellnessPlanDTO> assignPlan(Long planId) {
-        return ResponseEntity.ok(wellnessService.assignPlan(getCurrentEmail(), planId));
+        return ResponseEntity.ok(wellnessService.assignPlan(getCurrentUserId(), planId));
     }
 
     @Override
     public ResponseEntity<UserWellnessPlanDTO> getMyPlan() {
-        UserWellnessPlanDTO plan = wellnessService.getMyPlan(getCurrentEmail());
+        UserWellnessPlanDTO plan = wellnessService.getMyPlan(getCurrentUserId());
         return plan != null ? ResponseEntity.ok(plan) : ResponseEntity.noContent().build();
     }
 
@@ -56,7 +58,7 @@ public class WellnessController implements WellnessApi {
         String sessionType = (String) map.get("sessionType");
         Long sessionId = map.get("sessionId") != null ? ((Number) map.get("sessionId")).longValue() : null;
         Integer duration = map.get("durationMinutes") != null ? ((Number) map.get("durationMinutes")).intValue() : null;
-        return ResponseEntity.ok(wellnessService.completeSession(getCurrentEmail(), sessionType, sessionId, duration));
+        return ResponseEntity.ok(wellnessService.completeSession(getCurrentUserId(), sessionType, sessionId, duration));
     }
 
     @Override
@@ -66,13 +68,13 @@ public class WellnessController implements WellnessApi {
 
     @Override
     public ResponseEntity<WellnessStreakDTO> getStreak() {
-        return ResponseEntity.ok(wellnessService.getStreak(getCurrentEmail()));
+        return ResponseEntity.ok(wellnessService.getStreak(getCurrentUserId()));
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public ResponseEntity<List<Object>> getTodayCompletions() {
-        List<?> result = wellnessService.getTodayCompletions(getCurrentEmail());
+        List<?> result = wellnessService.getTodayCompletions(getCurrentUserId());
         return ResponseEntity.ok((List<Object>) (List<?>) result);
     }
 }

@@ -33,6 +33,12 @@ public class UserService implements UserOperations {
         return convertToDto(getUserByEmail(email));
     }
 
+    public UserDto getUserProfileById(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+        return convertToDto(user);
+    }
+
     public UserDto updateProfile(UpdateProfileRequest request) {
         User user = getCurrentUser();
         User.Profile profile = user.getProfile() != null ? user.getProfile() : new User.Profile();

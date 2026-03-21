@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 public class UserWellnessPlan {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "user_email") private String userEmail;
+    @Column(name = "user_id") private Long userId;
     @ManyToOne(fetch = FetchType.EAGER) @JoinColumn(name = "plan_id")
     private WellnessPlan wellnessPlan;
     @Column(name = "start_date") private LocalDate startDate;

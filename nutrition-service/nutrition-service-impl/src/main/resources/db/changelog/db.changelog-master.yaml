@@ -1,23 +1,247 @@
 databaseChangeLog:
-  - include:
-      file: changes/001-create-nutrition-plans-table.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/002-create-meals-table.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/003-create-food-items-table.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/004-create-user-nutrition-plans-table.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/005-create-user-food-preferences-table.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/006-create-daily-meal-tracking-table.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/007-create-food-log-and-swap-tables.yaml
-      relativeToChangelogFile: true
+  - changeSet:
+      id: 001-create-nutrition-plans-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: nutrition_plans
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: name, type: VARCHAR(255), constraints: { nullable: false } }
+              - column: { name: description, type: VARCHAR(1000) }
+              - column: { name: region, type: VARCHAR(50), constraints: { nullable: false } }
+              - column: { name: diet_type, type: VARCHAR(50), constraints: { nullable: false } }
+              - column: { name: goal, type: VARCHAR(50), constraints: { nullable: false } }
+              - column: { name: total_calories, type: INT }
+              - column: { name: protein_grams, type: DOUBLE }
+              - column: { name: carbs_grams, type: DOUBLE }
+              - column: { name: fat_grams, type: DOUBLE }
+              - column: { name: fiber_grams, type: DOUBLE }
+              - column: { name: difficulty, type: VARCHAR(50), constraints: { nullable: false } }
+              - column: { name: duration_days, type: INT }
+              - column: { name: is_active, type: BOOLEAN, defaultValueBoolean: true }
+              - column: { name: created_at, type: DATETIME }
+              - column: { name: updated_at, type: DATETIME }
+  - changeSet:
+      id: 002-create-meals-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: meals
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: nutrition_plan_id, type: BIGINT }
+              - column: { name: name, type: VARCHAR(255), constraints: { nullable: false } }
+              - column: { name: meal_type, type: VARCHAR(50), constraints: { nullable: false } }
+              - column: { name: time_of_day, type: VARCHAR(20) }
+              - column: { name: day_number, type: INT }
+              - column: { name: calories, type: INT }
+              - column: { name: protein_grams, type: DOUBLE }
+              - column: { name: carbs_grams, type: DOUBLE }
+              - column: { name: fat_grams, type: DOUBLE }
+              - column: { name: preparation_tips, type: VARCHAR(500) }
+              - column: { name: indian_alternatives, type: VARCHAR(500) }
+        - addForeignKeyConstraint:
+            baseTableName: meals
+            baseColumnNames: nutrition_plan_id
+            referencedTableName: nutrition_plans
+            referencedColumnNames: id
+            constraintName: fk_meals_nutrition_plan
+  - changeSet:
+      id: 003-create-food-items-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: food_items
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: meal_id, type: BIGINT }
+              - column: { name: name, type: VARCHAR(255), constraints: { nullable: false } }
+              - column: { name: hindi_name, type: VARCHAR(255) }
+              - column: { name: regional_name, type: VARCHAR(255) }
+              - column: { name: description, type: VARCHAR(500) }
+              - column: { name: quantity, type: VARCHAR(100) }
+              - column: { name: calories, type: INT }
+              - column: { name: protein_grams, type: DOUBLE }
+              - column: { name: carbs_grams, type: DOUBLE }
+              - column: { name: fat_grams, type: DOUBLE }
+              - column: { name: fiber_grams, type: DOUBLE }
+              - column: { name: ingredients, type: VARCHAR(1000) }
+              - column: { name: recipe, type: VARCHAR(1000) }
+              - column: { name: image_url, type: VARCHAR(500) }
+              - column: { name: is_vegetarian, type: BOOLEAN, defaultValueBoolean: true }
+              - column: { name: is_vegan, type: BOOLEAN, defaultValueBoolean: false }
+              - column: { name: is_gluten_free, type: BOOLEAN, defaultValueBoolean: false }
+              - column: { name: is_dairy_free, type: BOOLEAN, defaultValueBoolean: false }
+              - column: { name: is_jain_friendly, type: BOOLEAN, defaultValueBoolean: false }
+              - column: { name: region, type: VARCHAR(50) }
+        - addForeignKeyConstraint:
+            baseTableName: food_items
+            baseColumnNames: meal_id
+            referencedTableName: meals
+            referencedColumnNames: id
+            constraintName: fk_food_items_meal
+  - changeSet:
+      id: 004-create-user-nutrition-plans-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: user_nutrition_plans
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: nutrition_plan_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: start_date, type: DATE }
+              - column: { name: end_date, type: DATE }
+              - column: { name: current_day, type: INT, defaultValueNumeric: 1 }
+              - column: { name: status, type: VARCHAR(20), constraints: { nullable: false } }
+              - column: { name: completed_meals, type: INT, defaultValueNumeric: 0 }
+              - column: { name: total_meals, type: INT, defaultValueNumeric: 0 }
+              - column: { name: adherence_percentage, type: DOUBLE, defaultValueNumeric: 0.0 }
+              - column: { name: notes, type: VARCHAR(500) }
+              - column: { name: enrolled_at, type: DATETIME }
+        - addForeignKeyConstraint:
+            baseTableName: user_nutrition_plans
+            baseColumnNames: nutrition_plan_id
+            referencedTableName: nutrition_plans
+            referencedColumnNames: id
+            constraintName: fk_user_nutrition_plans_plan
+  - changeSet:
+      id: 005-create-user-food-preferences-table
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: user_food_preferences
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_id, type: BIGINT, constraints: { nullable: false, unique: true } }
+              - column: { name: include_chicken, type: BOOLEAN }
+              - column: { name: include_fish, type: BOOLEAN }
+              - column: { name: include_red_meat, type: BOOLEAN }
+              - column: { name: eggs_per_day, type: INT }
+              - column: { name: include_rice, type: BOOLEAN }
+              - column: { name: include_roti, type: BOOLEAN }
+              - column: { name: include_dal, type: BOOLEAN }
+              - column: { name: include_milk, type: BOOLEAN }
+              - column: { name: include_paneer, type: BOOLEAN }
+              - column: { name: include_curd, type: BOOLEAN }
+              - column: { name: cooking_oil_preference, type: VARCHAR(50) }
+              - column: { name: prefer_homemade, type: BOOLEAN }
+              - column: { name: custom_meals_json, type: TEXT }
+              - column: { name: include_pre_workout, type: BOOLEAN }
+              - column: { name: pre_workout_time, type: VARCHAR(20) }
+              - column: { name: include_post_workout, type: BOOLEAN }
+              - column: { name: post_workout_time, type: VARCHAR(20) }
+              - column: { name: can_take_whey_protein, type: BOOLEAN }
+              - column: { name: region, type: VARCHAR(50) }
+              - column: { name: created_at, type: DATETIME }
+              - column: { name: updated_at, type: DATETIME }
+        - createTable:
+            tableName: user_food_allergies
+            columns:
+              - column: { name: food_pref_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: allergy, type: VARCHAR(255) }
+        - createTable:
+            tableName: user_disliked_foods
+            columns:
+              - column: { name: food_pref_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: food, type: VARCHAR(255) }
+        - createTable:
+            tableName: user_supplements
+            columns:
+              - column: { name: food_pref_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: supplement, type: VARCHAR(255) }
+  - changeSet:
+      id: 006-create-daily-meal-tracking
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: daily_meal_tracking
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: tracking_date, type: DATE }
+              - column: { name: meal_id, type: BIGINT }
+              - column: { name: meal_name, type: VARCHAR(255) }
+              - column: { name: meal_type, type: VARCHAR(100) }
+              - column: { name: time_of_day, type: VARCHAR(20) }
+              - column: { name: completed, type: BOOLEAN }
+              - column: { name: completed_at, type: TIMESTAMP }
+              - column: { name: replaced, type: BOOLEAN }
+              - column: { name: replaced_with, type: VARCHAR(500) }
+              - column: { name: original_name, type: VARCHAR(255) }
+              - column: { name: calories, type: INT }
+              - column: { name: protein_grams, type: DOUBLE }
+              - column: { name: carbs_grams, type: DOUBLE }
+              - column: { name: fat_grams, type: DOUBLE }
+              - column: { name: created_at, type: TIMESTAMP }
+              - column: { name: updated_at, type: TIMESTAMP }
+        - addUniqueConstraint:
+            tableName: daily_meal_tracking
+            columnNames: user_id, tracking_date, meal_id
+            constraintName: uk_daily_meal_tracking
+  - changeSet:
+      id: 007-create-daily-nutrition-summary
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: daily_nutrition_summary
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: tracking_date, type: DATE }
+              - column: { name: consumed_calories, type: INT }
+              - column: { name: consumed_protein, type: DOUBLE }
+              - column: { name: consumed_carbs, type: DOUBLE }
+              - column: { name: consumed_fat, type: DOUBLE }
+              - column: { name: total_meals, type: INT }
+              - column: { name: completed_meals, type: INT }
+              - column: { name: created_at, type: TIMESTAMP }
+              - column: { name: updated_at, type: TIMESTAMP }
+        - addUniqueConstraint:
+            tableName: daily_nutrition_summary
+            columnNames: user_id, tracking_date
+            constraintName: uk_daily_nutrition_summary
+  - changeSet:
+      id: 008-create-food-log
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: food_log
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: log_date, type: DATE, constraints: { nullable: false } }
+              - column: { name: meal_type, type: VARCHAR(100) }
+              - column: { name: description, type: VARCHAR(500) }
+              - column: { name: source, type: VARCHAR(50) }
+              - column: { name: total_calories, type: INT }
+              - column: { name: total_protein, type: DOUBLE }
+              - column: { name: total_carbs, type: DOUBLE }
+              - column: { name: total_fat, type: DOUBLE }
+              - column: { name: confidence, type: DOUBLE }
+              - column: { name: food_items_json, type: TEXT }
+              - column: { name: created_at, type: TIMESTAMP }
+        - createIndex:
+            tableName: food_log
+            indexName: idx_food_log_user_date
+            columns:
+              - column: { name: user_id }
+              - column: { name: log_date }
+  - changeSet:
+      id: 009-create-meal-swap-history
+      author: fitnessapp
+      changes:
+        - createTable:
+            tableName: meal_swap_history
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_id, type: BIGINT, constraints: { nullable: false } }
+              - column: { name: plan_id, type: BIGINT }
+              - column: { name: original_meal_id, type: BIGINT }
+              - column: { name: original_meal_name, type: VARCHAR(255) }
+              - column: { name: new_meal_name, type: VARCHAR(255) }
+              - column: { name: original_calories, type: INT }
+              - column: { name: new_calories, type: INT }
+              - column: { name: swapped_at, type: DATETIME }
 

@@ -3,10 +3,9 @@ package com.fitnessapp.nutrition.rest.controller;
 import com.fitnessapp.nutrition.common.dto.*;
 import com.fitnessapp.nutrition.rest.api.NutritionApi;
 import com.fitnessapp.user.common.dto.ProfileCompletionStatusDTO;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
@@ -23,10 +22,19 @@ public class NutritionController implements NutritionApi {
     private final FoodLoggingOperations foodLoggingService;
     private final MealSwapOperations mealSwapService;
     private final GroceryListOperations groceryListService;
+    private final HttpServletRequest httpServletRequest;
 
-    private String getCurrentEmail() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth.getName();
+    private Long getCurrentUserId() {
+        Object userId = httpServletRequest.getAttribute("userId");
+        if (userId == null) {
+            throw new IllegalStateException("Authentication required: userId not found in request");
+        }
+        if (userId instanceof Long) return (Long) userId;
+        if (userId instanceof Number) return ((Number) userId).longValue();
+        try { return Long.parseLong(userId.toString()); }
+        catch (NumberFormatException e) {
+            throw new IllegalStateException("Invalid userId format in authentication token");
+        }
     }
 
     @Override
@@ -43,56 +51,74 @@ public class NutritionController implements NutritionApi {
 
     @Override
     public ResponseEntity<List<NutritionPlanDTO>> getRecommendedPlans() {
-        return ResponseEntity.ok(nutritionService.getRecommendedPlans(getCurrentEmail()));
+        return ResponseEntity.ok(nutritionService.getRecommendedPlans(getCurrentUserId()));
     }
 
     @Override
     public ResponseEntity<UserNutritionPlanDTO> enrollInPlan(Long planId) {
-        return ResponseEntity.ok(nutritionService.enrollInPlan(getCurrentEmail(), planId));
+        return ResponseEntity.ok(nutritionService.enrollInPlan(getCurrentUserId(), planId));
     }
 
     @Override
     public ResponseEntity<NutritionPlanDTO> generatePersonalizedPlan(GenerateNutritionPlanRequest request) {
-        return ResponseEntity.ok(aiBasedNutritionService.generatePersonalizedPlan(getCurrentEmail(), request));
+        return ResponseEntity.ok(aiBasedNutritionService.generatePersonalizedPlan(getCurrentUserId(), request));
     }
 
     @Override
     public ResponseEntity<UserNutritionPlanDTO> getActivePlan() {
-        UserNutritionPlanDTO plan = nutritionService.getActivePlan(getCurrentEmail());
+        UserNutritionPlanDTO plan = nutritionService.getActivePlan(getCurrentUserId());
         return plan == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(plan);
     }
 
     @Override
     public ResponseEntity<List<UserNutritionPlanDTO>> getPlanHistory() {
-        return ResponseEntity.ok(nutritionService.getUserPlanHistory(getCurrentEmail()));
+        return ResponseEntity.ok(nutritionService.getUserPlanHistory(getCurrentUserId()));
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public ResponseEntity<UserNutritionPlanDTO> updateProgress(Long userPlanId, Object body) {
-        Map<String, Integer> map = (Map<String, Integer>) body;
-        return ResponseEntity.ok(nutritionService.updatePlanProgress(getCurrentEmail(), userPlanId, map.get("completedMeals")));
+        if (body == null) {
+            throw new IllegalArgumentException("Request body is required");
+        }
+        Map<String, Object> map = (Map<String, Object>) body;
+        Object completedObj = map.get("completedMeals");
+        if (completedObj == null) {
+            throw new IllegalArgumentException("completedMeals is required");
+        }
+        int completedMeals;
+        if (completedObj instanceof Number) {
+            completedMeals = ((Number) completedObj).intValue();
+        } else {
+            try { completedMeals = Integer.parseInt(completedObj.toString()); }
+            catch (NumberFormatException e) { throw new IllegalArgumentException("completedMeals must be a number"); }
+        }
+        if (completedMeals < 0 || completedMeals > 10000) {
+            throw new IllegalArgumentException("completedMeals must be between 0 and 10000");
+        }
+        return ResponseEntity.ok(nutritionService.updatePlanProgress(getCurrentUserId(), userPlanId, completedMeals));
     }
 
     @Override
     public ResponseEntity<Void> cancelPlan(Long userPlanId) {
-        nutritionService.cancelPlan(getCurrentEmail(), userPlanId);
+        nutritionService.cancelPlan(getCurrentUserId(), userPlanId);
         return ResponseEntity.ok().build();
     }
 
     @Override
     public ResponseEntity<UserFoodPreferenceDTO> getFoodPreferences() {
-        UserFoodPreferenceDTO prefs = userFoodPreferenceService.getFoodPreferences(getCurrentEmail());
+        UserFoodPreferenceDTO prefs = userFoodPreferenceService.getFoodPreferences(getCurrentUserId());
         return prefs == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(prefs);
     }
 
     @Override
     public ResponseEntity<UserFoodPreferenceDTO> saveFoodPreferences(UserFoodPreferenceDTO request) {
-        return ResponseEntity.ok(userFoodPreferenceService.saveFoodPreferences(getCurrentEmail(), request));
+        return ResponseEntity.ok(userFoodPreferenceService.saveFoodPreferences(getCurrentUserId(), request));
     }
 
     @Override
     public ResponseEntity<ProfileCompletionStatusDTO> checkProfileStatus() {
-        return ResponseEntity.ok(nutritionProfileService.getProfileCompletion(getCurrentEmail()));
+        return ResponseEntity.ok(nutritionProfileService.getProfileCompletion(getCurrentUserId()));
     }
 
     @Override
@@ -102,56 +128,65 @@ public class NutritionController implements NutritionApi {
         if (foodDescription == null || foodDescription.trim().isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.ok(aiBasedNutritionService.estimateFoodMacros(foodDescription.trim()));
+        foodDescription = foodDescription.trim();
+        if (foodDescription.length() > 500) {
+            throw new IllegalArgumentException("Food description must be ≤ 500 characters");
+        }
+        return ResponseEntity.ok(aiBasedNutritionService.estimateFoodMacros(foodDescription));
     }
 
     @Override
     public ResponseEntity<DailyNutritionSummaryDTO> syncDailyTracking(DailyTrackingSyncRequest request) {
-        return ResponseEntity.ok(mealTrackingService.syncDailyTracking(getCurrentEmail(), request));
+        return ResponseEntity.ok(mealTrackingService.syncDailyTracking(getCurrentUserId(), request));
     }
 
     @Override
     public ResponseEntity<DailyNutritionSummaryDTO> getTodayTracking() {
-        return ResponseEntity.ok(mealTrackingService.getTodayTracking(getCurrentEmail()));
+        return ResponseEntity.ok(mealTrackingService.getTodayTracking(getCurrentUserId()));
     }
-
-    // ========== NEW FEATURE ENDPOINTS ==========
 
     @Override
     public ResponseEntity<FoodLogDTO> logFoodPhoto(FoodPhotoLogRequest request) {
-        return ResponseEntity.ok(foodLoggingService.logFoodPhoto(getCurrentEmail(), request));
+        return ResponseEntity.ok(foodLoggingService.logFoodPhoto(getCurrentUserId(), request));
     }
 
     @Override
     public ResponseEntity<List<FoodLogDTO>> getTodayFoodLogs() {
-        return ResponseEntity.ok(foodLoggingService.getTodayFoodLogs(getCurrentEmail()));
+        return ResponseEntity.ok(foodLoggingService.getTodayFoodLogs(getCurrentUserId()));
     }
 
     @Override
     public ResponseEntity<List<FoodLogDTO>> getFoodLogHistory(Integer days) {
-        return ResponseEntity.ok(foodLoggingService.getFoodLogHistory(getCurrentEmail(), days != null ? days : 7));
+        int d = days != null ? days : 7;
+        if (d < 1 || d > 365) {
+            throw new IllegalArgumentException("Days must be between 1 and 365");
+        }
+        return ResponseEntity.ok(foodLoggingService.getFoodLogHistory(getCurrentUserId(), d));
     }
 
     @Override
     public ResponseEntity<MealSwapResponseDTO> suggestMealSwap(MealSwapRequestDTO request) {
-        return ResponseEntity.ok(mealSwapService.suggestMealSwap(getCurrentEmail(), request));
+        return ResponseEntity.ok(mealSwapService.suggestMealSwap(getCurrentUserId(), request));
     }
 
     @Override
     public ResponseEntity<NutritionPlanDTO> applyMealSwap(ApplyMealSwapRequest request) {
-        // For now, just return the current active plan — actual swap logic can be enhanced
-        String email = getCurrentEmail();
-        UserNutritionPlanDTO userPlan = nutritionService.getActivePlan(email);
+        Long userId = getCurrentUserId();
+        UserNutritionPlanDTO userPlan = nutritionService.getActivePlan(userId);
         return userPlan != null ? ResponseEntity.ok(userPlan.getNutritionPlan()) : ResponseEntity.noContent().build();
     }
 
     @Override
     public ResponseEntity<GroceryListResponseDTO> getGroceryList(Integer weekNumber) {
-        return ResponseEntity.ok(groceryListService.getGroceryList(getCurrentEmail(), weekNumber != null ? weekNumber : 1));
+        int week = weekNumber != null ? weekNumber : 1;
+        if (week < 1 || week > 52) {
+            throw new IllegalArgumentException("Week number must be between 1 and 52");
+        }
+        return ResponseEntity.ok(groceryListService.getGroceryList(getCurrentUserId(), week));
     }
 
     @Override
     public ResponseEntity<UserNutritionPlanDTO> saveFreePlan(FreePlanRequestDTO request) {
-        return ResponseEntity.ok(nutritionService.saveFreePlan(getCurrentEmail(), request));
+        return ResponseEntity.ok(nutritionService.saveFreePlan(getCurrentUserId(), request));
     }
 }

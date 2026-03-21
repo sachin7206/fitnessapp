@@ -329,6 +329,30 @@ export const loadTrackingFromStorage = () => async (dispatch, getState) => {
     const raw = await AsyncStorage.getItem(storageKey);
     const today = getLocalDateString();
 
+    // 1. First check if user has an active nutrition plan (DB call)
+    let hasActivePlan = false;
+    try {
+      const activePlan = await nutritionService.getActivePlan();
+      hasActivePlan = !!(activePlan && activePlan.id);
+    } catch (e) {
+      // 204 No Content or network error — treat as no active plan if we got a response
+      if (e.response && (e.response.status === 204 || e.response.status === 404)) {
+        hasActivePlan = false;
+      } else {
+        // Network error — keep local data as fallback, assume plan may exist
+        hasActivePlan = !!(raw);
+        console.log('Active plan check failed, using local cache:', e.message);
+      }
+    }
+
+    // 2. If no active plan, clear any stale meal tracking data
+    if (!hasActivePlan) {
+      dispatch(loadTracking(null));
+      try { await AsyncStorage.removeItem(storageKey); } catch (_) {}
+      return;
+    }
+
+    // 3. Active plan exists — load from local cache
     if (raw) {
       const data = JSON.parse(raw);
       if (data.trackingDate && data.trackingDate !== today) {
@@ -350,7 +374,7 @@ export const loadTrackingFromStorage = () => async (dispatch, getState) => {
       dispatch(loadTracking(null));
     }
 
-    // Try to merge from backend (restores data if app was reinstalled)
+    // 4. Try to merge from backend (restores data if app was reinstalled)
     try {
       const backendData = await nutritionService.getTodayTracking();
       if (backendData && backendData.meals && backendData.meals.length > 0) {

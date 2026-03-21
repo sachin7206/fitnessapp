@@ -16,8 +16,8 @@ public class FoodLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String userEmail;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     @Column(nullable = false)
     private LocalDate logDate;
@@ -43,4 +43,3 @@ public class FoodLog {
         if (logDate == null) logDate = LocalDate.now();
     }
 }
-

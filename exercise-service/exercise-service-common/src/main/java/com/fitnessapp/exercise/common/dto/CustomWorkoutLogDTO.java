@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class CustomWorkoutLogDTO {
     private Long id;
-    private String userEmail;
+    private Long userId;
     private LocalDate logDate;
     private String dayOfWeek;
     private Integer exerciseIndex;

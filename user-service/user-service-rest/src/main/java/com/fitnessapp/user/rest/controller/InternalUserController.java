@@ -27,4 +27,9 @@ public class InternalUserController implements InternalUserApi {
     public ResponseEntity<Boolean> isProfileCompleteForNutrition(String email) {
         return ResponseEntity.ok(profileCompletionService.isProfileCompleteForNutrition(email));
     }
+
+    @Override
+    public ResponseEntity<UserDto> getUserById(Long userId) {
+        return ResponseEntity.ok(userService.getUserProfileById(userId));
+    }
 }

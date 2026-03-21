@@ -4,9 +4,8 @@ import java.util.List;
 import java.util.Map;
 
 public interface CustomWorkoutOperations {
-    WorkoutPlanDTO saveCustomWorkoutPlan(String email, Long userId, CustomWorkoutPlanRequest request);
-    WorkoutExerciseDTO updateExercise(String email, Long exerciseId, UpdateExerciseRequest request);
-    Map<String, Object> syncCustomWorkoutLog(String email, CustomWorkoutLogSyncRequest request);
-    List<CustomWorkoutLogDTO> getCustomWorkoutLogs(String email, int days);
+    WorkoutPlanDTO saveCustomWorkoutPlan(Long userId, CustomWorkoutPlanRequest request);
+    WorkoutExerciseDTO updateExercise(Long userId, Long exerciseId, UpdateExerciseRequest request);
+    Map<String, Object> syncCustomWorkoutLog(Long userId, CustomWorkoutLogSyncRequest request);
+    List<CustomWorkoutLogDTO> getCustomWorkoutLogs(Long userId, int days);
 }
-

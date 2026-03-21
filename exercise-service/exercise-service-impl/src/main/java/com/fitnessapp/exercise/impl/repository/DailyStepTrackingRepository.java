@@ -7,8 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface DailyStepTrackingRepository extends JpaRepository<DailyStepTracking, Long> {
-    Optional<DailyStepTracking> findByUserEmailAndTrackingDate(String userEmail, LocalDate trackingDate);
-    List<DailyStepTracking> findByUserEmailAndTrackingDateBetweenOrderByTrackingDateDesc(
-            String userEmail, LocalDate startDate, LocalDate endDate);
+    Optional<DailyStepTracking> findByUserIdAndTrackingDate(Long userId, LocalDate trackingDate);
+    List<DailyStepTracking> findByUserIdAndTrackingDateBetweenOrderByTrackingDateDesc(
+            Long userId, LocalDate startDate, LocalDate endDate);
 }
-

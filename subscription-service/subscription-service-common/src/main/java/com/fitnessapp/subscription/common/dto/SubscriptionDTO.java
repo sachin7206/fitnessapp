@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
 public class SubscriptionDTO {
     private Long id;
     private Long userId;
-    private String userEmail;
     private Long planId;
     private String planName;
     private BigDecimal planPrice;

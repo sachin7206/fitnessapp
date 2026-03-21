@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "daily_step_tracking",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"user_email", "tracking_date"}))
+       uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "tracking_date"}))
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -18,8 +18,8 @@ public class DailyStepTracking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_email")
-    private String userEmail;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     @Column(name = "tracking_date")
     private LocalDate trackingDate;
@@ -41,4 +41,3 @@ public class DailyStepTracking {
         updatedAt = LocalDateTime.now();
     }
 }
-

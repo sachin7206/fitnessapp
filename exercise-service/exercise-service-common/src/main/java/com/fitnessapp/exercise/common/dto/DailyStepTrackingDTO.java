@@ -10,7 +10,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class DailyStepTrackingDTO {
     private Long id;
-    private String userEmail;
+    private Long userId;
     private LocalDate trackingDate;
     private Integer steps;
     private Integer stepGoal;

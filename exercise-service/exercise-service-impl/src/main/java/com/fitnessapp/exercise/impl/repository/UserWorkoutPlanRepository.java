@@ -8,7 +8,6 @@ import java.util.Optional;
 
 @Repository
 public interface UserWorkoutPlanRepository extends JpaRepository<UserWorkoutPlan, Long> {
-    Optional<UserWorkoutPlan> findByUserEmailAndStatus(String userEmail, String status);
-    List<UserWorkoutPlan> findByUserEmail(String userEmail);
+    Optional<UserWorkoutPlan> findByUserIdAndStatus(Long userId, String status);
+    List<UserWorkoutPlan> findByUserId(Long userId);
 }
-

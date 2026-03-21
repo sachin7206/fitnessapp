@@ -15,8 +15,8 @@ public class WorkoutFeedback {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String userEmail;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     private Long workoutPlanId;
     private String difficulty; // TOO_EASY, JUST_RIGHT, TOO_HARD
@@ -30,4 +30,3 @@ public class WorkoutFeedback {
         if (createdAt == null) createdAt = LocalDateTime.now();
     }
 }
-

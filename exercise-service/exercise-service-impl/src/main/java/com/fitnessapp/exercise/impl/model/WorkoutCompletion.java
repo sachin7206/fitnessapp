@@ -17,7 +17,8 @@ public class WorkoutCompletion {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String userEmail;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_workout_plan_id")
@@ -27,4 +28,3 @@ public class WorkoutCompletion {
     private Boolean completed;
     private LocalDateTime completedAt;
 }
-

@@ -25,7 +25,7 @@ public class FoodLoggingService implements FoodLoggingOperations {
     private final ObjectMapper objectMapper;
 
     @Transactional
-    public FoodLogDTO logFoodPhoto(String email, FoodPhotoLogRequest request) {
+    public FoodLogDTO logFoodPhoto(Long userId, FoodPhotoLogRequest request) {
         AiFoodPhotoAnalysisResponse analysis;
         try {
             AiFoodPhotoAnalysisRequest aiRequest = new AiFoodPhotoAnalysisRequest(
@@ -44,7 +44,7 @@ public class FoodLoggingService implements FoodLoggingOperations {
         }
 
         FoodLog log = new FoodLog();
-        log.setUserEmail(email);
+        log.setUserId(userId);
         log.setLogDate(LocalDate.now());
         log.setMealType(request.getMealType());
         log.setDescription(request.getDescription());
@@ -65,14 +65,14 @@ public class FoodLoggingService implements FoodLoggingOperations {
         return toDTO(saved);
     }
 
-    public List<FoodLogDTO> getTodayFoodLogs(String email) {
-        return foodLogRepository.findByUserEmailAndLogDateOrderByCreatedAtDesc(email, LocalDate.now())
+    public List<FoodLogDTO> getTodayFoodLogs(Long userId) {
+        return foodLogRepository.findByUserIdAndLogDateOrderByCreatedAtDesc(userId, LocalDate.now())
                 .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
-    public List<FoodLogDTO> getFoodLogHistory(String email, int days) {
-        return foodLogRepository.findByUserEmailAndLogDateAfterOrderByLogDateDescCreatedAtDesc(
-                email, LocalDate.now().minusDays(days))
+    public List<FoodLogDTO> getFoodLogHistory(Long userId, int days) {
+        return foodLogRepository.findByUserIdAndLogDateAfterOrderByLogDateDescCreatedAtDesc(
+                userId, LocalDate.now().minusDays(days))
                 .stream().map(this::toDTO).collect(Collectors.toList());
     }
 

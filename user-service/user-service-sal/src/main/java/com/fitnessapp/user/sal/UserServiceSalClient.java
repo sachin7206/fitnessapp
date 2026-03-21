@@ -24,6 +24,13 @@ public class UserServiceSalClient {
                 UserDto.class, email);
     }
 
+    public UserDto getUserById(Long userId) {
+        log.debug("SAL: Fetching user by id: {}", userId);
+        return restTemplate.getForObject(
+                baseUrl + "/internal/users/by-id?userId={userId}",
+                UserDto.class, userId);
+    }
+
     public ProfileCompletionStatusDTO getProfileCompletion(String email) {
         log.debug("SAL: Checking profile completion for: {}", email);
         return restTemplate.getForObject(
@@ -38,4 +45,3 @@ public class UserServiceSalClient {
                 Boolean.class, email);
     }
 }
-

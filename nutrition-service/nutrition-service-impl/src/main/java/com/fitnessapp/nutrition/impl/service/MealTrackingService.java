@@ -25,8 +25,28 @@ public class MealTrackingService implements MealTrackingOperations {
 
     @Override
     @Transactional
-    public DailyNutritionSummaryDTO syncDailyTracking(String email, DailyTrackingSyncRequest request) {
+    public DailyNutritionSummaryDTO syncDailyTracking(Long userId, DailyTrackingSyncRequest request) {
         LocalDate today = LocalDate.now();
+
+        // Validate replaced meals have required macro details
+        if (request.getMeals() != null) {
+            for (MealCompletionRequest mealReq : request.getMeals()) {
+                if (Boolean.TRUE.equals(mealReq.getReplaced())) {
+                    if (mealReq.getReplacedWith() == null || mealReq.getReplacedWith().trim().isEmpty()) {
+                        throw new IllegalArgumentException("Replaced meal (mealId=" + mealReq.getMealId() + ") must have a food name (replacedWith)");
+                    }
+                    if (mealReq.getProteinGrams() == null || mealReq.getProteinGrams() < 0) {
+                        throw new IllegalArgumentException("Replaced meal (mealId=" + mealReq.getMealId() + ") must have valid protein value (≥ 0)");
+                    }
+                    if (mealReq.getCarbsGrams() == null || mealReq.getCarbsGrams() < 0) {
+                        throw new IllegalArgumentException("Replaced meal (mealId=" + mealReq.getMealId() + ") must have valid carbs value (≥ 0)");
+                    }
+                    if (mealReq.getFatGrams() == null || mealReq.getFatGrams() < 0) {
+                        throw new IllegalArgumentException("Replaced meal (mealId=" + mealReq.getMealId() + ") must have valid fat value (≥ 0)");
+                    }
+                }
+            }
+        }
 
         // Upsert each meal record (deduplicate by mealId — keep last occurrence)
         if (request.getMeals() != null) {
@@ -41,10 +61,10 @@ public class MealTrackingService implements MealTrackingOperations {
             for (MealCompletionRequest mealReq : uniqueMeals.values()) {
                 try {
                     DailyMealTracking record = mealTrackingRepo
-                            .findByUserEmailAndTrackingDateAndMealId(email, today, mealReq.getMealId())
+                            .findByUserIdAndTrackingDateAndMealId(userId, today, mealReq.getMealId())
                             .orElseGet(() -> {
                                 DailyMealTracking r = new DailyMealTracking();
-                                r.setUserEmail(email);
+                                r.setUserId(userId);
                                 r.setTrackingDate(today);
                                 r.setMealId(mealReq.getMealId());
                                 return r;
@@ -65,7 +85,7 @@ public class MealTrackingService implements MealTrackingOperations {
                 } catch (Exception e) {
                     // Duplicate key on concurrent requests — retry with find
                     log.warn("Duplicate meal tracking entry for mealId={}, retrying update: {}", mealReq.getMealId(), e.getMessage());
-                    mealTrackingRepo.findByUserEmailAndTrackingDateAndMealId(email, today, mealReq.getMealId())
+                    mealTrackingRepo.findByUserIdAndTrackingDateAndMealId(userId, today, mealReq.getMealId())
                             .ifPresent(existing -> {
                                 existing.setCompleted(mealReq.getCompleted() != null ? mealReq.getCompleted() : false);
                                 existing.setCalories(mealReq.getCalories() != null ? mealReq.getCalories() : 0);
@@ -78,44 +98,72 @@ public class MealTrackingService implements MealTrackingOperations {
             }
         }
 
-        // Upsert daily summary
-        DailyNutritionSummary summary = summaryRepo.findByUserEmailAndTrackingDate(email, today)
+        // Recalculate daily summary from actual DB meal records (only completed meals count)
+        List<DailyMealTracking> allMealsToday = mealTrackingRepo.findByUserIdAndTrackingDate(userId, today);
+
+        int totalCalories = 0;
+        double totalProtein = 0.0, totalCarbs = 0.0, totalFat = 0.0;
+        int completedCount = 0;
+
+        for (DailyMealTracking m : allMealsToday) {
+            if (Boolean.TRUE.equals(m.getCompleted())) {
+                totalCalories += m.getCalories() != null ? m.getCalories() : 0;
+                totalProtein += m.getProteinGrams() != null ? m.getProteinGrams() : 0.0;
+                totalCarbs += m.getCarbsGrams() != null ? m.getCarbsGrams() : 0.0;
+                totalFat += m.getFatGrams() != null ? m.getFatGrams() : 0.0;
+                completedCount++;
+            }
+        }
+
+        DailyNutritionSummary summary = summaryRepo.findByUserIdAndTrackingDate(userId, today)
                 .orElseGet(() -> {
                     DailyNutritionSummary s = new DailyNutritionSummary();
-                    s.setUserEmail(email);
+                    s.setUserId(userId);
                     s.setTrackingDate(today);
                     return s;
                 });
-        summary.setConsumedCalories(request.getConsumedCalories() != null ? request.getConsumedCalories() : 0);
-        summary.setConsumedProtein(request.getConsumedProtein() != null ? request.getConsumedProtein() : 0.0);
-        summary.setConsumedCarbs(request.getConsumedCarbs() != null ? request.getConsumedCarbs() : 0.0);
-        summary.setConsumedFat(request.getConsumedFat() != null ? request.getConsumedFat() : 0.0);
-        summary.setTotalMeals(request.getMeals() != null ? request.getMeals().size() : 0);
-        summary.setCompletedMeals(request.getMeals() != null
-                ? (int) request.getMeals().stream().filter(m -> Boolean.TRUE.equals(m.getCompleted())).count()
-                : 0);
+        summary.setConsumedCalories(totalCalories);
+        summary.setConsumedProtein(totalProtein);
+        summary.setConsumedCarbs(totalCarbs);
+        summary.setConsumedFat(totalFat);
+        summary.setTotalMeals(allMealsToday.size());
+        summary.setCompletedMeals(completedCount);
         summaryRepo.save(summary);
 
-        return buildSummaryDTO(email, today);
+        return buildSummaryDTO(userId, today);
     }
 
     @Override
-    public DailyNutritionSummaryDTO getTodayTracking(String email) {
-        return buildSummaryDTO(email, LocalDate.now());
+    public DailyNutritionSummaryDTO getTodayTracking(Long userId) {
+        return buildSummaryDTO(userId, LocalDate.now());
     }
 
-    private DailyNutritionSummaryDTO buildSummaryDTO(String email, LocalDate date) {
-        List<DailyMealTracking> meals = mealTrackingRepo.findByUserEmailAndTrackingDate(email, date);
-        DailyNutritionSummary summary = summaryRepo.findByUserEmailAndTrackingDate(email, date).orElse(null);
+    private DailyNutritionSummaryDTO buildSummaryDTO(Long userId, LocalDate date) {
+        List<DailyMealTracking> meals = mealTrackingRepo.findByUserIdAndTrackingDate(userId, date);
+
+        // Always recalculate from actual completed meal records
+        int totalCalories = 0;
+        double totalProtein = 0.0, totalCarbs = 0.0, totalFat = 0.0;
+        int completedCount = 0;
+
+        for (DailyMealTracking m : meals) {
+            if (Boolean.TRUE.equals(m.getCompleted())) {
+                totalCalories += m.getCalories() != null ? m.getCalories() : 0;
+                totalProtein += m.getProteinGrams() != null ? m.getProteinGrams() : 0.0;
+                totalCarbs += m.getCarbsGrams() != null ? m.getCarbsGrams() : 0.0;
+                totalFat += m.getFatGrams() != null ? m.getFatGrams() : 0.0;
+                completedCount++;
+            }
+        }
 
         DailyNutritionSummaryDTO dto = new DailyNutritionSummaryDTO();
         dto.setTrackingDate(date);
-        dto.setConsumedCalories(summary != null ? summary.getConsumedCalories() : 0);
-        dto.setConsumedProtein(summary != null ? summary.getConsumedProtein() : 0.0);
-        dto.setConsumedCarbs(summary != null ? summary.getConsumedCarbs() : 0.0);
-        dto.setConsumedFat(summary != null ? summary.getConsumedFat() : 0.0);
-        dto.setTotalMeals(summary != null ? summary.getTotalMeals() : 0);
-        dto.setCompletedMeals(summary != null ? summary.getCompletedMeals() : 0);
+        dto.setConsumedCalories(totalCalories);
+        dto.setConsumedProtein(totalProtein);
+        dto.setConsumedCarbs(totalCarbs);
+        dto.setConsumedFat(totalFat);
+        dto.setTotalMeals(meals.size());
+        dto.setCompletedMeals(completedCount);
         dto.setMeals(meals.stream().map(this::toMealDTO).collect(Collectors.toList()));
         return dto;
     }

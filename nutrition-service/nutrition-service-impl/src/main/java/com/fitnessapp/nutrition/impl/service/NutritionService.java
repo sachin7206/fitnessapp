@@ -6,6 +6,7 @@ import com.fitnessapp.user.sal.UserServiceSalClient;
 import com.fitnessapp.nutrition.impl.model.*;
 import com.fitnessapp.nutrition.impl.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
@@ -14,9 +15,13 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class NutritionService implements NutritionOperations {
     private final NutritionPlanRepository nutritionPlanRepository;
     private final UserNutritionPlanRepository userNutritionPlanRepository;
+    private final DailyMealTrackingRepository dailyMealTrackingRepository;
+    private final DailyNutritionSummaryRepository dailyNutritionSummaryRepository;
+    private final FoodLogRepository foodLogRepository;
     private final UserServiceSalClient userServiceSalClient;
 
     @Transactional(readOnly = true)
@@ -36,8 +41,8 @@ public class NutritionService implements NutritionOperations {
     }
 
     @Transactional(readOnly = true)
-    public List<NutritionPlanDTO> getRecommendedPlans(String email) {
-        UserDto user = userServiceSalClient.getUserByEmail(email);
+    public List<NutritionPlanDTO> getRecommendedPlans(Long userId) {
+        UserDto user = userServiceSalClient.getUserById(userId);
         String region = user.getProfile() != null ? user.getProfile().getRegion() : null;
         List<String> dietaryPrefs = user.getHealthMetrics() != null && user.getHealthMetrics().getDietaryPreferences() != null
             ? user.getHealthMetrics().getDietaryPreferences() : List.of();
@@ -49,50 +54,31 @@ public class NutritionService implements NutritionOperations {
     }
 
     @Transactional
-    public UserNutritionPlanDTO enrollInPlan(String email, Long planId) {
-        UserDto user = userServiceSalClient.getUserByEmail(email);
+    public UserNutritionPlanDTO enrollInPlan(Long userId, Long planId) {
         NutritionPlan plan = nutritionPlanRepository.findById(planId).orElseThrow(() -> new RuntimeException("Nutrition plan not found"));
         int durationDays = plan.getDurationDays() != null ? plan.getDurationDays() : 30;
 
-        boolean hasActivePlan = userNutritionPlanRepository.findActiveByUserId(user.getId()).isPresent();
-        LocalDate startDate;
-
-        if (hasActivePlan) {
-            // Mark current plan as ending today instead of cancelling
-            userNutritionPlanRepository.markActiveAsEndingToday(user.getId());
-            // Cancel any previously scheduled plan
-            userNutritionPlanRepository.cancelScheduledForUser(user.getId());
-            // New plan starts tomorrow
-            startDate = LocalDate.now().plusDays(1);
-        } else {
-            // Cancel any previously scheduled plan
-            userNutritionPlanRepository.cancelScheduledForUser(user.getId());
-            // Check if there's an ENDING_TODAY plan (created earlier today)
-            boolean hasEndingToday = userNutritionPlanRepository.findEndingTodayByUserId(user.getId()).isPresent();
-            startDate = hasEndingToday ? LocalDate.now().plusDays(1) : LocalDate.now();
-        }
+        // Delete all old plan data
+        deleteOldUserPlanData(userId);
 
         UserNutritionPlan userPlan = new UserNutritionPlan();
-        userPlan.setUserId(user.getId());
+        userPlan.setUserId(userId);
         userPlan.setNutritionPlan(plan);
-        userPlan.setStartDate(startDate);
-        userPlan.setEndDate(startDate.plusDays(durationDays));
-        userPlan.setStatus(startDate.isAfter(LocalDate.now()) ? "SCHEDULED" : "ACTIVE");
+        userPlan.setStartDate(LocalDate.now());
+        userPlan.setEndDate(LocalDate.now().plusDays(durationDays));
+        userPlan.setStatus("ACTIVE");
         userPlan.setCurrentDay(1);
         userPlan.setTotalMeals(plan.getMeals() != null ? plan.getMeals().size() * durationDays : 0);
 
-        UserNutritionPlanDTO dto = convertUserPlanToDTO(userNutritionPlanRepository.save(userPlan));
-        dto.setScheduledForTomorrow(startDate.isAfter(LocalDate.now()));
-        return dto;
+        return convertUserPlanToDTO(userNutritionPlanRepository.save(userPlan));
     }
 
     @Transactional
-    public UserNutritionPlanDTO getActivePlan(String email) {
-        UserDto user = userServiceSalClient.getUserByEmail(email);
+    public UserNutritionPlanDTO getActivePlan(Long userId) {
         LocalDate today = LocalDate.now();
 
         // 1. Complete ENDING_TODAY plans whose endDate has passed
-        userNutritionPlanRepository.findEndingTodayByUserId(user.getId()).ifPresent(ending -> {
+        userNutritionPlanRepository.findEndingTodayByUserId(userId).ifPresent(ending -> {
             if (ending.getEndDate() != null && ending.getEndDate().isBefore(today)) {
                 ending.setStatus("COMPLETED");
                 userNutritionPlanRepository.save(ending);
@@ -100,7 +86,7 @@ public class NutritionService implements NutritionOperations {
         });
 
         // 2. Activate SCHEDULED plans whose startDate is today or earlier
-        userNutritionPlanRepository.findScheduledByUserId(user.getId()).ifPresent(scheduled -> {
+        userNutritionPlanRepository.findScheduledByUserId(userId).ifPresent(scheduled -> {
             if (!scheduled.getStartDate().isAfter(today)) {
                 scheduled.setStatus("ACTIVE");
                 userNutritionPlanRepository.save(scheduled);
@@ -108,7 +94,7 @@ public class NutritionService implements NutritionOperations {
         });
 
         // 3. If ENDING_TODAY plan exists (still valid for today), return it
-        var endingToday = userNutritionPlanRepository.findEndingTodayByUserId(user.getId());
+        var endingToday = userNutritionPlanRepository.findEndingTodayByUserId(userId);
         if (endingToday.isPresent()) {
             UserNutritionPlan up = endingToday.get();
             nutritionPlanRepository.findByIdWithMealsAndFoodItems(up.getNutritionPlan().getId()).ifPresent(up::setNutritionPlan);
@@ -116,23 +102,21 @@ public class NutritionService implements NutritionOperations {
         }
 
         // 4. Return ACTIVE plan
-        return userNutritionPlanRepository.findActiveByUserId(user.getId()).map(up -> {
+        return userNutritionPlanRepository.findActiveByUserId(userId).map(up -> {
             nutritionPlanRepository.findByIdWithMealsAndFoodItems(up.getNutritionPlan().getId()).ifPresent(up::setNutritionPlan);
             return convertUserPlanToDTO(up);
         }).orElse(null);
     }
 
     @Transactional(readOnly = true)
-    public List<UserNutritionPlanDTO> getUserPlanHistory(String email) {
-        UserDto user = userServiceSalClient.getUserByEmail(email);
-        return userNutritionPlanRepository.findByUserId(user.getId()).stream().map(this::convertUserPlanToDTO).collect(Collectors.toList());
+    public List<UserNutritionPlanDTO> getUserPlanHistory(Long userId) {
+        return userNutritionPlanRepository.findByUserId(userId).stream().map(this::convertUserPlanToDTO).collect(Collectors.toList());
     }
 
     @Transactional
-    public UserNutritionPlanDTO updatePlanProgress(String email, Long userPlanId, Integer completedMeals) {
-        UserDto user = userServiceSalClient.getUserByEmail(email);
+    public UserNutritionPlanDTO updatePlanProgress(Long userId, Long userPlanId, Integer completedMeals) {
         UserNutritionPlan up = userNutritionPlanRepository.findByIdWithPlan(userPlanId).orElseThrow(() -> new RuntimeException("Plan not found"));
-        if (!up.getUserId().equals(user.getId())) throw new RuntimeException("Unauthorized");
+        if (!up.getUserId().equals(userId)) throw new RuntimeException("Unauthorized");
         up.setCompletedMeals(completedMeals);
         if (up.getTotalMeals() > 0) up.setAdherencePercentage((double) completedMeals / up.getTotalMeals() * 100);
         up.setCurrentDay((int) java.time.temporal.ChronoUnit.DAYS.between(up.getStartDate(), LocalDate.now()) + 1);
@@ -140,31 +124,18 @@ public class NutritionService implements NutritionOperations {
     }
 
     @Transactional
-    public void cancelPlan(String email, Long userPlanId) {
-        UserDto user = userServiceSalClient.getUserByEmail(email);
+    public void cancelPlan(Long userId, Long userPlanId) {
         UserNutritionPlan up = userNutritionPlanRepository.findById(userPlanId).orElseThrow(() -> new RuntimeException("Plan not found"));
-        if (!up.getUserId().equals(user.getId())) throw new RuntimeException("Unauthorized");
+        if (!up.getUserId().equals(userId)) throw new RuntimeException("Unauthorized");
         up.setStatus("CANCELLED");
         userNutritionPlanRepository.save(up);
     }
 
     @Transactional
     @SuppressWarnings("unchecked")
-    public UserNutritionPlanDTO saveFreePlan(String email, FreePlanRequestDTO request) {
-        UserDto user = userServiceSalClient.getUserByEmail(email);
-
-        // Cancel any existing active plan
-        userNutritionPlanRepository.findActiveByUserId(user.getId()).ifPresent(existing -> {
-            existing.setStatus("CANCELLED");
-            userNutritionPlanRepository.save(existing);
-        });
-        // Cancel any scheduled plan
-        userNutritionPlanRepository.cancelScheduledForUser(user.getId());
-        // Cancel any ENDING_TODAY plan
-        userNutritionPlanRepository.findEndingTodayByUserId(user.getId()).ifPresent(ending -> {
-            ending.setStatus("CANCELLED");
-            userNutritionPlanRepository.save(ending);
-        });
+    public UserNutritionPlanDTO saveFreePlan(Long userId, FreePlanRequestDTO request) {
+        // Delete all old plan data
+        deleteOldUserPlanData(userId);
 
         // Build NutritionPlan entity from free plan request
         NutritionPlan plan = new NutritionPlan();
@@ -238,7 +209,7 @@ public class NutritionService implements NutritionOperations {
 
         // Enroll user in the plan
         UserNutritionPlan userPlan = new UserNutritionPlan();
-        userPlan.setUserId(user.getId());
+        userPlan.setUserId(userId);
         userPlan.setNutritionPlan(plan);
         userPlan.setStartDate(LocalDate.now());
         userPlan.setEndDate(LocalDate.now().plusDays(30));
@@ -270,6 +241,49 @@ public class NutritionService implements NutritionOperations {
             try { return Double.parseDouble((String) val); } catch (NumberFormatException e) { return 0.0; }
         }
         return 0.0;
+    }
+
+    /**
+     * Fully deletes all old nutrition plan data for a user:
+     * 1. daily_meal_tracking (by email)
+     * 2. daily_nutrition_summary (by email)
+     * 3. food_logs (by email)
+     * 4. user_nutrition_plans (by userId)
+     * 5. nutrition_plans + meals + food_items (cascade) — only user-specific plans, not shared prebuilt ones
+     */
+    private void deleteOldUserPlanData(Long userId) {
+        // 1. Delete tracking data
+        dailyMealTrackingRepository.deleteByUserId(userId);
+        dailyNutritionSummaryRepository.deleteByUserId(userId);
+        foodLogRepository.deleteByUserId(userId);
+
+        // 2. Collect nutrition plan IDs before deleting user_nutrition_plans
+        List<UserNutritionPlan> oldUserPlans = userNutritionPlanRepository.findByUserId(userId);
+        List<Long> planIdsToDelete = new java.util.ArrayList<>();
+        for (UserNutritionPlan up : oldUserPlans) {
+            if (up.getNutritionPlan() != null) {
+                NutritionPlan np = up.getNutritionPlan();
+                // Only delete user-specific plans (CUSTOM or AI-generated for the user), not shared prebuilt seed data
+                // Prebuilt plans are shared across users; user-created plans have difficulty = CUSTOM or MODERATE (AI-generated)
+                // Safe check: if any OTHER user also references this plan, don't delete it
+                List<UserNutritionPlan> allReferences = userNutritionPlanRepository.findAll().stream()
+                    .filter(ref -> ref.getNutritionPlan() != null && ref.getNutritionPlan().getId().equals(np.getId()))
+                    .filter(ref -> !ref.getUserId().equals(userId))
+                    .toList();
+                if (allReferences.isEmpty()) {
+                    // No other user references this plan — safe to delete
+                    planIdsToDelete.add(np.getId());
+                }
+            }
+        }
+
+        // 3. Delete user_nutrition_plans
+        userNutritionPlanRepository.deleteAllByUserId(userId);
+
+        // 4. Delete orphaned nutrition_plans (cascade deletes meals + food_items)
+        for (Long planId : planIdsToDelete) {
+            nutritionPlanRepository.deleteById(planId);
+        }
     }
 
     // ========== Conversion Methods ==========
