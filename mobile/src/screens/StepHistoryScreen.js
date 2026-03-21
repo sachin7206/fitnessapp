@@ -41,7 +41,7 @@ const StepHistoryScreen = ({ navigation }) => {
           dispatch(persistWorkoutTracking());
         }
       } catch (e) {
-        console.log('Could not load step history from backend:', e.message);
+        
       }
     };
     loadFromBackend();

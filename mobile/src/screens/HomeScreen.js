@@ -150,7 +150,7 @@ const HomeScreen = ({ navigation }) => {
           // Steps will remain at 0 — no simulation needed
         }
       } catch (e) {
-        console.log('Pedometer error:', e.message);
+        
       }
     };
     const cleanup = startPedometer();
@@ -291,7 +291,7 @@ const HomeScreen = ({ navigation }) => {
       dispatch(persistWorkoutTracking());
       const msg = 'Great job completing your workout today! 🎉';
       Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Awesome! 💪', msg);
-    } catch (e) { console.log('Error:', e); }
+    } catch (e) {  }
   };
 
   const handleUncompleteWorkout = () => {

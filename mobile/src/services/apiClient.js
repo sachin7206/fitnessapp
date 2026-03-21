@@ -4,7 +4,6 @@ import API_CONFIG from '../config/api';
 
 // Create axios instance
 const BASE_URL = typeof API_CONFIG.API_URL === 'string' ? API_CONFIG.API_URL : 'http://localhost:8080/api';
-console.log('API Base URL:', BASE_URL);
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -24,19 +23,17 @@ apiClient.interceptors.request.use(
       // Skip attaching token for public auth endpoints
       const isPublic = PUBLIC_PATHS.some(path => config.url?.includes(path));
       if (isPublic) {
-        console.log('API Request (public):', config.url);
         // Remove any stale Authorization header
         delete config.headers.Authorization;
         return config;
       }
 
       const token = await AsyncStorage.getItem('accessToken');
-      console.log('API Request:', config.url, 'Token exists:', !!token);
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (error) {
-      console.error('Error getting token from storage:', error);
+      // Silent error - token retrieval failed
     }
     return config;
   },
@@ -51,8 +48,6 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Log the actual error for debugging
-    console.error('API Error:', originalRequest?.url, 'Status:', error.response?.status, 'Message:', error.response?.data?.message || error.message);
 
     // Don't retry auth endpoints — they're public and don't need token refresh
     const isAuthEndpoint = PUBLIC_PATHS.some(path => originalRequest?.url?.includes(path));

@@ -197,7 +197,7 @@ export const persistTracking = () => async (dispatch, getState) => {
   try {
     await AsyncStorage.setItem(storageKey, JSON.stringify(data));
   } catch (e) {
-    console.log('Failed to persist meal tracking:', e.message);
+    
   }
 
   // 2. Debounce backend sync — max once per 60 seconds
@@ -229,7 +229,7 @@ export const persistTracking = () => async (dispatch, getState) => {
         consumedFat: mealTracking.consumedFat || 0,
       });
     } catch (e) {
-      console.log('Meal tracking sync to backend failed (will retry):', e.message);
+      // Silent error
     }
   }
 };
@@ -251,7 +251,7 @@ export const persistTrackingNow = () => async (dispatch, getState) => {
       consumedFat: mealTracking.consumedFat,
     }));
   } catch (e) {
-    console.log('Failed to persist meal tracking:', e.message);
+    
   }
 
   // Sync to backend immediately
@@ -280,7 +280,7 @@ export const persistTrackingNow = () => async (dispatch, getState) => {
         consumedFat: mealTracking.consumedFat || 0,
       });
     } catch (e) {
-      console.log('Meal tracking sync to backend failed:', e.message);
+      
     }
   }
 };
@@ -315,7 +315,7 @@ export const loadTrackingLocal = () => async (dispatch, getState) => {
       dispatch(loadTracking(null));
     }
   } catch (e) {
-    console.log('Failed to load meal tracking:', e.message);
+    
     dispatch(loadTracking(null));
   }
 };
@@ -341,7 +341,7 @@ export const loadTrackingFromStorage = () => async (dispatch, getState) => {
       } else {
         // Network error — keep local data as fallback, assume plan may exist
         hasActivePlan = !!(raw);
-        console.log('Active plan check failed, using local cache:', e.message);
+        
       }
     }
 
@@ -411,10 +411,10 @@ export const loadTrackingFromStorage = () => async (dispatch, getState) => {
         }
       }
     } catch (e) {
-      console.log('Backend meal tracking unavailable, using local cache:', e.message);
+      
     }
   } catch (e) {
-    console.log('Failed to load meal tracking:', e.message);
+    
     dispatch(loadTracking(null));
   }
 };

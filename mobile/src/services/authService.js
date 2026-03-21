@@ -7,15 +7,9 @@ export const authService = {
     const response = await apiClient.post('/auth/register', userData);
     if (response.data.success) {
       const { accessToken, refreshToken, user } = response.data.data;
-      console.log('Register success, storing tokens...');
-      console.log('AccessToken:', accessToken ? accessToken.substring(0, 20) + '...' : 'null');
       await AsyncStorage.setItem('accessToken', accessToken);
       await AsyncStorage.setItem('refreshToken', refreshToken);
       await AsyncStorage.setItem('user', JSON.stringify(user));
-
-      // Verify storage
-      const storedToken = await AsyncStorage.getItem('accessToken');
-      console.log('Token stored successfully:', !!storedToken);
     }
     return response.data;
   },
@@ -24,7 +18,6 @@ export const authService = {
     const response = await apiClient.post('/auth/login', { email, password });
     if (response.data.success) {
       const { accessToken, refreshToken, user } = response.data.data;
-      console.log('Login success, storing tokens...');
       await AsyncStorage.setItem('accessToken', accessToken);
       await AsyncStorage.setItem('refreshToken', refreshToken);
       await AsyncStorage.setItem('user', JSON.stringify(user));
@@ -55,7 +48,7 @@ export const authService = {
         return { isAuthenticated: true, user: freshUser };
       }
     } catch (error) {
-      console.log('Could not fetch fresh profile, using cached data');
+      // Could not fetch fresh profile, using cached data
     }
 
     // Fallback to cached user if API call fails

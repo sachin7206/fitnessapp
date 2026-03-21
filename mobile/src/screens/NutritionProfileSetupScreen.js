@@ -71,7 +71,7 @@ const NutritionProfileSetupScreen = ({ navigation, route }) => {
           }));
         }
       } catch (error) {
-        console.log('Could not fetch fresh profile, using cached data');
+        
       } finally {
         setInitialLoading(false);
       }

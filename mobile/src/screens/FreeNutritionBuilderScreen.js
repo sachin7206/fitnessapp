@@ -267,7 +267,7 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
         ],
       });
     } catch (err) {
-      console.error('Error saving free plan:', err);
+      
       showAlert('Error', err.response?.data?.message || 'Failed to save your plan. Please try again.');
     } finally {
       setSaving(false);

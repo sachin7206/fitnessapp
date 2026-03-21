@@ -215,7 +215,7 @@ export const persistWorkoutTracking = () => async (dispatch, getState) => {
       ),
     }));
   } catch (e) {
-    console.log('Failed to persist workout tracking:', e.message);
+    
   }
 
   // Debounce backend sync — max once per 60 seconds
@@ -231,7 +231,7 @@ export const persistWorkoutTracking = () => async (dispatch, getState) => {
         goalCompleted: workoutTracking.stepGoalCompleted || false,
       });
     } catch (e) {
-      console.log('Step sync to backend failed (will retry):', e.message);
+      // Silent error
     }
   }
 };
@@ -249,7 +249,7 @@ export const loadWorkoutTrackingLocal = () => async (dispatch, getState) => {
       dispatch(loadWorkoutTracking(null));
     }
   } catch (e) {
-    console.log('Failed to load workout tracking:', e.message);
+    
     dispatch(loadWorkoutTracking(null));
   }
 };
@@ -282,7 +282,7 @@ export const loadWorkoutTrackingFromStorage = () => async (dispatch, getState) =
         dispatch(setActivePlan(null));
       }
       // On network error, keep whatever was in the cache
-      console.log('Active plan check failed, using local cache:', e.message);
+      
     }
 
     // 3. Merge step history from backend (one-time on mount)
@@ -307,10 +307,10 @@ export const loadWorkoutTrackingFromStorage = () => async (dispatch, getState) =
         }))));
       }
     } catch (e) {
-      console.log('Backend step data unavailable, using local cache:', e.message);
+      
     }
   } catch (e) {
-    console.log('Failed to load workout tracking:', e.message);
+    
     dispatch(loadWorkoutTracking(null));
   }
 };

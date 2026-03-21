@@ -9,7 +9,6 @@ export const register = createAsyncThunk(
       const response = await authService.register(userData);
       return response.data;
     } catch (error) {
-      console.error('Register thunk error:', error?.response?.status, error?.response?.data, error?.message);
       const msg = error.response?.data?.message
         || error.response?.data?.error
         || error.message
@@ -26,7 +25,6 @@ export const login = createAsyncThunk(
       const response = await authService.login(email, password);
       return response.data;
     } catch (error) {
-      console.error('Login thunk error:', error?.response?.status, error?.response?.data, error?.message);
       const msg = error.response?.data?.message
         || error.response?.data?.error
         || error.message
@@ -43,7 +41,6 @@ export const logout = createAsyncThunk(
       await authService.logout();
     } catch (error) {
       // Even if API call fails, we still want to clear local state
-      console.error('Logout error:', error);
     }
   }
 );

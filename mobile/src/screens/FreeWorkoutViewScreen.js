@@ -128,7 +128,7 @@ const FreeWorkoutViewScreen = ({ navigation }) => {
         setExpandedDays(prev => ({ ...prev, [todayDay]: true }));
       }
     } catch (error) {
-      console.log('Error fetching workout plan:', error);
+      
     } finally {
       setLoading(false);
       setRefreshing(false);

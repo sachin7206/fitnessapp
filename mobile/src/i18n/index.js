@@ -89,7 +89,7 @@ export const I18nProvider = ({ children }) => {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, code);
     } catch (e) {
-      console.log('Failed to save language preference:', e);
+      
     }
   }, []);
 

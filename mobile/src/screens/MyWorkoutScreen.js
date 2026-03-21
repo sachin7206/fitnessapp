@@ -68,7 +68,7 @@ const MyWorkoutScreen = ({ navigation }) => {
         navigation.replace('WorkoutChoice');
       }
     } catch (error) {
-      console.log('Error fetching workout plan:', error);
+      
       navigation.replace('WorkoutChoice');
     } finally {
       setLoading(false);
@@ -162,7 +162,7 @@ const MyWorkoutScreen = ({ navigation }) => {
       const msg = 'Great job completing your workout today! Keep it up! 🎉';
       Platform.OS === 'web' ? window.alert('Awesome! 💪\n' + msg) : Alert.alert('Awesome! 💪', msg);
     } catch (error) {
-      console.log('Error marking workout complete:', error);
+      
     }
   };
 

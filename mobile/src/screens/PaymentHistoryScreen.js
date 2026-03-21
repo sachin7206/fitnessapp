@@ -23,7 +23,7 @@ const PaymentHistoryScreen = ({ navigation }) => {
       const response = await paymentService.getPaymentHistory();
       setPayments(response.data || []);
     } catch (error) {
-      console.log('Failed to load payment history:', error);
+      
     } finally {
       setLoading(false);
     }

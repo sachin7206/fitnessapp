@@ -25,7 +25,6 @@ const LoginScreen = ({ navigation }) => {
   const { isLoading, error } = useSelector((state) => state.auth);
 
   const handleLogin = async () => {
-    console.log('handleLogin called', { email, password: password ? '***' : '' });
     setLoginError('');
 
     if (!email || !password) {
@@ -36,12 +35,9 @@ const LoginScreen = ({ navigation }) => {
     }
 
     try {
-      console.log('Dispatching login...');
       await dispatch(login({ email, password })).unwrap();
-      console.log('Login succeeded');
       // Navigation is handled automatically after successful login
     } catch (err) {
-      console.log('Login error:', err);
       const msg = err || 'Invalid credentials';
       setLoginError(typeof msg === 'string' ? msg : 'Login failed');
       if (Platform.OS !== 'web') Alert.alert('Login Failed', msg);
@@ -104,7 +100,6 @@ const LoginScreen = ({ navigation }) => {
               pressed && { opacity: 0.7 },
             ]}
             onPress={() => {
-              console.log('Login button pressed');
               handleLogin();
             }}
             disabled={isLoading}

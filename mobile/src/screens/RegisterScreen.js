@@ -135,7 +135,6 @@ const RegisterScreen = ({ navigation }) => {
   const [validationError, setValidationError] = useState('');
 
   const handleRegister = async () => {
-    console.log('handleRegister called', formData);
     setValidationError('');
 
     // Validation
@@ -169,13 +168,10 @@ const RegisterScreen = ({ navigation }) => {
     }
 
     try {
-      console.log('Dispatching register...');
       const { confirmPassword, ...registrationData } = formData;
       await dispatch(register(registrationData)).unwrap();
-      console.log('Register succeeded');
       // Navigation handled automatically after registration
     } catch (err) {
-      console.log('Register error:', err);
       const errorMessage = err || 'Something went wrong';
       // Check if the error is about existing email
       if (typeof errorMessage === 'string' && (errorMessage.toLowerCase().includes('already registered') || errorMessage.toLowerCase().includes('already exist'))) {
@@ -350,7 +346,6 @@ const RegisterScreen = ({ navigation }) => {
               pressed && { opacity: 0.7 },
             ]}
             onPress={() => {
-              console.log('Sign Up button pressed');
               handleRegister();
             }}
             disabled={isLoading}

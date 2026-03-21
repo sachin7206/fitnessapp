@@ -29,7 +29,7 @@ const getApiUrl = () => {
           window.location.hostname !== 'localhost' &&
           window.location.hostname !== '127.0.0.1') {
         // We're deployed but no API URL was set - show error
-        console.warn('No EXPO_PUBLIC_API_URL set for production web deployment');
+        
         // Fall through to localhost which will fail gracefully
       }
       return `http://localhost:${BACKEND_PORT}/api`;
@@ -43,13 +43,13 @@ const getApiUrl = () => {
         return `http://${expoIp}:${BACKEND_PORT}/api`;
       }
     } catch (e) {
-      console.log('Could not get Expo IP, using fallback');
+      
     }
 
     // Fallback to hardcoded IP
     return `http://${BACKEND_IP}:${BACKEND_PORT}/api`;
   } catch (e) {
-    console.warn('getApiUrl error, using fallback:', e);
+    
     return `http://localhost:${BACKEND_PORT}/api`;
   }
 };

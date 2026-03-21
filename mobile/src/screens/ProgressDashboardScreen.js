@@ -24,7 +24,7 @@ const ProgressDashboardScreen = ({ navigation }) => {
     try {
       const [s, t] = await Promise.all([progressService.getSummary('monthly'), progressService.getTrends(30)]);
       setSummary(s); setTrends(t);
-    } catch (e) { console.log('Failed to load progress:', e.message); }
+    } catch (e) {  }
     setLoading(false); setRefreshing(false);
   }, []);
 

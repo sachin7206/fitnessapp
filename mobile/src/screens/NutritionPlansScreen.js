@@ -80,7 +80,7 @@ const NutritionPlansScreen = ({ navigation }) => {
       // Profile check will only happen inside the Subscribe (AI) flow
       navigation.replace('NutritionChoice');
     } catch (error) {
-      console.log('No active plan, showing choice screen...');
+      
       navigation.replace('NutritionChoice');
     }
   };
@@ -90,7 +90,7 @@ const NutritionPlansScreen = ({ navigation }) => {
       const plansData = await nutritionService.getPlans(filters);
       setPlans(plansData);
     } catch (error) {
-      console.error('Error fetching plans:', error);
+      
       showAlert('Error', 'Failed to load nutrition plans');
     }
   }, [filters]);

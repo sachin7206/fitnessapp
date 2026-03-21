@@ -79,7 +79,7 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
   const fetchActivePlan = async () => {
     try {
       const response = await nutritionService.getActivePlan();
-      console.log('Fetched active plan:', response);
+      
 
       if (response && response.nutritionPlan) {
         setActivePlan(response);
@@ -109,7 +109,7 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
         navigation.replace('NutritionPlans');
       }
     } catch (error) {
-      console.log('Error fetching plan:', error);
+      
       navigation.replace('NutritionPlans');
     } finally {
       setLoading(false);

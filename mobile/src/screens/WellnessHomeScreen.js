@@ -49,7 +49,7 @@ const WellnessHomeScreen = ({ navigation }) => {
           setCompletedToday(completed);
         }
       } catch (e) { /* completions endpoint may not exist yet */ }
-    } catch (e) { console.log('Failed:', e.message); }
+    } catch (e) {  }
     setLoading(false); setRefreshing(false);
   }, []);
 

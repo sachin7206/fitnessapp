@@ -73,7 +73,7 @@ const GeneratedPlanViewScreen = ({ navigation, route }) => {
       const generatedPlan = await nutritionService.generatePersonalizedPlan(request);
       setPlan(generatedPlan);
     } catch (err) {
-      console.error('Error generating plan:', err);
+      
       setError(err.response?.data?.message || 'Failed to generate nutrition plan');
     } finally {
       setLoading(false);

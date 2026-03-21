@@ -226,7 +226,7 @@ const FoodPreferencesScreen = ({ navigation, route }) => {
         if (localData) {
           const parsed = JSON.parse(localData);
           restoreFromSaved(parsed);
-          console.log('Food preferences restored from local storage');
+          
         }
 
         // 2. Also try backend (may have newer data from another device)
@@ -236,13 +236,13 @@ const FoodPreferencesScreen = ({ navigation, route }) => {
             restoreFromSaved(backendData);
             // Update local cache with backend data
             await AsyncStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(backendData));
-            console.log('Food preferences synced from backend');
+            
           }
         } catch (apiErr) {
-          console.log('Backend food preferences not available, using local:', apiErr.message);
+          
         }
       } catch (error) {
-        console.log('Error loading food preferences:', error.message);
+        
       } finally {
         setInitialLoading(false);
       }
@@ -439,17 +439,17 @@ const FoodPreferencesScreen = ({ navigation, route }) => {
     // Save to local storage (guaranteed to persist)
     try {
       await AsyncStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(prefsPayload));
-      console.log('Food preferences saved to local storage');
+      
     } catch (error) {
-      console.log('Failed to save to local storage:', error.message);
+      
     }
 
     // Also save to backend (for cross-device sync)
     try {
       await nutritionService.saveFoodPreferences(prefsPayload);
-      console.log('Food preferences saved to backend');
+      
     } catch (error) {
-      console.log('Failed to save food preferences to backend:', error.message);
+      
     }
 
     navigation.navigate('GeneratedPlanView', {

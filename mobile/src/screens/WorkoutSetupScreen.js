@@ -197,7 +197,7 @@ const WorkoutSetupScreen = ({ navigation }) => {
           // Update local user state
           dispatch(updateUser({ ...user, profile: { ...user?.profile, gender } }));
         } catch (e) {
-          console.log('Failed to save gender to profile:', e.message);
+          
         }
       }
 

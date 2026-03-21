@@ -25,7 +25,7 @@ const WeeklyReportScreen = ({ navigation }) => {
       setPlateauData(plateauRes);
       setAchievements(achievementsRes);
     } catch (error) {
-      console.log('Failed to load report:', error);
+      
     }
     setLoading(false);
   };
