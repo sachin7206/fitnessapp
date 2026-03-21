@@ -62,6 +62,7 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
 
   const [saving, setSaving] = useState(false);
   const [restDay, setRestDay] = useState('');
+  const [validationErrors, setValidationErrors] = useState({});
 
   // Only load existing plan if user is explicitly editing (not creating new)
   useEffect(() => {
@@ -75,6 +76,10 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
       if (day === restDay) setRestDay('');
       return updated;
     });
+    // Clear days validation error when a day is toggled
+    if (validationErrors.days) {
+      setValidationErrors(prev => ({ ...prev, days: null }));
+    }
   };
 
   const toggleRestDay = (day) => {
@@ -231,6 +236,11 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
       return { ...prev, [activeDay]: dayExercises };
     });
 
+    // Clear exercises validation error when an exercise is added
+    if (validationErrors.exercises) {
+      setValidationErrors(prev => ({ ...prev, exercises: null }));
+    }
+
     setShowAddExercise(false);
   };
 
@@ -324,39 +334,38 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
   };
 
   const handleSavePlan = async () => {
+    // Clear previous errors
+    setValidationErrors({});
+    const errors = {};
+
     // Validate plan name
     const trimmedName = planName.trim();
     if (!trimmedName) {
-      const msg = 'Please enter a plan name';
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Info', msg);
-      return;
-    }
-    if (trimmedName.length > 100) {
-      const msg = 'Plan name must be 100 characters or less';
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
-      return;
+      errors.planName = 'Please enter a plan name';
+    } else if (trimmedName.length > 100) {
+      errors.planName = 'Plan name must be 100 characters or less';
     }
 
     // Validate at least one day is selected
     if (selectedDays.length === 0) {
-      const msg = 'Please select at least one workout day';
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('No Days Selected', msg);
-      return;
+      errors.days = 'Please select at least one workout day';
     }
 
     // Validate every selected workout day has at least one exercise
     const emptyDays = selectedDays.filter(day => !(exercises[day] && exercises[day].length > 0));
     if (emptyDays.length > 0) {
       const dayNames = emptyDays.map(d => formatLabel(d)).join(', ');
-      const msg = `Please add at least one exercise for each workout day.\n\nMissing exercises for: ${dayNames}`;
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Incomplete Plan', msg);
-      return;
+      errors.exercises = `Missing exercises for: ${dayNames}`;
     }
 
     const totalExercises = Object.values(exercises).reduce((sum, dayExs) => sum + dayExs.length, 0);
-    if (totalExercises === 0) {
-      const msg = 'Please add at least one exercise to your plan';
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Empty Plan', msg);
+    if (totalExercises === 0 && !errors.exercises) {
+      errors.exercises = 'Please add at least one exercise to your plan';
+    }
+
+    // If there are any errors, set them and return
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
       return;
     }
 
@@ -428,16 +437,27 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
         {/* Plan Name */}
         <Text style={styles.sectionTitle}>📝 Plan Name</Text>
         <TextInput
-          style={styles.nameInput}
+          style={[styles.nameInput, validationErrors.planName && styles.inputError]}
           value={planName}
-          onChangeText={setPlanName}
+          onChangeText={(text) => {
+            setPlanName(text);
+            if (validationErrors.planName) {
+              setValidationErrors(prev => ({ ...prev, planName: null }));
+            }
+          }}
           placeholder="My Custom Workout"
           maxLength={100}
           placeholderTextColor={colors.text.light}
         />
+        {validationErrors.planName && (
+          <Text style={styles.errorText}>⚠️ {validationErrors.planName}</Text>
+        )}
 
         {/* Day Selection */}
         <Text style={styles.sectionTitle}>📅 Workout Days</Text>
+        {validationErrors.days && (
+          <Text style={styles.errorText}>⚠️ {validationErrors.days}</Text>
+        )}
         <View style={styles.dayRow}>
           {DAYS.map(day => (
             <TouchableOpacity
@@ -509,6 +529,9 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
 
         {/* Active Day Tabs */}
         <Text style={styles.sectionTitle}>🏋️ Exercises</Text>
+        {validationErrors.exercises && (
+          <Text style={styles.errorText}>⚠️ {validationErrors.exercises}</Text>
+        )}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dayTabs}>
           {selectedDays.sort((a, b) => DAYS.indexOf(a) - DAYS.indexOf(b)).map(day => (
             <TouchableOpacity
@@ -969,6 +992,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, alignItems: 'center',
   },
   modalSaveText: { ...typography.body, color: colors.text.inverse, fontWeight: '600' },
+  errorText: {
+    ...typography.bodySmall,
+    color: '#dc3545',
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+    fontWeight: '500',
+  },
+  inputError: {
+    borderColor: '#dc3545',
+    borderWidth: 1.5,
+  },
 });
 
 export default FreeWorkoutBuilderScreen;
