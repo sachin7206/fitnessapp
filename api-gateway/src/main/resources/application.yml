@@ -6,6 +6,21 @@ spring:
     name: api-gateway
   cloud:
     gateway:
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+              - PATCH
+            allowedHeaders: "*"
+            exposedHeaders: "Authorization"
+            allowCredentials: true
+            maxAge: 3600
       httpclient:
         connect-timeout: 5000
         response-timeout: 30s

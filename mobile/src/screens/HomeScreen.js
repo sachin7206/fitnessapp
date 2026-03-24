@@ -357,12 +357,6 @@ const HomeScreen = ({ navigation }) => {
       onPress: () => navigation.navigate('GroceryList'),
     },
     {
-      title: 'Weekly Report',
-      description: 'AI progress insights',
-      icon: '📊',
-      onPress: () => navigation.navigate('WeeklyReport'),
-    },
-    {
       title: 'Workout Feedback',
       description: 'Rate & optimize workouts',
       icon: '⚡',
