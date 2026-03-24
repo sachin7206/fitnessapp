@@ -30,6 +30,7 @@ import {
   loadTrackingLocal,
   getLocalDateString,
 } from '../store/slices/mealTrackingSlice';
+import MacroPieChart from './components/MacroPieChart';
 
 const MyNutritionPlanScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
@@ -536,36 +537,50 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
 
         {/* Replacement macros */}
         {isReplaced && (
-          <View style={styles.replacedMacrosContainer}>
-            <View style={styles.macroItem}>
-              <Text style={styles.macroValue}>{tracked.proteinGrams?.toFixed(0) || 0}g</Text>
-              <Text style={styles.macroLabel}>Protein</Text>
+          <View>
+            <View style={styles.replacedMacrosContainer}>
+              <View style={styles.macroItem}>
+                <Text style={styles.macroValue}>{tracked.proteinGrams?.toFixed(0) || 0}g</Text>
+                <Text style={styles.macroLabel}>Protein</Text>
+              </View>
+              <View style={styles.macroItem}>
+                <Text style={styles.macroValue}>{tracked.carbsGrams?.toFixed(0) || 0}g</Text>
+                <Text style={styles.macroLabel}>Carbs</Text>
+              </View>
+              <View style={styles.macroItem}>
+                <Text style={styles.macroValue}>{tracked.fatGrams?.toFixed(0) || 0}g</Text>
+                <Text style={styles.macroLabel}>Fat</Text>
+              </View>
             </View>
-            <View style={styles.macroItem}>
-              <Text style={styles.macroValue}>{tracked.carbsGrams?.toFixed(0) || 0}g</Text>
-              <Text style={styles.macroLabel}>Carbs</Text>
-            </View>
-            <View style={styles.macroItem}>
-              <Text style={styles.macroValue}>{tracked.fatGrams?.toFixed(0) || 0}g</Text>
-              <Text style={styles.macroLabel}>Fat</Text>
-            </View>
+            <MacroPieChart
+              protein={tracked.proteinGrams || 0}
+              carbs={tracked.carbsGrams || 0}
+              fat={tracked.fatGrams || 0}
+            />
           </View>
         )}
 
         {!isReplaced && (
-          <View style={styles.macrosRow}>
-            <View style={styles.macroItem}>
-              <Text style={styles.macroValue}>{meal.proteinGrams?.toFixed(0) || 0}g</Text>
-              <Text style={styles.macroLabel}>Protein</Text>
+          <View>
+            <View style={styles.macrosRow}>
+              <View style={styles.macroItem}>
+                <Text style={styles.macroValue}>{meal.proteinGrams?.toFixed(0) || 0}g</Text>
+                <Text style={styles.macroLabel}>Protein</Text>
+              </View>
+              <View style={styles.macroItem}>
+                <Text style={styles.macroValue}>{meal.carbsGrams?.toFixed(0) || 0}g</Text>
+                <Text style={styles.macroLabel}>Carbs</Text>
+              </View>
+              <View style={styles.macroItem}>
+                <Text style={styles.macroValue}>{meal.fatGrams?.toFixed(0) || 0}g</Text>
+                <Text style={styles.macroLabel}>Fat</Text>
+              </View>
             </View>
-            <View style={styles.macroItem}>
-              <Text style={styles.macroValue}>{meal.carbsGrams?.toFixed(0) || 0}g</Text>
-              <Text style={styles.macroLabel}>Carbs</Text>
-            </View>
-            <View style={styles.macroItem}>
-              <Text style={styles.macroValue}>{meal.fatGrams?.toFixed(0) || 0}g</Text>
-              <Text style={styles.macroLabel}>Fat</Text>
-            </View>
+            <MacroPieChart
+              protein={meal.proteinGrams || 0}
+              carbs={meal.carbsGrams || 0}
+              fat={meal.fatGrams || 0}
+            />
           </View>
         )}
 
@@ -754,19 +769,26 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
                   </View>
                 </View>
                 {extraMeal.foodItems && extraMeal.foodItems.length > 0 && (
-                  <View style={styles.replacedMacrosContainer}>
-                    <View style={styles.macroItem}>
-                      <Text style={styles.macroValue}>{extraMeal.foodItems[0]?.proteinGrams?.toFixed(0) || 0}g</Text>
-                      <Text style={styles.macroLabel}>Protein</Text>
+                  <View>
+                    <View style={styles.replacedMacrosContainer}>
+                      <View style={styles.macroItem}>
+                        <Text style={styles.macroValue}>{extraMeal.foodItems[0]?.proteinGrams?.toFixed(0) || 0}g</Text>
+                        <Text style={styles.macroLabel}>Protein</Text>
+                      </View>
+                      <View style={styles.macroItem}>
+                        <Text style={styles.macroValue}>{extraMeal.foodItems[0]?.carbsGrams?.toFixed(0) || 0}g</Text>
+                        <Text style={styles.macroLabel}>Carbs</Text>
+                      </View>
+                      <View style={styles.macroItem}>
+                        <Text style={styles.macroValue}>{extraMeal.foodItems[0]?.fatGrams?.toFixed(0) || 0}g</Text>
+                        <Text style={styles.macroLabel}>Fat</Text>
+                      </View>
                     </View>
-                    <View style={styles.macroItem}>
-                      <Text style={styles.macroValue}>{extraMeal.foodItems[0]?.carbsGrams?.toFixed(0) || 0}g</Text>
-                      <Text style={styles.macroLabel}>Carbs</Text>
-                    </View>
-                    <View style={styles.macroItem}>
-                      <Text style={styles.macroValue}>{extraMeal.foodItems[0]?.fatGrams?.toFixed(0) || 0}g</Text>
-                      <Text style={styles.macroLabel}>Fat</Text>
-                    </View>
+                    <MacroPieChart
+                      protein={extraMeal.foodItems[0]?.proteinGrams || 0}
+                      carbs={extraMeal.foodItems[0]?.carbsGrams || 0}
+                      fat={extraMeal.foodItems[0]?.fatGrams || 0}
+                    />
                   </View>
                 )}
                 <TouchableOpacity
