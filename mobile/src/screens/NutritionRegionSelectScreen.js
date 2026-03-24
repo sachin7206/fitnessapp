@@ -42,7 +42,7 @@ const NutritionRegionSelectScreen = ({ navigation }) => {
       icon: '🫓',
       description: 'Rotis, Parathas, Dal, Paneer dishes',
       states: 'Punjab, Delhi, UP, Rajasthan, Haryana',
-      color: '#FF6B6B',
+      color: '#374151',
     },
     {
       value: 'SOUTH',
@@ -50,7 +50,7 @@ const NutritionRegionSelectScreen = ({ navigation }) => {
       icon: '🥘',
       description: 'Idli, Dosa, Sambar, Rice-based meals',
       states: 'Tamil Nadu, Kerala, Karnataka, Andhra',
-      color: '#4ECDC4',
+      color: '#6B7280',
     },
     {
       value: 'EAST',
@@ -58,7 +58,7 @@ const NutritionRegionSelectScreen = ({ navigation }) => {
       icon: '🍚',
       description: 'Bengali cuisine, Fish curries, Sweets',
       states: 'West Bengal, Odisha, Bihar, Jharkhand',
-      color: '#45B7D1',
+      color: '#6B7280',
     },
     {
       value: 'WEST',
@@ -66,7 +66,7 @@ const NutritionRegionSelectScreen = ({ navigation }) => {
       icon: '🥙',
       description: 'Gujarati, Maharashtrian, Dhokla, Vada Pav',
       states: 'Gujarat, Maharashtra, Goa',
-      color: '#96CEB4',
+      color: '#9CA3AF',
     },
     {
       value: 'PAN_INDIA',
@@ -74,7 +74,7 @@ const NutritionRegionSelectScreen = ({ navigation }) => {
       icon: '🇮🇳',
       description: 'Best dishes from all regions',
       states: 'Variety from across India',
-      color: '#DDA0DD',
+      color: '#D1D5DB',
     },
   ];
 

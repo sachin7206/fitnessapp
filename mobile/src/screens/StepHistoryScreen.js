@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     zIndex: 10, alignItems: 'center', minWidth: 80,
   },
   tooltipSteps: { ...typography.caption, color: '#FFF', fontWeight: '700', fontSize: 10 },
-  tooltipCal: { ...typography.caption, color: '#FFD700', fontSize: 9 },
+  tooltipCal: { ...typography.caption, color: '#9CA3AF', fontSize: 9 },
 
   // Week summary
   weekSummary: {

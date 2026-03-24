@@ -13,9 +13,9 @@ const WorkoutFeedbackScreen = ({ navigation }) => {
   const [showAdjust, setShowAdjust] = useState(false);
 
   const difficulties = [
-    { value: 'TOO_EASY', label: '😎 Too Easy', color: '#4CAF50' },
-    { value: 'JUST_RIGHT', label: '💪 Just Right', color: '#2196F3' },
-    { value: 'TOO_HARD', label: '😰 Too Hard', color: '#F44336' },
+    { value: 'TOO_EASY', label: '😎 Too Easy', color: '#22C55E' },
+    { value: 'JUST_RIGHT', label: '💪 Just Right', color: '#374151' },
+    { value: 'TOO_HARD', label: '😰 Too Hard', color: '#EF4444' },
   ];
 
   const submitFeedback = async () => {

@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   criteriaMet: {
-    color: '#2E7D32',
+    color: '#166534',
   },
   matchText: {
     ...typography.bodySmall,
@@ -456,10 +456,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   matchSuccess: {
-    color: '#2E7D32',
+    color: '#166534',
   },
   matchError: {
-    color: '#D32F2F',
+    color: '#EF4444',
   },
   customPickerButton: {
     backgroundColor: colors.surface,
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   validationError: {
-    color: '#D32F2F',
+    color: '#EF4444',
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',

@@ -651,10 +651,10 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
             const isMissing = count === 0;
             return (
               <View key={day} style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, isMissing && { color: '#D32F2F' }]}>
+                <Text style={[styles.summaryLabel, isMissing && { color: '#EF4444' }]}>
                   {isMissing ? '⚠️ ' : '✅ '}{formatLabel(day)}
                 </Text>
-                <Text style={[styles.summaryValue, isMissing && { color: '#D32F2F' }]}>
+                <Text style={[styles.summaryValue, isMissing && { color: '#EF4444' }]}>
                   {count === 0 ? 'No exercises!' : `${count} exercises`}
                 </Text>
               </View>
@@ -994,13 +994,13 @@ const styles = StyleSheet.create({
   modalSaveText: { ...typography.body, color: colors.text.inverse, fontWeight: '600' },
   errorText: {
     ...typography.bodySmall,
-    color: '#dc3545',
+    color: '#EF4444',
     marginTop: spacing.xs,
     marginBottom: spacing.sm,
     fontWeight: '500',
   },
   inputError: {
-    borderColor: '#dc3545',
+    borderColor: '#EF4444',
     borderWidth: 1.5,
   },
 });

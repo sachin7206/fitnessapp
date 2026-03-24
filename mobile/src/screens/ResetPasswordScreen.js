@@ -307,17 +307,17 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
   },
   criteriaTextMet: {
-    color: '#2E7D32',
+    color: '#166534',
   },
   matchText: {
     ...typography.bodySmall,
     marginTop: 4,
   },
   matchSuccess: {
-    color: '#2E7D32',
+    color: '#166534',
   },
   matchError: {
-    color: '#D32F2F',
+    color: '#EF4444',
   },
   button: {
     backgroundColor: colors.primary,

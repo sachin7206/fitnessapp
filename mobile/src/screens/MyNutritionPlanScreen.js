@@ -1170,12 +1170,12 @@ const styles = StyleSheet.create({
   },
   promptTextReplaced: {
     ...typography.bodySmall,
-    color: '#B8860B',
+    color: '#6B7280',
     fontWeight: '600',
     flex: 1,
   },
   mealNameReplaced: {
-    color: '#B8860B',
+    color: '#6B7280',
     fontWeight: '700',
   },
   replacedOriginal: {
@@ -1208,7 +1208,7 @@ const styles = StyleSheet.create({
   },
   ateSomethingElseText: {
     ...typography.bodySmall,
-    color: '#B8860B',
+    color: '#6B7280',
     fontWeight: '600',
     flex: 1,
   },
@@ -1252,7 +1252,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'center',
   },
   modalInputError: {
-    borderColor: '#E53935',
+    borderColor: '#EF4444',
     borderWidth: 1.5,
   },
   fieldLabel: {
@@ -1264,7 +1264,7 @@ const styles = StyleSheet.create({
   },
   fieldError: {
     ...typography.caption,
-    color: '#E53935',
+    color: '#EF4444',
     marginBottom: spacing.xs,
     marginTop: 2,
   },

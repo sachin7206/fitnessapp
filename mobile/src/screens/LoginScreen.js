@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   loginError: {
-    color: '#D32F2F',
+    color: '#EF4444',
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',

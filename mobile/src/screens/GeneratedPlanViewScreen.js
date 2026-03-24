@@ -194,19 +194,19 @@ const GeneratedPlanViewScreen = ({ navigation, route }) => {
           <Text style={styles.mealTotalsTitle}>Meal Total</Text>
           <View style={styles.mealTotalsRow}>
             <View style={styles.mealTotalItem}>
-              <Text style={[styles.mealTotalValue, { color: '#FF6B6B' }]}>
+              <Text style={[styles.mealTotalValue, { color: '#374151' }]}>
                 {Math.round(mealTotals.protein)}g
               </Text>
               <Text style={styles.mealTotalLabel}>Protein</Text>
             </View>
             <View style={styles.mealTotalItem}>
-              <Text style={[styles.mealTotalValue, { color: '#4ECDC4' }]}>
+              <Text style={[styles.mealTotalValue, { color: '#6B7280' }]}>
                 {Math.round(mealTotals.carbs)}g
               </Text>
               <Text style={styles.mealTotalLabel}>Carbs</Text>
             </View>
             <View style={styles.mealTotalItem}>
-              <Text style={[styles.mealTotalValue, { color: '#FFE66D' }]}>
+              <Text style={[styles.mealTotalValue, { color: '#9CA3AF' }]}>
                 {Math.round(mealTotals.fat)}g
               </Text>
               <Text style={styles.mealTotalLabel}>Fat</Text>
@@ -345,9 +345,9 @@ const GeneratedPlanViewScreen = ({ navigation, route }) => {
           <View style={styles.macrosContainer}>
             <Text style={styles.macrosTitle}>Daily Macros Target</Text>
             <View style={styles.macrosRow}>
-              {renderMacroCircle(plan.proteinGrams, 'Protein', '#FF6B6B')}
-              {renderMacroCircle(plan.carbsGrams, 'Carbs', '#4ECDC4')}
-              {renderMacroCircle(plan.fatGrams, 'Fat', '#FFE66D')}
+              {renderMacroCircle(plan.proteinGrams, 'Protein', '#374151')}
+              {renderMacroCircle(plan.carbsGrams, 'Carbs', '#6B7280')}
+              {renderMacroCircle(plan.fatGrams, 'Fat', '#9CA3AF')}
             </View>
           </View>
         </View>
@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs,
   },
   macroTagCarbs: {
-    backgroundColor: '#4ECDC420',
+    backgroundColor: '#6B728020',
   },
   macroTagFat: {
     backgroundColor: '#F3F4F640',

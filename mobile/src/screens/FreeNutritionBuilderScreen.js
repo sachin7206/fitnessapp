@@ -356,15 +356,15 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
             <Text style={styles.mealTotalsTitle}>Meal Total</Text>
             <View style={styles.mealTotalsRow}>
               <View style={styles.mealTotalItem}>
-                <Text style={[styles.mealTotalValue, { color: '#FF6B6B' }]}>{Math.round(mealTotals.protein)}g</Text>
+                <Text style={[styles.mealTotalValue, { color: '#374151' }]}>{Math.round(mealTotals.protein)}g</Text>
                 <Text style={styles.mealTotalLabel}>Protein</Text>
               </View>
               <View style={styles.mealTotalItem}>
-                <Text style={[styles.mealTotalValue, { color: '#4ECDC4' }]}>{Math.round(mealTotals.carbs)}g</Text>
+                <Text style={[styles.mealTotalValue, { color: '#6B7280' }]}>{Math.round(mealTotals.carbs)}g</Text>
                 <Text style={styles.mealTotalLabel}>Carbs</Text>
               </View>
               <View style={styles.mealTotalItem}>
-                <Text style={[styles.mealTotalValue, { color: '#FFE66D' }]}>{Math.round(mealTotals.fat)}g</Text>
+                <Text style={[styles.mealTotalValue, { color: '#9CA3AF' }]}>{Math.round(mealTotals.fat)}g</Text>
                 <Text style={styles.mealTotalLabel}>Fat</Text>
               </View>
               <View style={styles.mealTotalItem}>
@@ -413,9 +413,9 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
         <View style={styles.macrosContainer}>
           <Text style={styles.macrosTitle}>Daily Macros Target</Text>
           <View style={styles.macrosRow}>
-            {renderMacroCircle(dailyTotals.protein, 'Protein', '#FF6B6B')}
-            {renderMacroCircle(dailyTotals.carbs, 'Carbs', '#4ECDC4')}
-            {renderMacroCircle(dailyTotals.fat, 'Fat', '#FFE66D')}
+            {renderMacroCircle(dailyTotals.protein, 'Protein', '#374151')}
+            {renderMacroCircle(dailyTotals.carbs, 'Carbs', '#6B7280')}
+            {renderMacroCircle(dailyTotals.fat, 'Fat', '#9CA3AF')}
           </View>
           <View style={styles.totalCaloriesContainer}>
             <Text style={styles.totalCaloriesLabel}>Total Calories</Text>
@@ -500,7 +500,7 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
 
             <View style={styles.macroInputRow}>
               <View style={styles.macroInputGroup}>
-                <Text style={[styles.formLabel, { color: '#FF6B6B' }]}>Protein (g)</Text>
+                <Text style={[styles.formLabel, { color: '#374151' }]}>Protein (g)</Text>
                 <TextInput
                   style={[styles.formInput, styles.macroInput, foodErrors.protein && styles.formInputError]}
                   value={foodForm.protein}
@@ -515,7 +515,7 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
                 )}
               </View>
               <View style={styles.macroInputGroup}>
-                <Text style={[styles.formLabel, { color: '#4ECDC4' }]}>Carbs (g)</Text>
+                <Text style={[styles.formLabel, { color: '#6B7280' }]}>Carbs (g)</Text>
                 <TextInput
                   style={[styles.formInput, styles.macroInput, foodErrors.carbs && styles.formInputError]}
                   value={foodForm.carbs}
@@ -533,7 +533,7 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
 
             <View style={styles.macroInputRow}>
               <View style={styles.macroInputGroup}>
-                <Text style={[styles.formLabel, { color: '#FFE66D' }]}>Fat (g)</Text>
+                <Text style={[styles.formLabel, { color: '#9CA3AF' }]}>Fat (g)</Text>
                 <TextInput
                   style={[styles.formInput, styles.macroInput, foodErrors.fat && styles.formInputError]}
                   value={foodForm.fat}
@@ -636,14 +636,14 @@ const styles = StyleSheet.create({
     padding: spacing.md, marginBottom: spacing.md, ...shadows.sm,
   },
   mealCardError: {
-    borderWidth: 2, borderColor: '#FF6B6B',
+    borderWidth: 2, borderColor: '#374151',
   },
   inlineError: {
     backgroundColor: '#FEF2F215', borderRadius: borderRadius.sm,
     padding: spacing.sm, marginBottom: spacing.sm,
   },
   inlineErrorText: {
-    ...typography.bodySmall, color: '#FF6B6B', fontWeight: '600',
+    ...typography.bodySmall, color: '#374151', fontWeight: '600',
   },
   mealHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
   mealIcon: { fontSize: 28, marginRight: spacing.sm },
@@ -669,7 +669,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F220', borderRadius: borderRadius.sm,
     paddingHorizontal: spacing.xs, paddingVertical: 2,
   },
-  macroTagCarbs: { backgroundColor: '#4ECDC420' },
+  macroTagCarbs: { backgroundColor: '#6B728020' },
   macroTagFat: { backgroundColor: '#F3F4F620' },
   macroTagCal: { backgroundColor: colors.primary + '20' },
   macroTagText: { ...typography.caption, fontWeight: '600', color: colors.text.primary },
@@ -677,7 +677,7 @@ const styles = StyleSheet.create({
     marginLeft: 'auto', backgroundColor: '#FEF2F220', borderRadius: 12,
     width: 24, height: 24, justifyContent: 'center', alignItems: 'center',
   },
-  removeBtnText: { color: '#FF6B6B', fontWeight: '700', fontSize: 12 },
+  removeBtnText: { color: '#374151', fontWeight: '700', fontSize: 12 },
 
   mealTotalsContainer: {
     marginTop: spacing.sm, paddingTop: spacing.sm,
@@ -727,10 +727,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   formInputError: {
-    borderColor: '#FF6B6B', borderWidth: 1.5,
+    borderColor: '#374151', borderWidth: 1.5,
   },
   fieldError: {
-    ...typography.caption, color: '#FF6B6B', marginTop: 2, fontWeight: '500',
+    ...typography.caption, color: '#374151', marginTop: 2, fontWeight: '500',
   },
   macroInputRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   macroInputGroup: { flex: 1 },

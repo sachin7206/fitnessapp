@@ -112,7 +112,7 @@ const ProgressDashboardScreen = ({ navigation }) => {
         <View style={styles.actionsRow}>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.primary }]} onPress={() => setShowWeightForm(true)}><Text style={styles.actionBtnText}>⚖️ Log Weight</Text></TouchableOpacity>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.success }]} onPress={() => setShowMeasForm(true)}><Text style={styles.actionBtnText}>📏 Measurements</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.info || '#3b82f6' }]} onPress={() => setShowGoalForm(true)}><Text style={styles.actionBtnText}>🎯 Set Goal</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.info || '#374151' }]} onPress={() => setShowGoalForm(true)}><Text style={styles.actionBtnText}>🎯 Set Goal</Text></TouchableOpacity>
         </View>
 
         {/* Weight Form */}

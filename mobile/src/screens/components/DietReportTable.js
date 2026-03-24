@@ -32,7 +32,7 @@ const inlineVariance = (val, unit) => {
   if (unit === 'g P') {
     return { text, color: val >= 0 ? '#22C55E' : '#EF4444' };
   }
-  return { text, color: val > 0 ? '#F4A261' : '#22C55E' };
+  return { text, color: val > 0 ? '#9CA3AF' : '#22C55E' };
 };
 
 const DietReportTable = ({ report }) => {

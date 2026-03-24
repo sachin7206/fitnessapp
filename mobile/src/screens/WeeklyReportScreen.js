@@ -31,9 +31,9 @@ const WeeklyReportScreen = ({ navigation }) => {
   };
 
   const getScoreColor = (score) => {
-    if (score >= 80) return '#4CAF50';
+    if (score >= 80) return '#22C55E';
     if (score >= 60) return '#FF9800';
-    return '#F44336';
+    return '#EF4444';
   };
 
   if (loading) {
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   scoreValue: { fontSize: 28, fontWeight: 'bold', color: '#fff' },
   scoreLabel: { fontSize: 12, color: 'rgba(255,255,255,0.8)' },
   scoreSummary: { fontSize: 15, textAlign: 'center', color: colors.text.secondary, marginTop: spacing.md, lineHeight: 22 },
-  aiTag: { fontSize: 11, color: colors.primary, marginTop: spacing.sm, backgroundColor: '#E8EAF6', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  aiTag: { fontSize: 11, color: colors.primary, marginTop: spacing.sm, backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
   section: { margin: spacing.lg, marginTop: 0, backgroundColor: '#fff', borderRadius: borderRadius.md, padding: spacing.lg, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
   sectionTitle: { fontSize: 16, fontWeight: 'bold', color: colors.text.primary, marginBottom: spacing.md },
   listItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.sm },

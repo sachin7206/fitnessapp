@@ -208,9 +208,9 @@ const styles = StyleSheet.create({
   statLabel: { ...typography.caption, color: colors.text.secondary },
   cardioSummary: {
     backgroundColor: '#FEF2F2', borderRadius: borderRadius.md, padding: spacing.md,
-    marginBottom: spacing.lg, borderLeftWidth: 4, borderLeftColor: '#FF6B6B',
+    marginBottom: spacing.lg, borderLeftWidth: 4, borderLeftColor: '#374151',
   },
-  cardioTitle: { ...typography.body, fontWeight: '700', color: '#FF6B6B', marginBottom: 4 },
+  cardioTitle: { ...typography.body, fontWeight: '700', color: '#374151', marginBottom: 4 },
   cardioDetail: { ...typography.bodySmall, color: colors.text.secondary },
   sectionTitle: { ...typography.h3, color: colors.text.primary, marginBottom: spacing.md },
   dayCard: {
