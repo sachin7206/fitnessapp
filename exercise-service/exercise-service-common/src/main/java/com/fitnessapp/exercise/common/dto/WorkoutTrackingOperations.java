@@ -6,6 +6,7 @@ public interface WorkoutTrackingOperations {
     UserWorkoutPlanDTO getActiveWorkoutPlan(Long userId);
     UserWorkoutPlanDTO assignWorkoutPlan(Long userId, Long planId);
     UserWorkoutPlanDTO markWorkoutComplete(Long userId);
+    UserWorkoutPlanDTO markWorkoutUncomplete(Long userId);
     Integer getWorkoutCount(Long userId);
     void cancelPlan(Long userId);
 

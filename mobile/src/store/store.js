@@ -4,6 +4,7 @@ import userReducer from './slices/userSlice';
 import mealTrackingReducer from './slices/mealTrackingSlice';
 import workoutTrackingReducer from './slices/workoutTrackingSlice';
 import subscriptionReducer from './slices/subscriptionSlice';
+import reportReducer from './slices/reportSlice';
 
 export const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ export const store = configureStore({
     mealTracking: mealTrackingReducer,
     workoutTracking: workoutTrackingReducer,
     subscription: subscriptionReducer,
+    report: reportReducer,
   },
 });
 

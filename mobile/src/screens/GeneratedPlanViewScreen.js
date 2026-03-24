@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   macroTag: {
-    backgroundColor: '#FF6B6B20',
+    backgroundColor: '#FEF2F220',
     paddingHorizontal: spacing.xs,
     paddingVertical: 2,
     borderRadius: borderRadius.xs,
@@ -598,7 +598,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4ECDC420',
   },
   macroTagFat: {
-    backgroundColor: '#FFE66D40',
+    backgroundColor: '#F3F4F640',
   },
   macroTagText: {
     ...typography.caption,

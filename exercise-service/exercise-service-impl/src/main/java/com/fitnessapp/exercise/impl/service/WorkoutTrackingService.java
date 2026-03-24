@@ -204,6 +204,28 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
     }
 
     @Override
+    @Transactional
+    public UserWorkoutPlanDTO markWorkoutUncomplete(Long userId) {
+        UserWorkoutPlan userPlan = userPlanRepo.findByUserIdAndStatus(userId, "ACTIVE")
+                .orElseThrow(() -> new RuntimeException("No active workout plan"));
+
+        LocalDate today = LocalDate.now();
+
+        // Find and delete today's completion record
+        Optional<WorkoutCompletion> completion = completionRepo.findByUserIdAndCompletionDate(userId, today);
+        if (completion.isPresent()) {
+            completionRepo.delete(completion.get());
+
+            // Decrement plan progress
+            int current = userPlan.getCompletedWorkouts() != null ? userPlan.getCompletedWorkouts() : 0;
+            userPlan.setCompletedWorkouts(Math.max(0, current - 1));
+            userPlanRepo.save(userPlan);
+        }
+
+        return toDTO(userPlan);
+    }
+
+    @Override
     public Integer getWorkoutCount(Long userId) {
         return (int) completionRepo.countByUserIdAndCompletedTrue(userId);
     }

@@ -550,7 +550,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#E0E0E0',
   },
   logoutButton: {
-    backgroundColor: '#FF4444',
+    backgroundColor: '#EF4444',
     borderRadius: borderRadius.md,
     padding: spacing.md,
     alignItems: 'center',

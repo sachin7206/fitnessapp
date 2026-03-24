@@ -1,26 +1,29 @@
-// Theme configuration for the app
+// Theme configuration for the app — Minimal Design
 export const colors = {
-  primary: '#FF6B35', // Vibrant orange - energy and motivation
-  secondary: '#004E89', // Deep blue - trust and stability
-  accent: '#F7B801', // Golden yellow - achievement
-  success: '#06D6A0', // Teal green - health and wellness
-  error: '#EF476F', // Red - alerts
-  warning: '#FFB703', // Amber - caution
+  primary: '#111827',    // Near-black — primary actions & headers
+  secondary: '#374151',  // Dark gray — secondary elements
+  accent: '#111827',     // Same as primary for minimal look
+  success: '#22C55E',    // Green — health/success indicators
+  error: '#EF4444',      // Red — errors & alerts
+  warning: '#F59E0B',    // Amber — warnings
 
   // Neutrals
-  background: '#F8F9FA',
+  background: '#FAFAFA',
   surface: '#FFFFFF',
   text: {
-    primary: '#212529',
-    secondary: '#6C757D',
-    light: '#ADB5BD',
+    primary: '#111827',
+    secondary: '#6B7280',
+    light: '#9CA3AF',
     inverse: '#FFFFFF',
   },
 
-  // Gradients
+  // Border
+  border: '#E5E7EB',
+
+  // Gradients — kept for compatibility, set to flat dark tones
   gradient: {
-    primary: ['#FF6B35', '#F7B801'],
-    secondary: ['#004E89', '#06D6A0'],
+    primary: ['#111827', '#1F2937'],
+    secondary: ['#374151', '#4B5563'],
   },
 };
 
@@ -110,4 +113,5 @@ export default {
   borderRadius,
   shadows,
 };
+
 

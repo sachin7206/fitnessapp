@@ -108,6 +108,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserWorkoutPlanDTO'
+    delete:
+      tags: [Workout]
+      operationId: markUncomplete
+      responses:
+        '200':
+          description: Workout completion reverted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWorkoutPlanDTO'
 
   /workouts/workout-count:
     get:
@@ -568,11 +578,12 @@ components:
     UpdateExerciseRequest:
       type: object
       properties:
-        sets: { type: integer }
-        reps: { type: integer }
-        weight: { type: number, format: double }
-        restTimeSeconds: { type: integer }
-        setDetailsJson: { type: string, description: 'JSON array of per-set details' }
+        sets: { type: integer, minimum: 1, maximum: 50 }
+        reps: { type: integer, minimum: 1, maximum: 500 }
+        weight: { type: number, format: double, minimum: 0, maximum: 1000 }
+        restTimeSeconds: { type: integer, minimum: 0, maximum: 600 }
+        setDetailsJson: { type: string, maxLength: 5000, description: 'JSON array of per-set details' }
+        durationSeconds: { type: integer, minimum: 0, maximum: 86400 }
 
     CustomWorkoutLogDTO:
       type: object

@@ -38,6 +38,10 @@ public class DailyMealTracking {
     private Double proteinGrams;
     private Double carbsGrams;
     private Double fatGrams;
+    private Integer originalCalories;
+    private Double originalProteinGrams;
+    private Double originalCarbsGrams;
+    private Double originalFatGrams;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

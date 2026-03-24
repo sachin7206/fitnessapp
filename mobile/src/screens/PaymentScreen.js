@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     borderRadius: 12, padding: spacing.md, marginBottom: spacing.sm,
     borderWidth: 2, borderColor: '#E9ECEF',
   },
-  methodCardSelected: { borderColor: colors.primary, backgroundColor: '#FFF5F0' },
+  methodCardSelected: { borderColor: colors.primary, backgroundColor: '#F9FAFB' },
   methodIcon: { fontSize: 28, marginRight: spacing.md },
   methodInfo: { flex: 1 },
   methodName: { fontSize: 16, fontWeight: '600', color: colors.text.primary },
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
   autoCheckNote: { fontSize: 13, color: colors.text.secondary, textAlign: 'center', marginTop: spacing.md },
   stepsContainer: {
     marginTop: spacing.lg, paddingVertical: spacing.md, paddingHorizontal: spacing.lg,
-    backgroundColor: '#FFF8E1', borderRadius: 12, width: '100%', borderWidth: 1, borderColor: '#FFE082',
+    backgroundColor: '#FEF3C7', borderRadius: 12, width: '100%', borderWidth: 1, borderColor: '#FDE68A',
   },
   stepsTitle: { fontSize: 15, fontWeight: 'bold', color: colors.text.primary, marginBottom: spacing.sm },
   stepText: { fontSize: 13, color: colors.text.secondary, lineHeight: 22 },

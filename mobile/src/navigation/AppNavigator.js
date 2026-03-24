@@ -40,6 +40,7 @@ import PaymentHistoryScreen from '../screens/PaymentHistoryScreen';
 import RazorpayCheckoutScreen from '../screens/RazorpayCheckoutScreen';
 import NutritionChoiceScreen from '../screens/NutritionChoiceScreen';
 import FreeNutritionBuilderScreen from '../screens/FreeNutritionBuilderScreen';
+import ReportGeneratorScreen from '../screens/ReportGeneratorScreen';
 
 import { colors, spacing } from '../config/theme';
 
@@ -93,7 +94,7 @@ const MainTabs = () => (
       options={{
         tabBarLabel: 'Profile',
         tabBarIcon: ({ color }) => <Text style={{ fontSize: 24 }}>👤</Text>,
-        headerTitle: 'My Profile',
+        headerShown: false,
       }}
     />
   </Tab.Navigator>
@@ -126,6 +127,7 @@ const MainStack = () => (
     <Stack.Screen name="FoodPhotoLog" component={FoodPhotoLogScreen} />
     <Stack.Screen name="GroceryList" component={GroceryListScreen} />
     <Stack.Screen name="WeeklyReport" component={WeeklyReportScreen} />
+    <Stack.Screen name="ReportGenerator" component={ReportGeneratorScreen} />
     <Stack.Screen name="WorkoutFeedback" component={WorkoutFeedbackScreen} />
     <Stack.Screen name="ExerciseProgress" component={ExerciseProgressScreen} />
     <Stack.Screen name="SubscriptionPlans" component={SubscriptionPlansScreen} />

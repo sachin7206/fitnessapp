@@ -6,6 +6,7 @@ import com.fitnessapp.exercise.common.dto.*;
 import com.fitnessapp.exercise.impl.model.CustomWorkoutLog;
 import com.fitnessapp.exercise.impl.model.WorkoutPlan;
 import com.fitnessapp.exercise.impl.repository.CustomWorkoutLogRepository;
+import com.fitnessapp.exercise.impl.repository.WorkoutCompletionRepository;
 import com.fitnessapp.exercise.impl.repository.WorkoutExerciseRepository;
 import com.fitnessapp.exercise.impl.repository.WorkoutPlanRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
     private final WorkoutPlanRepository workoutPlanRepo;
     private final WorkoutExerciseRepository workoutExerciseRepo;
     private final CustomWorkoutLogRepository customLogRepo;
+    private final WorkoutCompletionRepository completionRepo;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -36,6 +38,11 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
         // --- Validation ---
         if (request.getExercises() == null || request.getExercises().isEmpty()) {
             throw new IllegalArgumentException("Please add at least one exercise to your plan");
+        }
+
+        // Cap total exercises to prevent abuse
+        if (request.getExercises().size() > 200) {
+            throw new IllegalArgumentException("A plan can have at most 200 exercises");
         }
 
         int expectedDays = request.getDaysPerWeek() != null ? request.getDaysPerWeek() : 0;
@@ -55,9 +62,13 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
             }
         }
 
+        // Sanitize plan name
+        String planName = request.getPlanName() != null ? request.getPlanName().trim() : "My Custom Workout";
+        planName = sanitizeInput(planName, 100);
+
         WorkoutPlan plan = new WorkoutPlan();
         plan.setUserId(userId);
-        plan.setPlanName(request.getPlanName() != null ? request.getPlanName() : "My Custom Workout");
+        plan.setPlanName(planName);
         plan.setPlanType("CUSTOM");
         plan.setDaysPerWeek(request.getDaysPerWeek() != null ? request.getDaysPerWeek() : 5);
         plan.setDurationWeeks(12);
@@ -75,7 +86,7 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
         if (request.getExercises() != null) {
             for (CustomExerciseEntry entry : request.getExercises()) {
                 WorkoutPlan.WorkoutExercise ex = new WorkoutPlan.WorkoutExercise();
-                ex.setExerciseName(entry.getExerciseName());
+                ex.setExerciseName(sanitizeInput(entry.getExerciseName(), 200));
                 ex.setSets(entry.getSets() != null ? entry.getSets() : 3);
                 ex.setReps(entry.getReps() != null ? entry.getReps() : 12);
                 ex.setWeight(entry.getWeight());
@@ -115,6 +126,10 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
     public WorkoutExerciseDTO updateExercise(Long userId, Long exerciseId, UpdateExerciseRequest request) {
         log.info("Updating exercise {} for user: {}", exerciseId, userId);
 
+        if (exerciseId == null || exerciseId <= 0) {
+            throw new IllegalArgumentException("Invalid exercise ID");
+        }
+
         WorkoutPlan.WorkoutExercise exercise = workoutExerciseRepo.findById(exerciseId)
                 .orElseThrow(() -> new RuntimeException("Exercise not found: " + exerciseId));
 
@@ -124,28 +139,66 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
             throw new IllegalArgumentException("You do not have permission to modify this exercise");
         }
 
+        // Server-side range validation (defense in depth — DTO annotations may not always trigger)
         if (request.getSets() != null) {
+            if (request.getSets() < 1 || request.getSets() > 50) {
+                throw new IllegalArgumentException("Sets must be between 1 and 50");
+            }
             exercise.setSets(request.getSets());
         }
         if (request.getReps() != null) {
+            if (request.getReps() < 1 || request.getReps() > 500) {
+                throw new IllegalArgumentException("Reps must be between 1 and 500");
+            }
             exercise.setReps(request.getReps());
         }
         if (request.getWeight() != null) {
+            if (request.getWeight() < 0 || request.getWeight() > 1000) {
+                throw new IllegalArgumentException("Weight must be between 0 and 1000 kg");
+            }
             exercise.setWeight(request.getWeight());
         }
         if (request.getRestTimeSeconds() != null) {
+            if (request.getRestTimeSeconds() < 0 || request.getRestTimeSeconds() > 600) {
+                throw new IllegalArgumentException("Rest time must be between 0 and 600 seconds");
+            }
             exercise.setRestTimeSeconds(request.getRestTimeSeconds());
         }
         if (request.getSetDetailsJson() != null) {
-            // Validate JSON before saving
+            if (request.getSetDetailsJson().length() > 5000) {
+                throw new IllegalArgumentException("Set details JSON must be ≤ 5000 characters");
+            }
+            // Validate JSON structure and individual set values
             try {
-                objectMapper.readTree(request.getSetDetailsJson());
+                List<Map<String, Object>> setDetails = objectMapper.readValue(
+                        request.getSetDetailsJson(),
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+
+                if (setDetails.size() > 50) {
+                    throw new IllegalArgumentException("Maximum 50 sets allowed in setDetailsJson");
+                }
+                for (int i = 0; i < setDetails.size(); i++) {
+                    Map<String, Object> s = setDetails.get(i);
+                    int reps = toInt(s.get("reps"));
+                    double weight = toDouble(s.get("weight"));
+                    if (reps < 0 || reps > 500) {
+                        throw new IllegalArgumentException("Set " + (i + 1) + ": reps must be between 0 and 500");
+                    }
+                    if (weight < 0 || weight > 1000) {
+                        throw new IllegalArgumentException("Set " + (i + 1) + ": weight must be between 0 and 1000 kg");
+                    }
+                }
+            } catch (IllegalArgumentException e) {
+                throw e; // re-throw our validation errors
             } catch (Exception e) {
                 throw new IllegalArgumentException("Invalid JSON in setDetailsJson");
             }
             exercise.setSetDetailsJson(request.getSetDetailsJson());
         }
         if (request.getDurationSeconds() != null) {
+            if (request.getDurationSeconds() < 0 || request.getDurationSeconds() > 86400) {
+                throw new IllegalArgumentException("Duration must be between 0 and 86400 seconds");
+            }
             exercise.setDurationSeconds(request.getDurationSeconds());
         }
 
@@ -274,32 +327,69 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
     public Map<String, Object> syncCustomWorkoutLog(Long userId, CustomWorkoutLogSyncRequest request) {
         log.info("Syncing custom workout logs for user: {} on date: {}", userId, request.getDate());
 
+        // Validate date format and range
         LocalDate logDate;
         try {
             logDate = LocalDate.parse(request.getDate());
         } catch (Exception e) {
-            logDate = LocalDate.now();
+            throw new IllegalArgumentException("Invalid date format. Use YYYY-MM-DD.");
         }
+
+        // Reject future dates
+        if (logDate.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Cannot log exercises for a future date.");
+        }
+        // Reject dates more than 90 days in the past
+        if (logDate.isBefore(LocalDate.now().minusDays(90))) {
+            throw new IllegalArgumentException("Cannot log exercises more than 90 days in the past.");
+        }
+
         final LocalDate finalLogDate = logDate;
 
         Map<String, Object> logs = request.getLogs();
-        if (logs == null) {
+        if (logs == null || logs.isEmpty()) {
             return Map.of("status", "ok", "synced", 0);
         }
+
+        // Validate: max 7 day entries
+        if (logs.size() > 7) {
+            throw new IllegalArgumentException("Maximum 7 day entries allowed per sync.");
+        }
+
+        // Valid day names
+        Set<String> validDays = Set.of("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY");
 
         int syncedCount = 0;
         for (Map.Entry<String, Object> dayEntry : logs.entrySet()) {
             String dayOfWeek = dayEntry.getKey();
+
+            // Validate day of week
+            if (!validDays.contains(dayOfWeek)) {
+                log.warn("Skipping invalid dayOfWeek '{}' from user {}", dayOfWeek, userId);
+                continue;
+            }
+
             if (!(dayEntry.getValue() instanceof Map)) continue;
 
             @SuppressWarnings("unchecked")
             Map<String, Object> exerciseLogs = (Map<String, Object>) dayEntry.getValue();
+
+            // Limit max exercises per day to 50
+            if (exerciseLogs.size() > 50) {
+                throw new IllegalArgumentException("Maximum 50 exercises per day allowed.");
+            }
 
             for (Map.Entry<String, Object> exEntry : exerciseLogs.entrySet()) {
                 int exerciseIndex;
                 try {
                     exerciseIndex = Integer.parseInt(exEntry.getKey());
                 } catch (NumberFormatException e) {
+                    continue;
+                }
+
+                // Validate exercise index bounds
+                if (exerciseIndex < 0 || exerciseIndex > 100) {
+                    log.warn("Skipping out-of-bounds exerciseIndex {} from user {}", exerciseIndex, userId);
                     continue;
                 }
 
@@ -349,6 +439,9 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
 
     @Override
     public List<CustomWorkoutLogDTO> getCustomWorkoutLogs(Long userId, int days) {
+        // Cap days to reasonable range
+        if (days < 1) days = 1;
+        if (days > 365) days = 365;
         LocalDate end = LocalDate.now();
         LocalDate start = end.minusDays(days);
         return customLogRepo.findByUserIdAndLogDateBetweenOrderByLogDateDesc(userId, start, end)
@@ -407,6 +500,260 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
             return edto;
         }).collect(Collectors.toList()));
         return dto;
+    }
+
+    @Override
+    public ExerciseReportDTO getExerciseReport(Long userId, LocalDate startDate, LocalDate endDate) {
+        List<CustomWorkoutLog> logs = customLogRepo.findByUserIdAndLogDateBetweenOrderByLogDateDesc(userId, startDate, endDate);
+
+        // Get actual completed workout days from workout_completions table
+        int totalWorkoutDays = completionRepo
+                .findByUserIdAndCompletedTrueAndCompletionDateBetween(userId, startDate, endDate).size();
+
+        // Exercise frequency (count how many log entries per exercise name)
+        Map<String, Integer> frequency = new LinkedHashMap<>();
+        // Personal bests: exerciseName -> {weight, date, reps}
+        Map<String, ExerciseReportDTO.PersonalBest> bests = new LinkedHashMap<>();
+        // Daily volume: date -> [totalVolume, exerciseCount]
+        Map<LocalDate, double[]> dailyVolume = new TreeMap<>();
+        // Per-exercise edit history: exerciseName -> list of EditEntry
+        Map<String, List<ExerciseReportDTO.EditEntry>> exerciseEditsMap = new LinkedHashMap<>();
+        // Per-exercise stats accumulators: exerciseName -> [totalWeight, weightCount, totalReps, repsCount, maxWeight, maxReps]
+        Map<String, double[]> exerciseStats = new LinkedHashMap<>();
+
+        double grandTotalVolume = 0;
+        int totalExercisesLogged = logs.size();
+
+        for (CustomWorkoutLog logEntry : logs) {
+            String name = logEntry.getExerciseName() != null ? logEntry.getExerciseName() : "Exercise #" + logEntry.getExerciseIndex();
+
+            // Parse the setsData which is a history array: [{sets:[{reps,weight},...], loggedAt:""}, ...]
+            List<Map<String, Object>> historyEntries = parseHistoryJson(logEntry.getSetsData());
+
+            // Count edits (history entries) for frequency
+            int editCount = historyEntries.size();
+            frequency.merge(name, Math.max(editCount, 1), Integer::sum);
+
+            // Process each history entry
+            for (Map<String, Object> entry : historyEntries) {
+                String loggedAt = entry.get("loggedAt") != null ? entry.get("loggedAt").toString() : logEntry.getLogDate().toString();
+                Object setsObj = entry.get("sets");
+                List<Map<String, Object>> sets = extractSetsList(setsObj);
+
+                double entryVolume = 0;
+                List<ExerciseReportDTO.SetDetail> setDetails = new ArrayList<>();
+
+                for (Map<String, Object> set : sets) {
+                    double weight = toDouble(set.get("weight"));
+                    int reps = toInt(set.get("reps"));
+                    entryVolume += weight * reps;
+                    setDetails.add(new ExerciseReportDTO.SetDetail(reps, weight));
+
+                    // Track stats
+                    double[] stats = exerciseStats.computeIfAbsent(name, k -> new double[]{0, 0, 0, 0, 0, 0});
+                    if (weight > 0) {
+                        stats[0] += weight; stats[1]++;
+                        if (weight > stats[4]) stats[4] = weight;
+                    }
+                    if (reps > 0) {
+                        stats[2] += reps; stats[3]++;
+                        if (reps > stats[5]) stats[5] = reps;
+                    }
+
+                    // Personal best
+                    if (weight > 0) {
+                        ExerciseReportDTO.PersonalBest current = bests.get(name);
+                        if (current == null || weight > current.getBestWeight()) {
+                            bests.put(name, new ExerciseReportDTO.PersonalBest(name, weight, loggedAt.substring(0, Math.min(10, loggedAt.length())), reps));
+                        }
+                    }
+                }
+
+                grandTotalVolume += entryVolume;
+
+                // Add to edit history
+                exerciseEditsMap.computeIfAbsent(name, k -> new ArrayList<>())
+                        .add(new ExerciseReportDTO.EditEntry(loggedAt, setDetails, entryVolume));
+            }
+
+            // If no history entries were parsed but log exists, count as 1 entry with flat sets
+            if (historyEntries.isEmpty()) {
+                List<Map<String, Object>> flatSets = parseFlatSetsJson(logEntry.getSetsData());
+                double logVolume = 0;
+                List<ExerciseReportDTO.SetDetail> setDetails = new ArrayList<>();
+                for (Map<String, Object> set : flatSets) {
+                    double weight = toDouble(set.get("weight"));
+                    int reps = toInt(set.get("reps"));
+                    logVolume += weight * reps;
+                    setDetails.add(new ExerciseReportDTO.SetDetail(reps, weight));
+
+                    if (weight > 0) {
+                        ExerciseReportDTO.PersonalBest current = bests.get(name);
+                        if (current == null || weight > current.getBestWeight()) {
+                            bests.put(name, new ExerciseReportDTO.PersonalBest(name, weight, logEntry.getLogDate().toString(), reps));
+                        }
+                        double[] stats = exerciseStats.computeIfAbsent(name, k -> new double[]{0, 0, 0, 0, 0, 0});
+                        stats[0] += weight; stats[1]++;
+                        if (weight > stats[4]) stats[4] = weight;
+                    }
+                    if (reps > 0) {
+                        double[] stats = exerciseStats.computeIfAbsent(name, k -> new double[]{0, 0, 0, 0, 0, 0});
+                        stats[2] += reps; stats[3]++;
+                        if (reps > stats[5]) stats[5] = reps;
+                    }
+                }
+                grandTotalVolume += logVolume;
+                if (!setDetails.isEmpty()) {
+                    exerciseEditsMap.computeIfAbsent(name, k -> new ArrayList<>())
+                            .add(new ExerciseReportDTO.EditEntry(
+                                    logEntry.getCompletedAt() != null ? logEntry.getCompletedAt().toString() : logEntry.getLogDate().toString(),
+                                    setDetails, logVolume));
+                }
+            }
+
+            // Daily volume
+            double[] dv = dailyVolume.computeIfAbsent(logEntry.getLogDate(), k -> new double[]{0, 0});
+            double logDayVol = historyEntries.isEmpty() ? 0 : historyEntries.stream().mapToDouble(e -> {
+                List<Map<String, Object>> s = extractSetsList(e.get("sets"));
+                return s.stream().mapToDouble(set -> toDouble(set.get("weight")) * toInt(set.get("reps"))).sum();
+            }).sum();
+            dv[0] += logDayVol;
+            dv[1]++;
+        }
+
+        // If no workout_completions exist, fall back to unique log dates
+        if (totalWorkoutDays == 0 && !logs.isEmpty()) {
+            totalWorkoutDays = (int) logs.stream()
+                    .filter(l -> l.getCompletedAt() != null)
+                    .map(CustomWorkoutLog::getLogDate)
+                    .distinct().count();
+        }
+
+        List<ExerciseReportDTO.DailyVolume> volumeList = dailyVolume.entrySet().stream()
+                .map(e -> new ExerciseReportDTO.DailyVolume(e.getKey().toString(), e.getValue()[0], (int) e.getValue()[1]))
+                .collect(Collectors.toList());
+
+        // Build per-exercise history list
+        List<ExerciseReportDTO.ExerciseHistory> exerciseHistories = new ArrayList<>();
+        for (Map.Entry<String, List<ExerciseReportDTO.EditEntry>> entry : exerciseEditsMap.entrySet()) {
+            String exName = entry.getKey();
+            List<ExerciseReportDTO.EditEntry> edits = entry.getValue();
+            // Sort edits by loggedAt ascending
+            edits.sort(Comparator.comparing(ExerciseReportDTO.EditEntry::getLoggedAt));
+
+            double[] stats = exerciseStats.getOrDefault(exName, new double[]{0, 0, 0, 0, 0, 0});
+            double avgWeight = stats[1] > 0 ? Math.round(stats[0] / stats[1] * 10) / 10.0 : 0;
+            double avgReps = stats[3] > 0 ? Math.round(stats[2] / stats[3] * 10) / 10.0 : 0;
+
+            exerciseHistories.add(new ExerciseReportDTO.ExerciseHistory(
+                    exName, edits.size(), avgWeight, avgReps, stats[4], (int) stats[5], edits));
+        }
+
+        ExerciseReportDTO report = new ExerciseReportDTO();
+        report.setStartDate(startDate.toString());
+        report.setEndDate(endDate.toString());
+        report.setTotalWorkoutDays(totalWorkoutDays);
+        report.setTotalExercisesLogged(totalExercisesLogged);
+        report.setTotalVolumeLifted(Math.round(grandTotalVolume));
+        report.setExerciseFrequency(frequency);
+        report.setPersonalBests(new ArrayList<>(bests.values()));
+        report.setVolumeProgression(volumeList);
+        report.setExerciseHistories(exerciseHistories);
+        return report;
+    }
+
+    /**
+     * Parse setsData as a history array: [{sets:[{reps,weight},...], loggedAt:""}, ...]
+     * Returns empty list if format doesn't match.
+     */
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> parseHistoryJson(String json) {
+        if (json == null || json.isBlank()) return List.of();
+        try {
+            Object parsed = objectMapper.readValue(json, Object.class);
+            if (parsed instanceof List) {
+                List<Object> list = (List<Object>) parsed;
+                // Check if first element has "sets" key — it's history format
+                if (!list.isEmpty() && list.get(0) instanceof Map) {
+                    Map<String, Object> first = (Map<String, Object>) list.get(0);
+                    if (first.containsKey("sets") && first.containsKey("loggedAt")) {
+                        return (List<Map<String, Object>>) parsed;
+                    }
+                }
+            }
+        } catch (JsonProcessingException e) {
+            log.warn("Failed to parse history JSON: {}", e.getMessage());
+        }
+        return List.of();
+    }
+
+    /**
+     * Parse setsData as a flat sets array: [{reps:12, weight:50}, ...]
+     * Used as fallback when data isn't in history format.
+     */
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> parseFlatSetsJson(String json) {
+        if (json == null || json.isBlank()) return List.of();
+        try {
+            Object parsed = objectMapper.readValue(json, Object.class);
+            if (parsed instanceof List) {
+                List<Object> list = (List<Object>) parsed;
+                if (!list.isEmpty() && list.get(0) instanceof Map) {
+                    Map<String, Object> first = (Map<String, Object>) list.get(0);
+                    // Flat format has reps/weight directly
+                    if (first.containsKey("reps") || first.containsKey("weight")) {
+                        return (List<Map<String, Object>>) parsed;
+                    }
+                }
+            }
+            if (parsed instanceof Map) {
+                Map<String, Object> map = (Map<String, Object>) parsed;
+                Object sets = map.get("sets");
+                if (sets instanceof List) return (List<Map<String, Object>>) sets;
+            }
+        } catch (JsonProcessingException e) {
+            log.warn("Failed to parse flat sets JSON: {}", e.getMessage());
+        }
+        return List.of();
+    }
+
+    /**
+     * Extract a List of set maps from a "sets" field value.
+     */
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> extractSetsList(Object setsObj) {
+        if (setsObj instanceof List) return (List<Map<String, Object>>) setsObj;
+        return List.of();
+    }
+
+    private double toDouble(Object val) {
+        if (val == null) return 0;
+        if (val instanceof Number) return ((Number) val).doubleValue();
+        try { return Double.parseDouble(val.toString()); } catch (NumberFormatException e) { return 0; }
+    }
+
+    private int toInt(Object val) {
+        if (val == null) return 0;
+        if (val instanceof Number) return ((Number) val).intValue();
+        try { return Integer.parseInt(val.toString()); } catch (NumberFormatException e) { return 0; }
+    }
+
+    /**
+     * Sanitize user input strings to prevent XSS and injection attacks.
+     * Strips HTML tags, script content, and control characters.
+     */
+    private String sanitizeInput(String input, int maxLength) {
+        if (input == null) return null;
+        String sanitized = input
+                .replaceAll("<[^>]*>", "")                   // strip HTML tags
+                .replaceAll("(?i)javascript:", "")            // remove javascript: protocol
+                .replaceAll("(?i)on\\w+\\s*=", "")           // remove inline event handlers
+                .replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]", "") // strip control chars
+                .trim();
+        if (sanitized.length() > maxLength) {
+            sanitized = sanitized.substring(0, maxLength);
+        }
+        return sanitized;
     }
 }
 

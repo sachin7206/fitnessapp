@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -188,5 +189,16 @@ public class NutritionController implements NutritionApi {
     @Override
     public ResponseEntity<UserNutritionPlanDTO> saveFreePlan(FreePlanRequestDTO request) {
         return ResponseEntity.ok(nutritionService.saveFreePlan(getCurrentUserId(), request));
+    }
+
+    @GetMapping("/nutrition/report")
+    public ResponseEntity<DietReportDTO> getDietReport(
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        LocalDate start = LocalDate.parse(startDate);
+        LocalDate end = LocalDate.parse(endDate);
+        if (start.isAfter(end)) throw new IllegalArgumentException("startDate must be before endDate");
+        if (start.isBefore(LocalDate.now().minusYears(1))) throw new IllegalArgumentException("Range cannot exceed 1 year");
+        return ResponseEntity.ok(mealTrackingService.getDietReport(getCurrentUserId(), start, end));
     }
 }

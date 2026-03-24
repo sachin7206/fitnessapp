@@ -164,6 +164,14 @@ export const nutritionService = {
     const response = await apiClient.post('/nutrition/free-plan', planData);
     return response.data;
   },
+
+  // ========== REPORT ==========
+
+  // Get diet report for a date range
+  getDietReport: async (startDate, endDate) => {
+    const response = await apiClient.get(`/nutrition/report?startDate=${startDate}&endDate=${endDate}`);
+    return response.data;
+  },
 };
 
 export default nutritionService;

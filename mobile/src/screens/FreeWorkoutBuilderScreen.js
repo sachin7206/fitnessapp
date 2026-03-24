@@ -513,7 +513,7 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
                       🏋️ Workout Day
                     </Text>
                   ) : info.type === 'rest' ? (
-                    <Text style={[styles.cycleSource, { color: '#FF9800', fontWeight: '700' }]}>
+                    <Text style={[styles.cycleSource, { color: '#374151', fontWeight: '700' }]}>
                       😴 Rest Day
                     </Text>
                   ) : (
@@ -637,7 +637,7 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
           {restDay ? (
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Rest day</Text>
-              <Text style={[styles.summaryValue, { color: '#FF9800' }]}>{formatLabel(restDay)}</Text>
+              <Text style={[styles.summaryValue, { color: '#374151' }]}>{formatLabel(restDay)}</Text>
             </View>
           ) : null}
           <View style={styles.summaryRow}>
@@ -847,7 +847,7 @@ const styles = StyleSheet.create({
   dayChipText: { ...typography.bodySmall, color: colors.text.primary, fontWeight: '600' },
   dayChipTextSelected: { color: colors.text.inverse },
   restDayHint: { ...typography.caption, color: colors.text.secondary, marginBottom: spacing.sm },
-  restDayChipSelected: { backgroundColor: colors.accent || '#FF9800', borderColor: colors.accent || '#FF9800' },
+  restDayChipSelected: { backgroundColor: colors.accent || '#374151', borderColor: colors.accent || '#374151' },
   restDayChipTextSelected: { color: colors.text.inverse },
   cycleInfoCard: {
     backgroundColor: colors.primary + '08', borderRadius: borderRadius.md, padding: spacing.md,
@@ -897,7 +897,7 @@ const styles = StyleSheet.create({
   },
   addBtnText: { ...typography.body, color: colors.primary, fontWeight: '600' },
   // Rest day chip styles
-  restDayChipSelected: { backgroundColor: '#ff9800', borderColor: '#ff9800' },
+  restDayChipSelected: { backgroundColor: '#374151', borderColor: '#374151' },
   restDayChipTextSelected: { color: '#fff', fontWeight: '700' },
   sectionHint: { ...typography.caption, color: colors.text.light, marginBottom: spacing.sm },
   // Cycle preview

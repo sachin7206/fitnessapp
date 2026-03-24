@@ -1013,7 +1013,7 @@ const styles = StyleSheet.create({
   },
   editExBtnText: { fontSize: 16 },
   upgradeBanner: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF5F0',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB',
     borderRadius: borderRadius.lg, padding: spacing.md, marginTop: spacing.md,
     borderWidth: 1.5, borderColor: colors.primary + '40', ...shadows.sm,
   },

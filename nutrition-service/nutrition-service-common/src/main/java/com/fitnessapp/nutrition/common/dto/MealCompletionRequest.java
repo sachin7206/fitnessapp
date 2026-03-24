@@ -47,5 +47,11 @@ public class MealCompletionRequest {
     @DecimalMin(value = "0.0", message = "Fat must be ≥ 0")
     @DecimalMax(value = "500.0", message = "Fat must be ≤ 500g")
     private Double fatGrams;
+
+    // Original macros — saved when meal is replaced, used to restore on undo
+    private Integer originalCalories;
+    private Double originalProteinGrams;
+    private Double originalCarbsGrams;
+    private Double originalFatGrams;
 }
 

@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -46,6 +47,11 @@ public class WorkoutController implements WorkoutApi {
     @Override
     public ResponseEntity<UserWorkoutPlanDTO> markComplete() {
         return ResponseEntity.ok(workoutTrackingService.markWorkoutComplete(getCurrentUserId()));
+    }
+
+    @Override
+    public ResponseEntity<UserWorkoutPlanDTO> markUncomplete() {
+        return ResponseEntity.ok(workoutTrackingService.markWorkoutUncomplete(getCurrentUserId()));
     }
 
     @Override
@@ -120,6 +126,18 @@ public class WorkoutController implements WorkoutApi {
 
     @Override
     public ResponseEntity<List<CustomWorkoutLogDTO>> getCustomWorkoutLogs(Integer days) {
-        return ResponseEntity.ok(customWorkoutService.getCustomWorkoutLogs(getCurrentUserId(), days != null ? days : 30));
+        int safeDays = days != null ? Math.min(Math.max(days, 1), 365) : 30;
+        return ResponseEntity.ok(customWorkoutService.getCustomWorkoutLogs(getCurrentUserId(), safeDays));
+    }
+
+    @GetMapping("/workouts/report")
+    public ResponseEntity<ExerciseReportDTO> getExerciseReport(
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        LocalDate start = LocalDate.parse(startDate);
+        LocalDate end = LocalDate.parse(endDate);
+        if (start.isAfter(end)) throw new IllegalArgumentException("startDate must be before endDate");
+        if (start.isBefore(LocalDate.now().minusYears(1))) throw new IllegalArgumentException("Range cannot exceed 1 year");
+        return ResponseEntity.ok(customWorkoutService.getExerciseReport(getCurrentUserId(), start, end));
     }
 }

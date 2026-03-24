@@ -112,7 +112,7 @@ const WeeklyReportScreen = ({ navigation }) => {
       {plateauData && (
         <View style={[styles.section, styles.plateauSection]}>
           <Text style={styles.sectionTitle}>📈 Plateau Analysis</Text>
-          <View style={[styles.plateauBadge, { backgroundColor: plateauData.isPlateauDetected ? '#FFF3E0' : '#E8F5E9' }]}>
+          <View style={[styles.plateauBadge, { backgroundColor: plateauData.isPlateauDetected ? '#FEF3C7' : '#F0FDF4' }]}>
             <Text style={styles.plateauStatus}>
               {plateauData.isPlateauDetected ? '⚠️ Plateau Detected' : '✅ No Plateau Detected'}
             </Text>

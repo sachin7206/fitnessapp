@@ -245,3 +245,15 @@ databaseChangeLog:
               - column: { name: new_calories, type: INT }
               - column: { name: swapped_at, type: DATETIME }
 
+  - changeSet:
+      id: 010-add-original-macros-to-daily-meal-tracking
+      author: fitnessapp
+      changes:
+        - addColumn:
+            tableName: daily_meal_tracking
+            columns:
+              - column: { name: original_calories, type: INT }
+              - column: { name: original_protein_grams, type: DOUBLE }
+              - column: { name: original_carbs_grams, type: DOUBLE }
+              - column: { name: original_fat_grams, type: DOUBLE }
+

@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: '#FF6B6B',
   },
   inlineError: {
-    backgroundColor: '#FF6B6B15', borderRadius: borderRadius.sm,
+    backgroundColor: '#FEF2F215', borderRadius: borderRadius.sm,
     padding: spacing.sm, marginBottom: spacing.sm,
   },
   inlineErrorText: {
@@ -666,15 +666,15 @@ const styles = StyleSheet.create({
   editIcon: { fontSize: 14, marginLeft: spacing.sm },
   foodMacros: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 4 },
   macroTag: {
-    backgroundColor: '#FF6B6B20', borderRadius: borderRadius.sm,
+    backgroundColor: '#FEF2F220', borderRadius: borderRadius.sm,
     paddingHorizontal: spacing.xs, paddingVertical: 2,
   },
   macroTagCarbs: { backgroundColor: '#4ECDC420' },
-  macroTagFat: { backgroundColor: '#FFE66D20' },
+  macroTagFat: { backgroundColor: '#F3F4F620' },
   macroTagCal: { backgroundColor: colors.primary + '20' },
   macroTagText: { ...typography.caption, fontWeight: '600', color: colors.text.primary },
   removeBtn: {
-    marginLeft: 'auto', backgroundColor: '#FF6B6B20', borderRadius: 12,
+    marginLeft: 'auto', backgroundColor: '#FEF2F220', borderRadius: 12,
     width: 24, height: 24, justifyContent: 'center', alignItems: 'center',
   },
   removeBtnText: { color: '#FF6B6B', fontWeight: '700', fontSize: 12 },

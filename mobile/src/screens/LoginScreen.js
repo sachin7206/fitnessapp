@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     marginBottom: spacing.sm,
-    backgroundColor: '#FFEBEE',
+    backgroundColor: '#FEF2F2',
     padding: spacing.sm,
     borderRadius: borderRadius.sm,
   },

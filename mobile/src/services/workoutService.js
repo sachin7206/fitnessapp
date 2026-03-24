@@ -25,6 +25,12 @@ const workoutService = {
     return response.data;
   },
 
+  // Undo today's workout completion
+  markWorkoutUncomplete: async () => {
+    const response = await apiClient.delete('/workouts/my-plan/complete');
+    return response.data;
+  },
+
   // Get total workout count
   getWorkoutCount: async () => {
     const response = await apiClient.get('/workouts/workout-count');
@@ -109,19 +115,53 @@ const workoutService = {
 
   // Update a single exercise in-place (sets, reps, weight, rest, setDetailsJson)
   updateExercise: async (exerciseId, request) => {
+    if (!exerciseId || exerciseId <= 0) {
+      throw new Error('Invalid exercise ID');
+    }
+    // Client-side guard: reject obviously bad payloads
+    if (request.sets !== undefined && (request.sets < 1 || request.sets > 50)) {
+      throw new Error('Sets must be between 1 and 50');
+    }
+    if (request.reps !== undefined && (request.reps < 1 || request.reps > 500)) {
+      throw new Error('Reps must be between 1 and 500');
+    }
+    if (request.weight !== undefined && (request.weight < 0 || request.weight > 1000)) {
+      throw new Error('Weight must be between 0 and 1000 kg');
+    }
+    if (request.setDetailsJson && request.setDetailsJson.length > 5000) {
+      throw new Error('Set details too large');
+    }
     const response = await apiClient.put(`/workouts/custom-plan/exercises/${exerciseId}`, request);
     return response.data;
   },
 
   // Sync custom workout exercise log to backend
   syncCustomWorkoutLog: async (request) => {
+    if (!request.date || !/^\d{4}-\d{2}-\d{2}$/.test(request.date)) {
+      throw new Error('Invalid date format');
+    }
+    if (!request.logs || typeof request.logs !== 'object') {
+      throw new Error('Logs data is required');
+    }
     const response = await apiClient.put('/workouts/custom-plan/log', request);
     return response.data;
   },
 
   // Get custom workout exercise logs
   getCustomWorkoutLogs: async (days = 30) => {
-    const response = await apiClient.get(`/workouts/custom-plan/log?days=${days}`);
+    const safeDays = Math.min(Math.max(days, 1), 365);
+    const response = await apiClient.get(`/workouts/custom-plan/log?days=${safeDays}`);
+    return response.data;
+  },
+
+  // ========== REPORT ==========
+
+  // Get exercise report for a date range
+  getExerciseReport: async (startDate, endDate) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      throw new Error('Invalid date format. Use YYYY-MM-DD.');
+    }
+    const response = await apiClient.get(`/workouts/report?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`);
     return response.data;
   },
 };

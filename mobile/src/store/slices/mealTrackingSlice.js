@@ -88,25 +88,32 @@ const mealTrackingSlice = createSlice({
         state.consumedCarbs = 0;
         state.consumedFat = 0;
       } else {
-        // Same day — merge new meals but keep completed state
+        // Same day — merge new meals but keep completed state; also preserve extra meals
         const existingMap = {};
         state.meals.forEach(m => { existingMap[m.mealId] = m; });
-        state.meals = sortByTime(meals.map(m => {
-          const id = m.id || m.mealId;
-          if (existingMap[id]) return existingMap[id];
-          return {
-            mealId: id,
-            name: m.name,
-            mealType: m.mealType,
-            timeOfDay: m.timeOfDay,
-            calories: m.calories || 0,
-            proteinGrams: m.proteinGrams || 0,
-            carbsGrams: m.carbsGrams || 0,
-            fatGrams: m.fatGrams || 0,
-            completed: false,
-            completedAt: null,
-          };
-        }));
+
+        // Keep extra meals that are already in state
+        const existingExtras = state.meals.filter(m => m.isExtra);
+
+        state.meals = sortByTime([
+          ...meals.map(m => {
+            const id = m.id || m.mealId;
+            if (existingMap[id]) return existingMap[id];
+            return {
+              mealId: id,
+              name: m.name,
+              mealType: m.mealType,
+              timeOfDay: m.timeOfDay,
+              calories: m.calories || 0,
+              proteinGrams: m.proteinGrams || 0,
+              carbsGrams: m.carbsGrams || 0,
+              fatGrams: m.fatGrams || 0,
+              completed: false,
+              completedAt: null,
+            };
+          }),
+          ...existingExtras,
+        ]);
       }
     },
 
@@ -131,11 +138,23 @@ const mealTrackingSlice = createSlice({
         state.consumedProtein = Math.max(0, state.consumedProtein - meal.proteinGrams);
         state.consumedCarbs = Math.max(0, state.consumedCarbs - meal.carbsGrams);
         state.consumedFat = Math.max(0, state.consumedFat - meal.fatGrams);
+        // Restore original macros if this was a replaced meal
+        if (meal.replaced && meal.originalCalories != null) {
+          meal.calories = meal.originalCalories;
+          meal.proteinGrams = meal.originalProteinGrams;
+          meal.carbsGrams = meal.originalCarbsGrams;
+          meal.fatGrams = meal.originalFatGrams;
+          meal.name = meal.originalName;
+        }
         meal.completed = false;
         meal.completedAt = null;
         meal.replaced = false;
         meal.replacedWith = null;
         meal.originalName = null;
+        meal.originalCalories = null;
+        meal.originalProteinGrams = null;
+        meal.originalCarbsGrams = null;
+        meal.originalFatGrams = null;
       }
     },
 
@@ -147,6 +166,11 @@ const mealTrackingSlice = createSlice({
         meal.completedAt = new Date().toISOString();
         meal.replaced = true;
         meal.originalName = meal.name;
+        // Save original macros so they can be restored on undo
+        meal.originalCalories = meal.calories;
+        meal.originalProteinGrams = meal.proteinGrams;
+        meal.originalCarbsGrams = meal.carbsGrams;
+        meal.originalFatGrams = meal.fatGrams;
         meal.replacedWith = foodName;
         state.consumedCalories += calories;
         state.consumedProtein += proteinGrams;
@@ -168,10 +192,65 @@ const mealTrackingSlice = createSlice({
       state.consumedFat = 0;
       state.loaded = false;
     },
+
+    addExtraMeal: (state, action) => {
+      const { mealName, foodItems } = action.payload;
+      // Generate a unique ID for the extra meal
+      const extraId = `extra_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+      const now = new Date();
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const displayHours = hours % 12 || 12;
+      const timeOfDay = `${displayHours}:${String(minutes).padStart(2, '0')} ${ampm}`;
+
+      // Compute totals from food items
+      const items = Array.isArray(foodItems) ? foodItems : [];
+      const totalProtein = items.reduce((s, f) => s + (f.proteinGrams || 0), 0);
+      const totalCarbs = items.reduce((s, f) => s + (f.carbsGrams || 0), 0);
+      const totalFat = items.reduce((s, f) => s + (f.fatGrams || 0), 0);
+      const totalCalories = items.reduce((s, f) => s + (f.calories || 0), 0);
+
+      const newMeal = {
+        mealId: extraId,
+        name: mealName || (items.length === 1 ? items[0].name : 'Extra Meal'),
+        mealType: 'EXTRA',
+        timeOfDay,
+        calories: totalCalories,
+        proteinGrams: totalProtein,
+        carbsGrams: totalCarbs,
+        fatGrams: totalFat,
+        foodItems: items,
+        completed: true,
+        completedAt: now.toISOString(),
+        isExtra: true,
+      };
+
+      state.meals.push(newMeal);
+      state.consumedCalories += newMeal.calories;
+      state.consumedProtein += newMeal.proteinGrams;
+      state.consumedCarbs += newMeal.carbsGrams;
+      state.consumedFat += newMeal.fatGrams;
+    },
+
+    removeExtraMeal: (state, action) => {
+      const { mealId } = action.payload;
+      const idx = state.meals.findIndex(m => m.mealId === mealId && m.isExtra);
+      if (idx !== -1) {
+        const meal = state.meals[idx];
+        if (meal.completed) {
+          state.consumedCalories = Math.max(0, state.consumedCalories - meal.calories);
+          state.consumedProtein = Math.max(0, state.consumedProtein - meal.proteinGrams);
+          state.consumedCarbs = Math.max(0, state.consumedCarbs - meal.carbsGrams);
+          state.consumedFat = Math.max(0, state.consumedFat - meal.fatGrams);
+        }
+        state.meals.splice(idx, 1);
+      }
+    },
   },
 });
 
-export const { loadTracking, initMealsForToday, completeMeal, uncompleteMeal, replaceMeal, clearTracking } = mealTrackingSlice.actions;
+export const { loadTracking, initMealsForToday, completeMeal, uncompleteMeal, replaceMeal, clearTracking, addExtraMeal, removeExtraMeal } = mealTrackingSlice.actions;
 
 // Export the helper so screens can use the same local date logic
 export { getLocalDateString };
@@ -222,6 +301,12 @@ export const persistTracking = () => async (dispatch, getState) => {
           proteinGrams: m.proteinGrams || 0,
           carbsGrams: m.carbsGrams || 0,
           fatGrams: m.fatGrams || 0,
+          foodItems: m.foodItems || [],
+          originalCalories: m.originalCalories ?? null,
+          originalProteinGrams: m.originalProteinGrams ?? null,
+          originalCarbsGrams: m.originalCarbsGrams ?? null,
+          originalFatGrams: m.originalFatGrams ?? null,
+          isExtra: m.isExtra || false,
         })),
         consumedCalories: mealTracking.consumedCalories || 0,
         consumedProtein: mealTracking.consumedProtein || 0,
@@ -273,6 +358,12 @@ export const persistTrackingNow = () => async (dispatch, getState) => {
           proteinGrams: m.proteinGrams || 0,
           carbsGrams: m.carbsGrams || 0,
           fatGrams: m.fatGrams || 0,
+          foodItems: m.foodItems || [],
+          originalCalories: m.originalCalories ?? null,
+          originalProteinGrams: m.originalProteinGrams ?? null,
+          originalCarbsGrams: m.originalCarbsGrams ?? null,
+          originalFatGrams: m.originalFatGrams ?? null,
+          isExtra: m.isExtra || false,
         })),
         consumedCalories: mealTracking.consumedCalories || 0,
         consumedProtein: mealTracking.consumedProtein || 0,
@@ -299,11 +390,33 @@ export const loadTrackingLocal = () => async (dispatch, getState) => {
       if (data.trackingDate && data.trackingDate !== today) {
         const resetData = {
           trackingDate: today,
-          meals: (data.meals || []).map(m => ({
-            ...m,
-            completed: false, completedAt: null,
-            replaced: false, replacedWith: null, originalName: null,
-          })),
+          meals: (data.meals || []).map(m => {
+            // Restore original macros if meal was replaced yesterday
+            const calories = (m.replaced && m.originalCalories != null) ? m.originalCalories : m.calories;
+            const proteinGrams = (m.replaced && m.originalProteinGrams != null) ? m.originalProteinGrams : m.proteinGrams;
+            const carbsGrams = (m.replaced && m.originalCarbsGrams != null) ? m.originalCarbsGrams : m.carbsGrams;
+            const fatGrams = (m.replaced && m.originalFatGrams != null) ? m.originalFatGrams : m.fatGrams;
+            const name = (m.replaced && m.originalName) ? m.originalName : m.name;
+            return {
+              mealId: m.mealId,
+              name,
+              mealType: m.mealType,
+              timeOfDay: m.timeOfDay,
+              calories,
+              proteinGrams,
+              carbsGrams,
+              fatGrams,
+              completed: false,
+              completedAt: null,
+              replaced: false,
+              replacedWith: null,
+              originalName: null,
+              originalCalories: null,
+              originalProteinGrams: null,
+              originalCarbsGrams: null,
+              originalFatGrams: null,
+            };
+          }),
           consumedCalories: 0, consumedProtein: 0, consumedCarbs: 0, consumedFat: 0,
         };
         dispatch(loadTracking(resetData));
@@ -312,11 +425,17 @@ export const loadTrackingLocal = () => async (dispatch, getState) => {
         dispatch(loadTracking(data));
       }
     } else {
-      dispatch(loadTracking(null));
+      // No local cache — do NOT clear if meals already initialized in Redux
+      const currentState = getState().mealTracking;
+      if (!currentState.meals || currentState.meals.length === 0) {
+        dispatch(loadTracking(null));
+      }
     }
   } catch (e) {
-    
-    dispatch(loadTracking(null));
+    const currentState = getState().mealTracking;
+    if (!currentState.meals || currentState.meals.length === 0) {
+      dispatch(loadTracking(null));
+    }
   }
 };
 
@@ -358,11 +477,33 @@ export const loadTrackingFromStorage = () => async (dispatch, getState) => {
       if (data.trackingDate && data.trackingDate !== today) {
         const resetData = {
           trackingDate: today,
-          meals: (data.meals || []).map(m => ({
-            ...m,
-            completed: false, completedAt: null,
-            replaced: false, replacedWith: null, originalName: null,
-          })),
+          meals: (data.meals || []).map(m => {
+            // Restore original macros if meal was replaced yesterday
+            const calories = (m.replaced && m.originalCalories != null) ? m.originalCalories : m.calories;
+            const proteinGrams = (m.replaced && m.originalProteinGrams != null) ? m.originalProteinGrams : m.proteinGrams;
+            const carbsGrams = (m.replaced && m.originalCarbsGrams != null) ? m.originalCarbsGrams : m.carbsGrams;
+            const fatGrams = (m.replaced && m.originalFatGrams != null) ? m.originalFatGrams : m.fatGrams;
+            const name = (m.replaced && m.originalName) ? m.originalName : m.name;
+            return {
+              mealId: m.mealId,
+              name,
+              mealType: m.mealType,
+              timeOfDay: m.timeOfDay,
+              calories,
+              proteinGrams,
+              carbsGrams,
+              fatGrams,
+              completed: false,
+              completedAt: null,
+              replaced: false,
+              replacedWith: null,
+              originalName: null,
+              originalCalories: null,
+              originalProteinGrams: null,
+              originalCarbsGrams: null,
+              originalFatGrams: null,
+            };
+          }),
           consumedCalories: 0, consumedProtein: 0, consumedCarbs: 0, consumedFat: 0,
         };
         dispatch(loadTracking(resetData));
@@ -371,16 +512,21 @@ export const loadTrackingFromStorage = () => async (dispatch, getState) => {
         dispatch(loadTracking(data));
       }
     } else {
-      dispatch(loadTracking(null));
+      // No local cache — do NOT clear if initMealsForToday already populated the state
+      const currentState = getState().mealTracking;
+      if (!currentState.meals || currentState.meals.length === 0) {
+        dispatch(loadTracking(null));
+      }
     }
 
     // 4. Try to merge from backend (restores data if app was reinstalled)
     try {
       const backendData = await nutritionService.getTodayTracking();
       if (backendData && backendData.meals && backendData.meals.length > 0) {
-        const localState = raw ? JSON.parse(raw) : null;
-        const localMeals = localState?.meals || [];
-        const localCompletedCount = localMeals.filter(m => m.completed).length;
+        // Use CURRENT Redux state for comparison (not stale AsyncStorage data)
+        const currentState = getState().mealTracking;
+        const currentMeals = currentState.meals || [];
+        const localCompletedCount = currentMeals.filter(m => m.completed).length;
         const backendCompletedCount = backendData.meals.filter(m => m.completed).length;
 
         if (backendCompletedCount > localCompletedCount) {
@@ -400,6 +546,10 @@ export const loadTrackingFromStorage = () => async (dispatch, getState) => {
               replaced: m.replaced || false,
               replacedWith: m.replacedWith || null,
               originalName: m.originalName || null,
+              originalCalories: m.originalCalories ?? null,
+              originalProteinGrams: m.originalProteinGrams ?? null,
+              originalCarbsGrams: m.originalCarbsGrams ?? null,
+              originalFatGrams: m.originalFatGrams ?? null,
             })),
             consumedCalories: backendData.consumedCalories || 0,
             consumedProtein: backendData.consumedProtein || 0,
@@ -414,8 +564,11 @@ export const loadTrackingFromStorage = () => async (dispatch, getState) => {
       
     }
   } catch (e) {
-    
-    dispatch(loadTracking(null));
+    // Only clear if no meals were already initialized (prevent race condition)
+    const currentState = getState().mealTracking;
+    if (!currentState.meals || currentState.meals.length === 0) {
+      dispatch(loadTracking(null));
+    }
   }
 };
 

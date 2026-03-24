@@ -21,5 +21,9 @@ public class DailyMealTrackingDTO {
     private Double proteinGrams;
     private Double carbsGrams;
     private Double fatGrams;
+    private Integer originalCalories;
+    private Double originalProteinGrams;
+    private Double originalCarbsGrams;
+    private Double originalFatGrams;
 }
 

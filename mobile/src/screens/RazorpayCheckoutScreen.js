@@ -57,7 +57,7 @@ const RazorpayCheckoutScreen = ({ navigation, route }) => {
             email: "",
             contact: ""
           },
-          theme: { color: "#FF6B35" },
+          theme: { color: "#111827" },
           notes: { subscriptionId: "${subscription?.id || ''}" }
         };
 
