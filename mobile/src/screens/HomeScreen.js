@@ -368,6 +368,12 @@ const HomeScreen = ({ navigation }) => {
       icon: '⚡',
       onPress: () => navigation.navigate('WorkoutFeedback'),
     },
+    {
+      title: 'Report Generator',
+      description: 'Custom fitness & diet reports',
+      icon: '📄',
+      onPress: () => navigation.navigate('ReportGenerator'),
+    },
   ];
 
   // ---------- Render ----------
