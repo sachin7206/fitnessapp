@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   actionBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
   formCard: { backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.md, ...shadows.sm },
   formTitle: { ...typography.h4, color: colors.text.primary, marginBottom: spacing.sm },
-  input: { borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.md, padding: spacing.sm, marginBottom: spacing.sm, color: colors.text.primary },
+  input: { borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.md, padding: spacing.sm, marginBottom: spacing.sm, color: colors.text.primary, backgroundColor: colors.surface },
   formActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, marginTop: spacing.sm },
   cancelBtn: { padding: spacing.sm, paddingHorizontal: spacing.md },
   cancelText: { color: colors.text.secondary },

@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FitnessApp — HomeScreen UX</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:#f0f0f3;display:flex;justify-content:center;gap:44px;padding:40px 16px;flex-wrap:wrap}
+.label{text-align:center;font-size:10px;font-weight:700;color:#9CA3AF;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:14px}
+.phone{width:375px;height:812px;background:#F8F9FA;border-radius:48px;overflow:hidden;box-shadow:0 40px 100px rgba(0,0,0,.22),0 0 0 1px rgba(0,0,0,.05);position:relative;display:flex;flex-direction:column}
+.phone::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:28px;background:#000;border-radius:0 0 16px 16px;z-index:100}
+.phone::after{content:'';position:absolute;top:8px;left:50%;transform:translateX(-50%);width:8px;height:8px;background:#1a1a2e;border-radius:50%;z-index:101;box-shadow:0 0 0 2px #333}
+.sb{background:#0F172A;padding:14px 24px 0;height:44px;display:flex;justify-content:space-between;align-items:center;color:rgba(255,255,255,.7);font-size:11px;font-weight:600}
+.hdr{background:#0F172A;padding:10px 20px 20px;display:flex;justify-content:space-between;align-items:center}
+.hdr .g{font-size:18px;font-weight:700;color:#FFF;letter-spacing:-.2px}
+.hdr .s{font-size:11px;color:rgba(255,255,255,.4);font-weight:500;margin-top:2px}
+.hdr .av{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:15px;border:1.5px solid rgba(255,255,255,.12)}
+.ct{flex:1;overflow-y:auto;padding:16px 16px 0}.ct::-webkit-scrollbar{display:none}
+.overview{background:#FFF;border-radius:20px;padding:20px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.overview-title{font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
+.rings-row{display:flex;justify-content:space-around;align-items:center}
+.ring-item{display:flex;flex-direction:column;align-items:center;gap:6px}
+.ring-item svg{display:block;filter:drop-shadow(0 1px 3px rgba(0,0,0,.06))}
+.ring-item .lbl{font-size:9px;font-weight:600;color:#9CA3AF;letter-spacing:.3px}
+.card{background:#FFF;border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.card-title{font-size:14px;font-weight:700;color:#111827;letter-spacing:-.2px}
+.card-link{font-size:11px;font-weight:600;color:#6B7280;letter-spacing:-.1px}
+.view-meals{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#FFF;border-radius:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);cursor:pointer;transition:all .2s;border:1px solid transparent}
+.view-meals:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.07);border-color:rgba(0,0,0,.04)}
+.vm-left{display:flex;align-items:center;gap:12px}
+.vm-icon{width:38px;height:38px;border-radius:12px;background:#ECFDF5;display:flex;align-items:center;justify-content:center;font-size:18px}
+.vm-text{font-size:13px;font-weight:700;color:#111827}
+.vm-sub{font-size:10px;color:#9CA3AF;font-weight:500;margin-top:2px}
+.vm-arrow{font-size:16px;color:#9CA3AF;font-weight:600}
+.workout-status{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px}
+.workout-status.pending{background:#F9FAFB}
+.workout-status.done{background:rgba(34,197,94,.05)}
+.ws-icon{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.ws-icon.pending{background:rgba(17,24,39,.06)}
+.ws-icon.done{background:rgba(34,197,94,.1)}
+.ws-text{font-size:12px;font-weight:600;color:#374151}
+.ws-text.done{color:#16a34a}
+.ws-sub{font-size:10px;color:#9CA3AF;font-weight:500;margin-top:1px}
+.ws-badge{margin-left:auto;font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;flex-shrink:0}
+.ws-badge.pending{background:rgba(17,24,39,.06);color:#6B7280}
+.ws-badge.done{background:rgba(34,197,94,.1);color:#16a34a}
+.quote{font-size:11px;font-weight:500;color:#9CA3AF;line-height:1.5;font-style:italic;text-align:center;padding:8px 0 4px}
+.cele{text-align:center;padding:16px 12px;border-radius:14px;margin-bottom:12px}
+.cele.green{background:rgba(34,197,94,.05)}
+.cele-icon{font-size:28px;margin-bottom:4px}
+.cele-title{font-size:14px;font-weight:800;margin-bottom:2px}
+.cele-title.green{color:#16a34a}
+.cele-sub{font-size:11px;color:#6B7280;font-weight:500}
+.cele-detail{font-size:10px;color:#9CA3AF;margin-top:6px;font-weight:600}
+.sec-title{font-size:12px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:1.5px;margin:8px 0 12px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-bottom:24px}
+.act{background:#FFF;border-radius:14px;padding:14px 12px;box-shadow:0 1px 4px rgba(0,0,0,.03);cursor:pointer;transition:all .2s;border:1px solid transparent}
+.act:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.06);border-color:rgba(0,0,0,.04)}
+.act-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:8px}
+.act-icon.i1{background:#EFF6FF}.act-icon.i2{background:#ECFDF5}.act-icon.i3{background:#F5F3FF}.act-icon.i4{background:#FFFBEB}
+.act-icon.i5{background:#FDF2F8}.act-icon.i6{background:#F0FDFA}.act-icon.i7{background:#FFF7ED}.act-icon.i8{background:#F8FAFC}
+.act-t{font-size:12px;font-weight:700;color:#111827}
+.act-d{font-size:9px;color:#9CA3AF;font-weight:500;margin-top:2px}
+.tb{display:flex;justify-content:space-around;align-items:center;padding:8px 0 28px;background:#FFF;border-top:1px solid rgba(0,0,0,.04)}
+.tab{text-align:center;cursor:pointer;padding:4px 20px;position:relative}
+.tab.active::after{content:'';position:absolute;top:-1px;left:50%;transform:translateX(-50%);width:20px;height:2px;background:#111827;border-radius:1px}
+.tab span{font-size:18px;display:block}
+.tab div{font-size:8px;font-weight:700;color:#D1D5DB;margin-top:2px;letter-spacing:.5px}
+.tab.active div{color:#111827}
+.rest{text-align:center;padding:16px;border-radius:14px;background:rgba(139,92,246,.04);margin-bottom:12px}
+.rest-icon{font-size:28px;margin-bottom:4px}
+.rest-t{font-size:14px;font-weight:800;color:#8B5CF6}
+.rest-s{font-size:11px;color:#6B7280;font-weight:500;margin-top:4px;line-height:1.5}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.card,.overview,.cele,.rest,.view-meals{animation:fadeUp .4s ease-out both}
+.card:nth-child(2){animation-delay:.06s}
+.view-meals{animation-delay:.08s}
+</style>
+</head>
+<body>
+
+<!-- STATE 1 — In-Progress -->
+<div>
+<div class="label">State 1 — In-Progress</div>
+<div class="phone">
+<div class="sb"><span>9:41</span><span>●●●● WiFi 🔋</span></div>
+<div class="hdr">
+  <div><div class="g">Good morning, Sachin 👋</div><div class="s">Tuesday, 25 March</div></div>
+  <div class="av">👤</div>
+</div>
+<div class="ct">
+<div class="overview">
+  <div class="overview-title">Overview</div>
+  <div class="rings-row">
+    <div class="ring-item">
+      <svg width="64" height="64" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#F3F4F6" stroke-width="5"/>
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#22C55E" stroke-width="5" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="128" transform="rotate(-90 40 40)"/>
+        <text x="40" y="38" text-anchor="middle" font-size="14" font-weight="800" fill="#111827">40%</text>
+        <text x="40" y="50" text-anchor="middle" font-size="7" fill="#9CA3AF" font-weight="600">2 of 5</text>
+      </svg>
+      <div class="lbl">Today Meals</div>
+    </div>
+    <div class="ring-item">
+      <svg width="64" height="64" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#F3F4F6" stroke-width="5"/>
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#111827" stroke-width="5" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="0" transform="rotate(-90 40 40)"/>
+        <text x="40" y="38" text-anchor="middle" font-size="18" font-weight="900" fill="#111827">3</text>
+        <text x="40" y="50" text-anchor="middle" font-size="7" fill="#9CA3AF" font-weight="600">total</text>
+      </svg>
+      <div class="lbl">Workout Done</div>
+    </div>
+    <div class="ring-item">
+      <svg width="64" height="64" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#F3F4F6" stroke-width="5"/>
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#22C55E" stroke-width="5" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="124" transform="rotate(-90 40 40)"/>
+        <text x="40" y="38" text-anchor="middle" font-size="14" font-weight="800" fill="#111827">42%</text>
+        <text x="40" y="50" text-anchor="middle" font-size="7" fill="#9CA3AF" font-weight="600">4,218</text>
+      </svg>
+      <div class="lbl">Today Steps</div>
+    </div>
+  </div>
+</div>
+
+<div class="view-meals">
+  <div class="vm-left">
+    <div class="vm-icon">🍽️</div>
+    <div><div class="vm-text">View your meals</div><div class="vm-sub">820 / 2,200 kcal • 2 of 5 done</div></div>
+  </div>
+  <div class="vm-arrow">›</div>
+</div>
+
+<div class="card">
+  <div class="card-head"><div class="card-title">💪 Today’s Workout</div><div class="card-link">Chest & Triceps</div></div>
+  <div class="workout-status pending">
+    <div class="ws-icon pending">🏋️</div>
+    <div><div class="ws-text">Scheduled at 6:00 AM</div><div class="ws-sub">8 exercises • ~55 min</div></div>
+    <div class="ws-badge pending">Pending</div>
+  </div>
+  <div class="quote">“Your body can stand almost anything. It’s your mind you have to convince.”</div>
+</div>
+
+<div class="sec-title">Quick Actions</div>
+<div class="actions">
+  <div class="act"><div class="act-icon i1">💪</div><div class="act-t">My Workout</div><div class="act-d">Track sessions</div></div>
+  <div class="act"><div class="act-icon i2">🥗</div><div class="act-t">My Nutrition</div><div class="act-d">View plan</div></div>
+  <div class="act"><div class="act-icon i3">📊</div><div class="act-t">Progress</div><div class="act-d">Track goals</div></div>
+  <div class="act"><div class="act-icon i4">🧘</div><div class="act-t">Yoga</div><div class="act-d">Mind & body</div></div>
+  <div class="act"><div class="act-icon i5">📸</div><div class="act-t">Food Log</div><div class="act-d">Log meals</div></div>
+  <div class="act"><div class="act-icon i6">🛒</div><div class="act-t">Grocery</div><div class="act-d">Shopping list</div></div>
+  <div class="act"><div class="act-icon i7">⚡</div><div class="act-t">Feedback</div><div class="act-d">Rate workouts</div></div>
+  <div class="act"><div class="act-icon i8">📄</div><div class="act-t">Reports</div><div class="act-d">View reports</div></div>
+</div>
+</div>
+<div class="tb"><div class="tab active"><span>🏠</span><div>HOME</div></div><div class="tab"><span>👤</span><div>PROFILE</div></div></div>
+</div></div>
+
+<!-- STATE 2 — Afternoon -->
+<div>
+<div class="label">State 2 — Afternoon</div>
+<div class="phone">
+<div class="sb"><span>2:15 PM</span><span>●●●● WiFi 🔋</span></div>
+<div class="hdr">
+  <div><div class="g">Keep going, Sachin 💪</div><div class="s">Tuesday, 25 March</div></div>
+  <div class="av">👤</div>
+</div>
+<div class="ct">
+<div class="overview">
+  <div class="overview-title">Overview</div>
+  <div class="rings-row">
+    <div class="ring-item">
+      <svg width="64" height="64" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#F3F4F6" stroke-width="5"/>
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#22C55E" stroke-width="5" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="86" transform="rotate(-90 40 40)"/>
+        <text x="40" y="38" text-anchor="middle" font-size="14" font-weight="800" fill="#111827">60%</text>
+        <text x="40" y="50" text-anchor="middle" font-size="7" fill="#9CA3AF" font-weight="600">3 of 5</text>
+      </svg>
+      <div class="lbl">Today Meals</div>
+    </div>
+    <div class="ring-item">
+      <svg width="64" height="64" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#F3F4F6" stroke-width="5"/>
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#22C55E" stroke-width="5" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="0" transform="rotate(-90 40 40)"/>
+        <text x="40" y="38" text-anchor="middle" font-size="18" font-weight="900" fill="#16a34a">4</text>
+        <text x="40" y="50" text-anchor="middle" font-size="7" fill="#22C55E" font-weight="600">total</text>
+      </svg>
+      <div class="lbl">Workout Done</div>
+    </div>
+    <div class="ring-item">
+      <svg width="64" height="64" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#F3F4F6" stroke-width="5"/>
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#22C55E" stroke-width="5" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="0" transform="rotate(-90 40 40)"/>
+        <text x="40" y="38" text-anchor="middle" font-size="14" font-weight="800" fill="#16a34a">✓</text>
+        <text x="40" y="50" text-anchor="middle" font-size="7" fill="#22C55E" font-weight="600">7,832</text>
+      </svg>
+      <div class="lbl">Today Steps</div>
+    </div>
+  </div>
+</div>
+
+<div class="view-meals">
+  <div class="vm-left">
+    <div class="vm-icon">🍽️</div>
+    <div><div class="vm-text">View your meals</div><div class="vm-sub">1,340 / 2,200 kcal • 3 of 5 done</div></div>
+  </div>
+  <div class="vm-arrow">›</div>
+</div>
+
+<div class="card">
+  <div class="card-head"><div class="card-title">💪 Today’s Workout</div><div class="card-link">Chest & Triceps</div></div>
+  <div class="workout-status done">
+    <div class="ws-icon done">✓</div>
+    <div><div class="ws-text done">Workout completed!</div><div class="ws-sub">8 exercises • 52 min</div></div>
+    <div class="ws-badge done">Done</div>
+  </div>
+</div>
+
+<!-- Step celebration removed — steps shown in Overview rings above -->
+
+<div class="sec-title">Quick Actions</div>
+<div class="actions">
+  <div class="act"><div class="act-icon i1">💪</div><div class="act-t">My Workout</div><div class="act-d">Track sessions</div></div>
+  <div class="act"><div class="act-icon i2">🥗</div><div class="act-t">My Nutrition</div><div class="act-d">View plan</div></div>
+  <div class="act"><div class="act-icon i3">📊</div><div class="act-t">Progress</div><div class="act-d">Track goals</div></div>
+  <div class="act"><div class="act-icon i4">🧘</div><div class="act-t">Yoga</div><div class="act-d">Mind & body</div></div>
+  <div class="act"><div class="act-icon i5">📸</div><div class="act-t">Food Log</div><div class="act-d">Log meals</div></div>
+  <div class="act"><div class="act-icon i6">🛒</div><div class="act-t">Grocery</div><div class="act-d">Shopping list</div></div>
+  <div class="act"><div class="act-icon i7">⚡</div><div class="act-t">Feedback</div><div class="act-d">Rate workouts</div></div>
+  <div class="act"><div class="act-icon i8">📄</div><div class="act-t">Reports</div><div class="act-d">View reports</div></div>
+</div>
+</div>
+<div class="tb"><div class="tab active"><span>🏠</span><div>HOME</div></div><div class="tab"><span>👤</span><div>PROFILE</div></div></div>
+</div></div>
+
+<!-- STATE 3 — All Complete -->
+<div>
+<div class="label">State 3 — All Complete</div>
+<div class="phone">
+<div class="sb"><span>9:30 PM</span><span>●●●● WiFi 🔋</span></div>
+<div class="hdr">
+  <div><div class="g">Perfect day, Sachin 🌟</div><div class="s">Tuesday, 25 March</div></div>
+  <div class="av">👤</div>
+</div>
+<div class="ct">
+<div class="overview">
+  <div class="overview-title">Overview</div>
+  <div class="rings-row">
+    <div class="ring-item">
+      <svg width="64" height="64" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#F3F4F6" stroke-width="5"/>
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#22C55E" stroke-width="5" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="0" transform="rotate(-90 40 40)"/>
+        <text x="40" y="38" text-anchor="middle" font-size="14" font-weight="800" fill="#16a34a">✓</text>
+        <text x="40" y="50" text-anchor="middle" font-size="7" fill="#22C55E" font-weight="600">5 of 5</text>
+      </svg>
+      <div class="lbl">Today Meals</div>
+    </div>
+    <div class="ring-item">
+      <svg width="64" height="64" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#F3F4F6" stroke-width="5"/>
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#22C55E" stroke-width="5" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="0" transform="rotate(-90 40 40)"/>
+        <text x="40" y="38" text-anchor="middle" font-size="18" font-weight="900" fill="#16a34a">4</text>
+        <text x="40" y="50" text-anchor="middle" font-size="7" fill="#22C55E" font-weight="600">total</text>
+      </svg>
+      <div class="lbl">Workout Done</div>
+    </div>
+    <div class="ring-item">
+      <svg width="64" height="64" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#F3F4F6" stroke-width="5"/>
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#22C55E" stroke-width="5" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="0" transform="rotate(-90 40 40)"/>
+        <text x="40" y="38" text-anchor="middle" font-size="14" font-weight="800" fill="#16a34a">✓</text>
+        <text x="40" y="50" text-anchor="middle" font-size="7" fill="#22C55E" font-weight="600">10,432</text>
+      </svg>
+      <div class="lbl">Today Steps</div>
+    </div>
+  </div>
+</div>
+
+<div class="cele green">
+  <div class="cele-icon">🎉</div>
+  <div class="cele-title green">You crushed it today!</div>
+  <div class="cele-sub">All meals, workout & step goal completed</div>
+  <div class="cele-detail">2,180 kcal • 52 min workout • 10,432 steps</div>
+</div>
+
+<div class="view-meals">
+  <div class="vm-left">
+    <div class="vm-icon">🍽️</div>
+    <div><div class="vm-text">View your meals</div><div class="vm-sub">2,180 / 2,200 kcal • 5 of 5 done</div></div>
+  </div>
+  <div class="vm-arrow">›</div>
+</div>
+
+<div class="card">
+  <div class="card-head"><div class="card-title">💪 Today’s Workout</div><div class="card-link">Chest & Triceps</div></div>
+  <div class="workout-status done">
+    <div class="ws-icon done">✓</div>
+    <div><div class="ws-text done">Workout completed!</div><div class="ws-sub">8 exercises • 52 min</div></div>
+    <div class="ws-badge done">Done</div>
+  </div>
+</div>
+
+<div class="sec-title">Quick Actions</div>
+<div class="actions">
+  <div class="act"><div class="act-icon i1">💪</div><div class="act-t">My Workout</div><div class="act-d">Track sessions</div></div>
+  <div class="act"><div class="act-icon i2">🥗</div><div class="act-t">My Nutrition</div><div class="act-d">View plan</div></div>
+  <div class="act"><div class="act-icon i3">📊</div><div class="act-t">Progress</div><div class="act-d">Track goals</div></div>
+  <div class="act"><div class="act-icon i4">🧘</div><div class="act-t">Yoga</div><div class="act-d">Mind & body</div></div>
+  <div class="act"><div class="act-icon i5">📸</div><div class="act-t">Food Log</div><div class="act-d">Log meals</div></div>
+  <div class="act"><div class="act-icon i6">🛒</div><div class="act-t">Grocery</div><div class="act-d">Shopping list</div></div>
+  <div class="act"><div class="act-icon i7">⚡</div><div class="act-t">Feedback</div><div class="act-d">Rate workouts</div></div>
+  <div class="act"><div class="act-icon i8">📄</div><div class="act-t">Reports</div><div class="act-d">View reports</div></div>
+</div>
+</div>
+<div class="tb"><div class="tab active"><span>🏠</span><div>HOME</div></div><div class="tab"><span>👤</span><div>PROFILE</div></div></div>
+</div></div>
+
+<!-- STATE 4 — Rest Day -->
+<div>
+<div class="label">State 4 — Rest Day</div>
+<div class="phone">
+<div class="sb"><span>10:15 AM</span><span>●●●● WiFi 🔋</span></div>
+<div class="hdr">
+  <div><div class="g">Rest well, Sachin 🌿</div><div class="s">Sunday, 30 March</div></div>
+  <div class="av">👤</div>
+</div>
+<div class="ct">
+<div class="overview">
+  <div class="overview-title">Overview</div>
+  <div class="rings-row">
+    <div class="ring-item">
+      <svg width="64" height="64" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#F3F4F6" stroke-width="5"/>
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#8B5CF6" stroke-width="5" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="171" transform="rotate(-90 40 40)"/>
+        <text x="40" y="38" text-anchor="middle" font-size="14" font-weight="800" fill="#111827">20%</text>
+        <text x="40" y="50" text-anchor="middle" font-size="7" fill="#9CA3AF" font-weight="600">1 of 5</text>
+      </svg>
+      <div class="lbl">Today Meals</div>
+    </div>
+    <div class="ring-item">
+      <svg width="64" height="64" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#F3F4F6" stroke-width="5"/>
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#8B5CF6" stroke-width="5" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="0" transform="rotate(-90 40 40)"/>
+        <text x="40" y="38" text-anchor="middle" font-size="18" font-weight="900" fill="#8B5CF6">4</text>
+        <text x="40" y="50" text-anchor="middle" font-size="7" fill="#8B5CF6" font-weight="600">total</text>
+      </svg>
+      <div class="lbl">Workout Done</div>
+    </div>
+    <div class="ring-item">
+      <svg width="64" height="64" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#F3F4F6" stroke-width="5"/>
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#8B5CF6" stroke-width="5" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="171" transform="rotate(-90 40 40)"/>
+        <text x="40" y="38" text-anchor="middle" font-size="14" font-weight="800" fill="#111827">20%</text>
+        <text x="40" y="50" text-anchor="middle" font-size="7" fill="#9CA3AF" font-weight="600">2,015</text>
+      </svg>
+      <div class="lbl">Today Steps</div>
+    </div>
+  </div>
+</div>
+
+<div class="rest">
+  <div class="rest-icon">🧘</div>
+  <div class="rest-t">Today is Rest Day</div>
+  <div class="rest-s">Your muscles grow when you rest.<br>Stay hydrated and stretch! 💧</div>
+</div>
+
+<div class="view-meals">
+  <div class="vm-left">
+    <div class="vm-icon" style="background:#F5F3FF">🍽️</div>
+    <div><div class="vm-text">View your meals</div><div class="vm-sub">480 / 2,200 kcal • 1 of 5 done</div></div>
+  </div>
+  <div class="vm-arrow">›</div>
+</div>
+
+<div class="sec-title">Quick Actions</div>
+<div class="actions">
+  <div class="act"><div class="act-icon i1">💪</div><div class="act-t">My Workout</div><div class="act-d">Track sessions</div></div>
+  <div class="act"><div class="act-icon i2">🥗</div><div class="act-t">My Nutrition</div><div class="act-d">View plan</div></div>
+  <div class="act"><div class="act-icon i3">📊</div><div class="act-t">Progress</div><div class="act-d">Track goals</div></div>
+  <div class="act"><div class="act-icon i4">🧘</div><div class="act-t">Yoga</div><div class="act-d">Mind & body</div></div>
+  <div class="act"><div class="act-icon i5">📸</div><div class="act-t">Food Log</div><div class="act-d">Log meals</div></div>
+  <div class="act"><div class="act-icon i6">🛒</div><div class="act-t">Grocery</div><div class="act-d">Shopping list</div></div>
+  <div class="act"><div class="act-icon i7">⚡</div><div class="act-t">Feedback</div><div class="act-d">Rate workouts</div></div>
+  <div class="act"><div class="act-icon i8">📄</div><div class="act-t">Reports</div><div class="act-d">View reports</div></div>
+</div>
+</div>
+<div class="tb"><div class="tab active"><span>🏠</span><div>HOME</div></div><div class="tab"><span>👤</span><div>PROFILE</div></div></div>
+</div></div>
+
+</body>
+</html>

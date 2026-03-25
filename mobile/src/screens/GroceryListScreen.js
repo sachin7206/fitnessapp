@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import { colors, spacing, borderRadius } from '../config/theme';
+import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import nutritionService from '../services/nutritionService';
 
 const GroceryListScreen = ({ navigation }) => {
@@ -112,19 +112,19 @@ const GroceryListScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   loadingText: { marginTop: spacing.md, color: colors.text.secondary },
-  header: { padding: spacing.lg, paddingTop: 50, backgroundColor: '#111827' },
-  backText: { color: '#fff', fontSize: 16 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#fff', marginTop: 4 },
-  subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
-  progressCard: { margin: spacing.lg, backgroundColor: '#fff', borderRadius: borderRadius.md, padding: spacing.lg, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 4 },
-  progressText: { fontSize: 16, fontWeight: '600', marginBottom: spacing.sm },
-  progressBar: { height: 8, backgroundColor: '#eee', borderRadius: 4 },
-  progressFill: { height: '100%', backgroundColor: '#22C55E', borderRadius: 4 },
-  categoryCard: { margin: spacing.lg, marginTop: 0, backgroundColor: '#fff', borderRadius: borderRadius.md, padding: spacing.md, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
-  categoryTitle: { fontSize: 16, fontWeight: 'bold', color: colors.primary, marginBottom: spacing.sm, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  itemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 0.5, borderBottomColor: '#f0f0f0' },
+  header: { padding: spacing.lg, paddingTop: spacing.xxl + spacing.lg, backgroundColor: colors.primary, flexDirection: 'row', flexWrap: 'wrap' },
+  backText: { color: colors.text.inverse, fontSize: 16, fontWeight: '600', width: '100%', marginBottom: spacing.xs },
+  title: { ...typography.h2, color: colors.text.inverse, width: '100%' },
+  subtitle: { ...typography.bodySmall, color: 'rgba(255,255,255,0.7)', marginTop: 4, width: '100%' },
+  progressCard: { margin: spacing.lg, backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.lg, ...shadows.sm },
+  progressText: { fontSize: 16, fontWeight: '700', marginBottom: spacing.sm, color: colors.text.primary },
+  progressBar: { height: 8, backgroundColor: colors.border, borderRadius: 4 },
+  progressFill: { height: '100%', backgroundColor: colors.success, borderRadius: 4 },
+  categoryCard: { margin: spacing.lg, marginTop: 0, backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.md, ...shadows.sm },
+  categoryTitle: { fontSize: 16, fontWeight: '700', color: colors.text.primary, marginBottom: spacing.sm, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
+  itemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 0.5, borderBottomColor: colors.border },
   itemRowChecked: { opacity: 0.6 },
   checkbox: { fontSize: 20, marginRight: spacing.sm },
   checkboxChecked: {},
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   itemQuantity: { fontSize: 13, color: colors.text.secondary, marginTop: 2 },
   emptyContainer: { padding: spacing.xl, alignItems: 'center' },
   emptyText: { fontSize: 48 },
-  emptyTitle: { fontSize: 18, fontWeight: '600', marginTop: spacing.md },
+  emptyTitle: { fontSize: 18, fontWeight: '600', marginTop: spacing.md, color: colors.text.primary },
   emptySubtitle: { fontSize: 14, color: colors.text.secondary, textAlign: 'center', marginTop: 4 },
   aiNote: { textAlign: 'center', padding: spacing.md, color: colors.text.secondary, fontSize: 12, fontStyle: 'italic' },
 });

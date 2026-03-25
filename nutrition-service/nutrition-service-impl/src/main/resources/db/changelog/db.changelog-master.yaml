@@ -257,3 +257,13 @@ databaseChangeLog:
               - column: { name: original_carbs_grams, type: DOUBLE }
               - column: { name: original_fat_grams, type: DOUBLE }
 
+  - changeSet:
+      id: 011-add-extra-meal-fields-to-daily-meal-tracking
+      author: fitnessapp
+      changes:
+        - addColumn:
+            tableName: daily_meal_tracking
+            columns:
+              - column: { name: is_extra, type: BOOLEAN, defaultValueBoolean: false }
+              - column: { name: food_items_json, type: TEXT }
+

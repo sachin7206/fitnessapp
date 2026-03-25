@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { colors, spacing, borderRadius } from '../config/theme';
+import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import progressService from '../services/progressService';
 
 const WeeklyReportScreen = ({ navigation }) => {
@@ -167,20 +167,20 @@ const WeeklyReportScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   loadingText: { marginTop: spacing.md, color: colors.text.secondary },
-  header: { padding: spacing.lg, paddingTop: 50, backgroundColor: '#673AB7' },
-  backText: { color: '#fff', fontSize: 16 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#fff', marginTop: 4 },
-  subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
-  scoreCard: { margin: spacing.lg, backgroundColor: '#fff', borderRadius: borderRadius.md, padding: spacing.lg, alignItems: 'center', elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 6 },
+  header: { padding: spacing.lg, paddingTop: spacing.xxl + spacing.lg, backgroundColor: colors.primary, flexDirection: 'row', flexWrap: 'wrap' },
+  backText: { color: colors.text.inverse, fontSize: 16, fontWeight: '600', width: '100%', marginBottom: spacing.xs },
+  title: { fontSize: 24, fontWeight: 'bold', color: colors.text.inverse, width: '100%' },
+  subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.7)', marginTop: 4, width: '100%' },
+  scoreCard: { margin: spacing.lg, backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.lg, alignItems: 'center', ...shadows.md },
   scoreBadge: { width: 80, height: 80, borderRadius: 40, justifyContent: 'center', alignItems: 'center' },
-  scoreValue: { fontSize: 28, fontWeight: 'bold', color: '#fff' },
+  scoreValue: { fontSize: 28, fontWeight: 'bold', color: colors.text.inverse },
   scoreLabel: { fontSize: 12, color: 'rgba(255,255,255,0.8)' },
   scoreSummary: { fontSize: 15, textAlign: 'center', color: colors.text.secondary, marginTop: spacing.md, lineHeight: 22 },
-  aiTag: { fontSize: 11, color: colors.primary, marginTop: spacing.sm, backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  section: { margin: spacing.lg, marginTop: 0, backgroundColor: '#fff', borderRadius: borderRadius.md, padding: spacing.lg, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: colors.text.primary, marginBottom: spacing.md },
+  aiTag: { fontSize: 11, color: colors.primary, marginTop: spacing.sm, backgroundColor: colors.background, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  section: { margin: spacing.lg, marginTop: 0, backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.lg, ...shadows.sm },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: colors.text.primary, marginBottom: spacing.md },
   listItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.sm },
   listIcon: { fontSize: 14, marginRight: 8, marginTop: 2 },
   listText: { fontSize: 14, color: colors.text.secondary, flex: 1, lineHeight: 20 },
@@ -189,17 +189,17 @@ const styles = StyleSheet.create({
   plateauStatus: { fontSize: 14, fontWeight: '600' },
   plateauAnalysis: { fontSize: 14, color: colors.text.secondary, marginBottom: spacing.sm, lineHeight: 20 },
   suggestionItem: { fontSize: 13, color: colors.text.secondary, marginBottom: 4 },
-  achievementCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, borderBottomWidth: 0.5, borderBottomColor: '#f0f0f0' },
+  achievementCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, borderBottomWidth: 0.5, borderBottomColor: colors.border },
   achievementLocked: { opacity: 0.6 },
   achievementIcon: { fontSize: 28, marginRight: spacing.md },
   achievementInfo: { flex: 1 },
-  achievementName: { fontSize: 15, fontWeight: '600' },
+  achievementName: { fontSize: 15, fontWeight: '600', color: colors.text.primary },
   achievementDesc: { fontSize: 12, color: colors.text.secondary },
-  achievementProgress: { height: 4, backgroundColor: '#eee', borderRadius: 2, marginTop: 4 },
+  achievementProgress: { height: 4, backgroundColor: colors.border, borderRadius: 2, marginTop: 4 },
   achievementBar: { height: '100%', backgroundColor: colors.primary, borderRadius: 2 },
   earnedBadge: { fontSize: 20 },
   streakCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm },
-  streakType: { fontSize: 14, fontWeight: '600', flex: 1 },
+  streakType: { fontSize: 14, fontWeight: '600', flex: 1, color: colors.text.primary },
   streakCount: { fontSize: 18, fontWeight: 'bold', color: colors.primary },
   streakBest: { fontSize: 12, color: colors.text.secondary, marginLeft: spacing.md },
 });

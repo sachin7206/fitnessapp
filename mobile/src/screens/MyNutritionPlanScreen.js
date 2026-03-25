@@ -56,10 +56,12 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
   // Extra meal modal state
   const [extraMealModalVisible, setExtraMealModalVisible] = useState(false);
   const [extraMealName, setExtraMealName] = useState('');
-  const [extraProtein, setExtraProtein] = useState('');
-  const [extraCarbs, setExtraCarbs] = useState('');
-  const [extraFat, setExtraFat] = useState('');
+  const [extraFoodItems, setExtraFoodItems] = useState([]); // list of food items for the extra meal
   const [extraSaving, setExtraSaving] = useState(false);
+  // Add food item sub-modal for extra meals
+  const [extraFoodModalVisible, setExtraFoodModalVisible] = useState(false);
+  const [extraFoodEditIndex, setExtraFoodEditIndex] = useState(null);
+  const [extraFoodForm, setExtraFoodForm] = useState({ name: '', quantity: '', protein: '', carbs: '', fat: '', calories: '' });
 
   // Format strings: "WEIGHT_LOSS" → "Weight Loss", "NON_VEGETARIAN" → "Non Vegetarian"
   const formatLabel = (str) => {
@@ -370,10 +372,73 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
   // ========== EXTRA MEAL HANDLERS ==========
   const handleOpenExtraMealModal = () => {
     setExtraMealName('');
-    setExtraProtein('');
-    setExtraCarbs('');
-    setExtraFat('');
+    setExtraFoodItems([]);
     setExtraMealModalVisible(true);
+  };
+
+  const openExtraFoodModal = (editIndex = null) => {
+    if (editIndex !== null) {
+      const food = extraFoodItems[editIndex];
+      setExtraFoodForm({
+        name: food.name || '',
+        quantity: food.quantity || '',
+        protein: String(food.proteinGrams || ''),
+        carbs: String(food.carbsGrams || ''),
+        fat: String(food.fatGrams || ''),
+        calories: String(food.calories || ''),
+      });
+      setExtraFoodEditIndex(editIndex);
+    } else {
+      setExtraFoodForm({ name: '', quantity: '', protein: '', carbs: '', fat: '', calories: '' });
+      setExtraFoodEditIndex(null);
+    }
+    setExtraFoodModalVisible(true);
+  };
+
+  const handleSaveExtraFoodItem = () => {
+    if (!extraFoodForm.name.trim()) {
+      const msg = 'Please enter a food name.';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Info', msg);
+      return;
+    }
+    const protein = parseFloat(extraFoodForm.protein) || 0;
+    const carbs = parseFloat(extraFoodForm.carbs) || 0;
+    const fat = parseFloat(extraFoodForm.fat) || 0;
+    let calories = parseInt(extraFoodForm.calories) || 0;
+    if (calories === 0 && (protein > 0 || carbs > 0 || fat > 0)) {
+      calories = Math.round(protein * 4 + carbs * 4 + fat * 9);
+    }
+    const foodItem = {
+      name: extraFoodForm.name.trim(),
+      quantity: extraFoodForm.quantity.trim() || '1 serving',
+      proteinGrams: protein,
+      carbsGrams: carbs,
+      fatGrams: fat,
+      calories,
+    };
+    if (extraFoodEditIndex !== null) {
+      setExtraFoodItems(prev => {
+        const updated = [...prev];
+        updated[extraFoodEditIndex] = foodItem;
+        return updated;
+      });
+    } else {
+      setExtraFoodItems(prev => [...prev, foodItem]);
+    }
+    setExtraFoodModalVisible(false);
+  };
+
+  const removeExtraFoodItem = (index) => {
+    setExtraFoodItems(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const getExtraMealTotals = () => {
+    return extraFoodItems.reduce((acc, item) => ({
+      protein: acc.protein + (item.proteinGrams || 0),
+      carbs: acc.carbs + (item.carbsGrams || 0),
+      fat: acc.fat + (item.fatGrams || 0),
+      calories: acc.calories + (item.calories || 0),
+    }), { protein: 0, carbs: 0, fat: 0, calories: 0 });
   };
 
   const handleSubmitExtraMeal = async () => {
@@ -382,10 +447,11 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
       Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Info', msg);
       return;
     }
-    const protein = parseFloat(extraProtein) || 0;
-    const carbs = parseFloat(extraCarbs) || 0;
-    const fat = parseFloat(extraFat) || 0;
-    const calories = Math.round(protein * 4 + carbs * 4 + fat * 9);
+    if (extraFoodItems.length === 0) {
+      const msg = 'Please add at least one food item.';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Info', msg);
+      return;
+    }
 
     const currentExtras = tracking.meals.filter(m => m.isExtra).length;
     if (currentExtras >= 10) {
@@ -398,14 +464,7 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
     try {
       dispatch(addExtraMeal({
         mealName: extraMealName.trim(),
-        foodItems: [{
-          name: extraMealName.trim(),
-          quantity: '1 serving',
-          proteinGrams: protein,
-          carbsGrams: carbs,
-          fatGrams: fat,
-          calories,
-        }],
+        foodItems: extraFoodItems,
       }));
       await dispatch(persistTrackingNow());
       setExtraMealModalVisible(false);
@@ -753,7 +812,12 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
             <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
               🍕 Extra Meals ({tracking.meals.filter(m => m.isExtra).length})
             </Text>
-            {tracking.meals.filter(m => m.isExtra).map((extraMeal, idx) => (
+            {tracking.meals.filter(m => m.isExtra).map((extraMeal, idx) => {
+              const items = extraMeal.foodItems || [];
+              const totalP = items.reduce((s, f) => s + (f.proteinGrams || 0), 0);
+              const totalC = items.reduce((s, f) => s + (f.carbsGrams || 0), 0);
+              const totalF = items.reduce((s, f) => s + (f.fatGrams || 0), 0);
+              return (
               <View key={extraMeal.mealId || `extra-${idx}`} style={[styles.mealCard, styles.extraMealCard]}>
                 <View style={styles.mealHeader}>
                   <View style={[styles.mealIconContainer, { backgroundColor: colors.warning + '20' }]}>
@@ -761,34 +825,41 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
                   </View>
                   <View style={styles.mealInfo}>
                     <Text style={styles.mealName}>{extraMeal.name || 'Extra Meal'}</Text>
-                    <Text style={styles.mealTime}>Added today</Text>
+                    <Text style={styles.mealTime}>Added today • {items.length} item{items.length !== 1 ? 's' : ''}</Text>
                   </View>
                   <View style={styles.mealCalories}>
                     <Text style={styles.caloriesValue}>{extraMeal.calories || 0}</Text>
                     <Text style={styles.caloriesLabel}>kcal</Text>
                   </View>
                 </View>
-                {extraMeal.foodItems && extraMeal.foodItems.length > 0 && (
-                  <View>
+                {/* Individual food items list */}
+                {items.length > 0 && (
+                  <View style={{ marginTop: spacing.sm }}>
+                    {items.map((food, fIdx) => (
+                      <View key={fIdx} style={styles.extraFoodItemRow}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.extraFoodItemName}>{food.name}</Text>
+                          <Text style={styles.extraFoodItemQty}>{food.quantity || '1 serving'}</Text>
+                        </View>
+                        <Text style={styles.extraFoodItemCal}>{food.calories || 0} cal</Text>
+                      </View>
+                    ))}
+                    {/* Total macros */}
                     <View style={styles.replacedMacrosContainer}>
                       <View style={styles.macroItem}>
-                        <Text style={styles.macroValue}>{extraMeal.foodItems[0]?.proteinGrams?.toFixed(0) || 0}g</Text>
+                        <Text style={styles.macroValue}>{totalP.toFixed(0)}g</Text>
                         <Text style={styles.macroLabel}>Protein</Text>
                       </View>
                       <View style={styles.macroItem}>
-                        <Text style={styles.macroValue}>{extraMeal.foodItems[0]?.carbsGrams?.toFixed(0) || 0}g</Text>
+                        <Text style={styles.macroValue}>{totalC.toFixed(0)}g</Text>
                         <Text style={styles.macroLabel}>Carbs</Text>
                       </View>
                       <View style={styles.macroItem}>
-                        <Text style={styles.macroValue}>{extraMeal.foodItems[0]?.fatGrams?.toFixed(0) || 0}g</Text>
+                        <Text style={styles.macroValue}>{totalF.toFixed(0)}g</Text>
                         <Text style={styles.macroLabel}>Fat</Text>
                       </View>
                     </View>
-                    <MacroPieChart
-                      protein={extraMeal.foodItems[0]?.proteinGrams || 0}
-                      carbs={extraMeal.foodItems[0]?.carbsGrams || 0}
-                      fat={extraMeal.foodItems[0]?.fatGrams || 0}
-                    />
+                    <MacroPieChart protein={totalP} carbs={totalC} fat={totalF} />
                   </View>
                 )}
                 <TouchableOpacity
@@ -799,7 +870,8 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
                   <Text style={styles.removeExtraBtnText}>🗑️ Remove</Text>
                 </TouchableOpacity>
               </View>
-            ))}
+              );
+            })}
           </>
         )}
 
@@ -970,7 +1042,7 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+            <View style={[styles.modalContent, { maxHeight: '85%' }]}>
               <Text style={styles.modalTitle}>➕ Add Extra Meal</Text>
               <Text style={styles.modalSubtitle}>
                 Log something you ate outside your plan
@@ -979,7 +1051,7 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
               <Text style={styles.fieldLabel}>Meal Name *</Text>
               <TextInput
                 style={[styles.modalInput, styles.modalInputSingle]}
-                placeholder="e.g. Protein shake, Fruit bowl..."
+                placeholder="e.g. Evening Snack, Post-workout..."
                 placeholderTextColor={colors.text.light}
                 value={extraMealName}
                 onChangeText={setExtraMealName}
@@ -987,53 +1059,57 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
                 autoFocus
               />
 
-              <Text style={styles.fieldLabel}>Nutritional Details (optional)</Text>
-              <View style={styles.macroRow}>
-                <View style={styles.macroField}>
-                  <Text style={styles.macroLabel}>Protein (g)</Text>
-                  <TextInput
-                    style={styles.macroInput}
-                    placeholder="0"
-                    placeholderTextColor={colors.text.light}
-                    keyboardType="decimal-pad"
-                    value={extraProtein}
-                    onChangeText={setExtraProtein}
-                  />
-                </View>
-                <View style={styles.macroField}>
-                  <Text style={styles.macroLabel}>Carbs (g)</Text>
-                  <TextInput
-                    style={styles.macroInput}
-                    placeholder="0"
-                    placeholderTextColor={colors.text.light}
-                    keyboardType="decimal-pad"
-                    value={extraCarbs}
-                    onChangeText={setExtraCarbs}
-                  />
-                </View>
-                <View style={styles.macroField}>
-                  <Text style={styles.macroLabel}>Fat (g)</Text>
-                  <TextInput
-                    style={styles.macroInput}
-                    placeholder="0"
-                    placeholderTextColor={colors.text.light}
-                    keyboardType="decimal-pad"
-                    value={extraFat}
-                    onChangeText={setExtraFat}
-                  />
-                </View>
-              </View>
+              {/* Food Items List */}
+              <Text style={[styles.fieldLabel, { marginTop: spacing.sm }]}>
+                Food Items ({extraFoodItems.length})
+              </Text>
+              <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
+                {extraFoodItems.length === 0 ? (
+                  <View style={styles.extraEmptyFoodList}>
+                    <Text style={styles.extraEmptyFoodText}>No food items added yet</Text>
+                  </View>
+                ) : (
+                  extraFoodItems.map((food, fIdx) => (
+                    <View key={fIdx} style={styles.extraFoodListItem}>
+                      <TouchableOpacity
+                        style={{ flex: 1 }}
+                        onPress={() => openExtraFoodModal(fIdx)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.extraFoodListName}>{food.name}</Text>
+                        <Text style={styles.extraFoodListMacros}>
+                          {food.quantity || '1 serving'} • {food.calories} cal • P:{food.proteinGrams}g C:{food.carbsGrams}g F:{food.fatGrams}g
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => removeExtraFoodItem(fIdx)}
+                        style={styles.extraFoodRemoveBtn}
+                      >
+                        <Text style={styles.extraFoodRemoveBtnText}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))
+                )}
+              </ScrollView>
 
-              {/* Estimated calories preview */}
-              {(extraProtein !== '' || extraCarbs !== '' || extraFat !== '') && (
-                <Text style={styles.caloriePreview}>
-                  🔥 Estimated: {Math.round(
-                    (parseFloat(extraProtein) || 0) * 4 +
-                    (parseFloat(extraCarbs) || 0) * 4 +
-                    (parseFloat(extraFat) || 0) * 9
-                  )} kcal
-                </Text>
-              )}
+              {/* Add Food Item Button */}
+              <TouchableOpacity
+                style={styles.extraAddFoodBtn}
+                onPress={() => openExtraFoodModal()}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.extraAddFoodBtnText}>➕ Add Food Item</Text>
+              </TouchableOpacity>
+
+              {/* Totals preview */}
+              {extraFoodItems.length > 0 && (() => {
+                const totals = getExtraMealTotals();
+                return (
+                  <Text style={styles.caloriePreview}>
+                    🔥 Total: {Math.round(totals.calories)} kcal • P:{totals.protein.toFixed(0)}g C:{totals.carbs.toFixed(0)}g F:{totals.fat.toFixed(0)}g
+                  </Text>
+                );
+              })()}
 
               <View style={styles.modalButtons}>
                 <TouchableOpacity
@@ -1043,15 +1119,130 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
                   <Text style={styles.modalCancelText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.modalSubmitBtn, extraSaving && styles.modalSubmitDisabled]}
+                  style={[styles.modalSubmitBtn, (extraSaving || extraFoodItems.length === 0) && styles.modalSubmitDisabled]}
                   onPress={handleSubmitExtraMeal}
-                  disabled={extraSaving}
+                  disabled={extraSaving || extraFoodItems.length === 0}
                 >
                   {extraSaving ? (
                     <ActivityIndicator size="small" color="#FFF" />
                   ) : (
-                    <Text style={styles.modalSubmitText}>Add Meal</Text>
+                    <Text style={styles.modalSubmitText}>Add Meal ({extraFoodItems.length} items)</Text>
                   )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Add Food Item Sub-Modal for Extra Meals */}
+      <Modal
+        visible={extraFoodModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setExtraFoodModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>
+                {extraFoodEditIndex !== null ? '✏️ Edit Food Item' : '➕ Add Food Item'}
+              </Text>
+
+              <Text style={styles.fieldLabel}>Food Name *</Text>
+              <TextInput
+                style={[styles.modalInput, styles.modalInputSingle]}
+                placeholder="e.g. Grilled Chicken, Rice..."
+                placeholderTextColor={colors.text.light}
+                value={extraFoodForm.name}
+                onChangeText={(t) => setExtraFoodForm(p => ({ ...p, name: t }))}
+                maxLength={200}
+                autoFocus
+              />
+
+              <Text style={styles.fieldLabel}>Quantity</Text>
+              <TextInput
+                style={[styles.modalInput, styles.modalInputSingle]}
+                placeholder="e.g. 150g, 1 cup, 2 pieces"
+                placeholderTextColor={colors.text.light}
+                value={extraFoodForm.quantity}
+                onChangeText={(t) => setExtraFoodForm(p => ({ ...p, quantity: t }))}
+                maxLength={100}
+              />
+
+              <Text style={styles.fieldLabel}>Macros</Text>
+              <View style={styles.macroRow}>
+                <View style={styles.macroField}>
+                  <Text style={styles.macroLabel}>Protein (g)</Text>
+                  <TextInput
+                    style={styles.macroInput}
+                    placeholder="0"
+                    placeholderTextColor={colors.text.light}
+                    keyboardType="decimal-pad"
+                    value={extraFoodForm.protein}
+                    onChangeText={(t) => setExtraFoodForm(p => ({ ...p, protein: t }))}
+                  />
+                </View>
+                <View style={styles.macroField}>
+                  <Text style={styles.macroLabel}>Carbs (g)</Text>
+                  <TextInput
+                    style={styles.macroInput}
+                    placeholder="0"
+                    placeholderTextColor={colors.text.light}
+                    keyboardType="decimal-pad"
+                    value={extraFoodForm.carbs}
+                    onChangeText={(t) => setExtraFoodForm(p => ({ ...p, carbs: t }))}
+                  />
+                </View>
+                <View style={styles.macroField}>
+                  <Text style={styles.macroLabel}>Fat (g)</Text>
+                  <TextInput
+                    style={styles.macroInput}
+                    placeholder="0"
+                    placeholderTextColor={colors.text.light}
+                    keyboardType="decimal-pad"
+                    value={extraFoodForm.fat}
+                    onChangeText={(t) => setExtraFoodForm(p => ({ ...p, fat: t }))}
+                  />
+                </View>
+              </View>
+
+              <View style={[styles.macroRow, { marginTop: spacing.sm }]}>
+                <View style={[styles.macroField, { flex: 1 }]}>
+                  <Text style={styles.macroLabel}>Calories (auto if empty)</Text>
+                  <TextInput
+                    style={styles.macroInput}
+                    placeholder="Auto"
+                    placeholderTextColor={colors.text.light}
+                    keyboardType="decimal-pad"
+                    value={extraFoodForm.calories}
+                    onChangeText={(t) => setExtraFoodForm(p => ({ ...p, calories: t }))}
+                  />
+                </View>
+              </View>
+
+              {/* Auto-calc hint */}
+              <Text style={[styles.caloriePreview, { fontSize: 11, marginTop: 4 }]}>
+                💡 Leave calories empty to auto-calculate (P×4 + C×4 + F×9)
+              </Text>
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  onPress={() => setExtraFoodModalVisible(false)}
+                >
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalSubmitBtn}
+                  onPress={handleSaveExtraFoodItem}
+                >
+                  <Text style={styles.modalSubmitText}>
+                    {extraFoodEditIndex !== null ? 'Update' : 'Add'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1682,6 +1873,86 @@ const styles = StyleSheet.create({
   removeExtraBtnText: {
     ...typography.caption,
     color: colors.error,
+    fontWeight: '600',
+  },
+  // --- Extra Meal Food Items (in card) ---
+  extraFoodItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border + '30',
+  },
+  extraFoodItemName: {
+    ...typography.bodySmall,
+    color: colors.text.primary,
+    fontWeight: '600',
+  },
+  extraFoodItemQty: {
+    ...typography.caption,
+    color: colors.text.secondary,
+  },
+  extraFoodItemCal: {
+    ...typography.bodySmall,
+    color: colors.primary,
+    fontWeight: '700',
+    marginLeft: spacing.sm,
+  },
+  // --- Extra Meal Modal Food List ---
+  extraEmptyFoodList: {
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.xs,
+  },
+  extraEmptyFoodText: {
+    ...typography.bodySmall,
+    color: colors.text.light,
+    fontStyle: 'italic',
+  },
+  extraFoodListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  extraFoodListName: {
+    ...typography.bodySmall,
+    color: colors.text.primary,
+    fontWeight: '600',
+  },
+  extraFoodListMacros: {
+    ...typography.caption,
+    color: colors.text.secondary,
+    marginTop: 2,
+  },
+  extraFoodRemoveBtn: {
+    padding: spacing.xs,
+    marginLeft: spacing.sm,
+  },
+  extraFoodRemoveBtnText: {
+    fontSize: 16,
+    color: colors.error,
+    fontWeight: '700',
+  },
+  extraAddFoodBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+    borderWidth: 1.5,
+    borderColor: colors.primary + '40',
+    borderStyle: 'dashed',
+    borderRadius: borderRadius.md,
+  },
+  extraAddFoodBtnText: {
+    ...typography.bodySmall,
+    color: colors.primary,
     fontWeight: '600',
   },
   // --- Macro Percentages ---

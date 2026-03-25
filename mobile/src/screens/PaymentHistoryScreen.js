@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import paymentService from '../services/paymentService';
-import { colors, spacing } from '../config/theme';
+import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 
 const PaymentHistoryScreen = ({ navigation }) => {
   const [payments, setPayments] = useState([]);
@@ -118,35 +118,35 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.md, paddingTop: 50, paddingBottom: spacing.md,
+    paddingHorizontal: spacing.md, paddingTop: spacing.xxl + spacing.lg, paddingBottom: spacing.md,
     backgroundColor: colors.primary,
   },
   backButton: { padding: spacing.sm },
   backButtonText: { color: colors.text.inverse, fontSize: 16, fontWeight: '600' },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: colors.text.inverse },
+  headerTitle: { ...typography.h3, color: colors.text.inverse },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyIcon: { fontSize: 48, marginBottom: spacing.md },
-  emptyText: { fontSize: 18, fontWeight: '600', color: colors.text.primary },
-  emptySubtext: { fontSize: 14, color: colors.text.secondary, marginTop: spacing.xs },
+  emptyText: { ...typography.h3, color: colors.text.primary },
+  emptySubtext: { ...typography.bodySmall, color: colors.text.secondary, marginTop: spacing.xs },
   listContent: { padding: spacing.md },
   paymentCard: {
-    backgroundColor: colors.surface, borderRadius: 12, padding: spacing.md,
-    marginBottom: spacing.sm, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
+    backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.md,
+    marginBottom: spacing.sm, ...shadows.sm,
   },
   paymentHeader: { flexDirection: 'row', justifyContent: 'space-between' },
   paymentLeft: { flex: 1 },
   paymentRight: { alignItems: 'flex-end' },
-  paymentDescription: { fontSize: 15, fontWeight: '600', color: colors.text.primary },
-  paymentDate: { fontSize: 12, color: colors.text.secondary, marginTop: 4 },
+  paymentDescription: { ...typography.body, fontWeight: '600', color: colors.text.primary },
+  paymentDate: { ...typography.caption, color: colors.text.secondary, marginTop: 4 },
   paymentAmount: { fontSize: 18, fontWeight: 'bold', color: colors.text.primary },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, marginTop: 4 },
   statusText: { fontSize: 11, fontWeight: 'bold' },
   paymentDetails: {
     flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.sm,
-    paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: '#F0F0F0',
+    paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border,
   },
-  detailText: { fontSize: 12, color: colors.text.secondary },
+  detailText: { ...typography.caption, color: colors.text.secondary },
 });
 
 export default PaymentHistoryScreen;

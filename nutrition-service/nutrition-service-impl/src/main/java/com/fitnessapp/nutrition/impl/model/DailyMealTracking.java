@@ -42,6 +42,10 @@ public class DailyMealTracking {
     private Double originalProteinGrams;
     private Double originalCarbsGrams;
     private Double originalFatGrams;
+    @Column(name = "is_extra")
+    private Boolean isExtra;
+    @Column(name = "food_items_json", columnDefinition = "TEXT")
+    private String foodItemsJson;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

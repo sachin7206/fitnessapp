@@ -88,6 +88,8 @@ public class MealTrackingService implements MealTrackingOperations {
                     record.setProteinGrams(mealReq.getProteinGrams() != null ? mealReq.getProteinGrams() : 0.0);
                     record.setCarbsGrams(mealReq.getCarbsGrams() != null ? mealReq.getCarbsGrams() : 0.0);
                     record.setFatGrams(mealReq.getFatGrams() != null ? mealReq.getFatGrams() : 0.0);
+                    record.setIsExtra(mealReq.getIsExtra() != null ? mealReq.getIsExtra() : false);
+                    record.setFoodItemsJson(mealReq.getFoodItemsJson());
                     // Persist original macros only if meal is actually replaced; clear stale data otherwise
                     if (Boolean.TRUE.equals(mealReq.getReplaced())) {
                         record.setOriginalCalories(mealReq.getOriginalCalories());
@@ -116,6 +118,8 @@ public class MealTrackingService implements MealTrackingOperations {
                                 existing.setProteinGrams(mealReq.getProteinGrams() != null ? mealReq.getProteinGrams() : 0.0);
                                 existing.setCarbsGrams(mealReq.getCarbsGrams() != null ? mealReq.getCarbsGrams() : 0.0);
                                 existing.setFatGrams(mealReq.getFatGrams() != null ? mealReq.getFatGrams() : 0.0);
+                                existing.setIsExtra(mealReq.getIsExtra() != null ? mealReq.getIsExtra() : false);
+                                existing.setFoodItemsJson(mealReq.getFoodItemsJson());
                                 // Persist original macros only if meal is actually replaced; clear stale data otherwise
                                 if (Boolean.TRUE.equals(mealReq.getReplaced())) {
                                     existing.setOriginalCalories(mealReq.getOriginalCalories());
@@ -223,6 +227,8 @@ public class MealTrackingService implements MealTrackingOperations {
         dto.setOriginalProteinGrams(m.getOriginalProteinGrams());
         dto.setOriginalCarbsGrams(m.getOriginalCarbsGrams());
         dto.setOriginalFatGrams(m.getOriginalFatGrams());
+        dto.setIsExtra(m.getIsExtra());
+        dto.setFoodItemsJson(m.getFoodItemsJson());
         return dto;
     }
 

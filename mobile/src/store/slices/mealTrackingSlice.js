@@ -195,17 +195,15 @@ const mealTrackingSlice = createSlice({
 
     addExtraMeal: (state, action) => {
       const { mealName, foodItems } = action.payload;
-      // Generate a unique ID for the extra meal
-      const extraId = `extra_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+      // Generate a unique numeric ID for the extra meal (timestamp-based, fits in Java Long)
+      const extraId = Date.now();
       const now = new Date();
       const hours = now.getHours();
-      const minutes = now.getMinutes();
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      const displayHours = hours % 12 || 12;
-      const timeOfDay = `${displayHours}:${String(minutes).padStart(2, '0')} ${ampm}`;
-
-      // Compute totals from food items
-      const items = Array.isArray(foodItems) ? foodItems : [];
+      const items = foodItems || [];
+      const mins = now.getMinutes();
+      const period = hours >= 12 ? 'PM' : 'AM';
+      const displayHours = hours > 12 ? hours - 12 : (hours === 0 ? 12 : hours);
+      const timeOfDay = `${displayHours}:${String(mins).padStart(2, '0')} ${period}`;
       const totalProtein = items.reduce((s, f) => s + (f.proteinGrams || 0), 0);
       const totalCarbs = items.reduce((s, f) => s + (f.carbsGrams || 0), 0);
       const totalFat = items.reduce((s, f) => s + (f.fatGrams || 0), 0);
@@ -220,13 +218,14 @@ const mealTrackingSlice = createSlice({
         proteinGrams: totalProtein,
         carbsGrams: totalCarbs,
         fatGrams: totalFat,
-        foodItems: items,
         completed: true,
         completedAt: now.toISOString(),
         isExtra: true,
+        foodItems: items,
       };
 
       state.meals.push(newMeal);
+      state.meals = sortByTime(state.meals);
       state.consumedCalories += newMeal.calories;
       state.consumedProtein += newMeal.proteinGrams;
       state.consumedCarbs += newMeal.carbsGrams;
@@ -307,6 +306,7 @@ export const persistTracking = () => async (dispatch, getState) => {
           originalCarbsGrams: m.originalCarbsGrams ?? null,
           originalFatGrams: m.originalFatGrams ?? null,
           isExtra: m.isExtra || false,
+          foodItemsJson: m.isExtra && m.foodItems ? JSON.stringify(m.foodItems) : null,
         })),
         consumedCalories: mealTracking.consumedCalories || 0,
         consumedProtein: mealTracking.consumedProtein || 0,
@@ -364,8 +364,8 @@ export const persistTrackingNow = () => async (dispatch, getState) => {
           originalCarbsGrams: m.originalCarbsGrams ?? null,
           originalFatGrams: m.originalFatGrams ?? null,
           isExtra: m.isExtra || false,
+          foodItemsJson: m.isExtra && m.foodItems ? JSON.stringify(m.foodItems) : null,
         })),
-        consumedCalories: mealTracking.consumedCalories || 0,
         consumedProtein: mealTracking.consumedProtein || 0,
         consumedCarbs: mealTracking.consumedCarbs || 0,
         consumedFat: mealTracking.consumedFat || 0,
@@ -388,9 +388,11 @@ export const loadTrackingLocal = () => async (dispatch, getState) => {
     if (raw) {
       const data = JSON.parse(raw);
       if (data.trackingDate && data.trackingDate !== today) {
+        // Filter out extra meals — they should NOT carry over to the next day
+        const regularMeals = (data.meals || []).filter(m => !m.isExtra);
         const resetData = {
           trackingDate: today,
-          meals: (data.meals || []).map(m => {
+          meals: regularMeals.map(m => {
             // Restore original macros if meal was replaced yesterday
             const calories = (m.replaced && m.originalCalories != null) ? m.originalCalories : m.calories;
             const proteinGrams = (m.replaced && m.originalProteinGrams != null) ? m.originalProteinGrams : m.proteinGrams;
@@ -475,9 +477,11 @@ export const loadTrackingFromStorage = () => async (dispatch, getState) => {
     if (raw) {
       const data = JSON.parse(raw);
       if (data.trackingDate && data.trackingDate !== today) {
+        // Filter out extra meals — they should NOT carry over to the next day
+        const regularMeals = (data.meals || []).filter(m => !m.isExtra);
         const resetData = {
           trackingDate: today,
-          meals: (data.meals || []).map(m => {
+          meals: regularMeals.map(m => {
             // Restore original macros if meal was replaced yesterday
             const calories = (m.replaced && m.originalCalories != null) ? m.originalCalories : m.calories;
             const proteinGrams = (m.replaced && m.originalProteinGrams != null) ? m.originalProteinGrams : m.proteinGrams;
@@ -550,6 +554,8 @@ export const loadTrackingFromStorage = () => async (dispatch, getState) => {
               originalProteinGrams: m.originalProteinGrams ?? null,
               originalCarbsGrams: m.originalCarbsGrams ?? null,
               originalFatGrams: m.originalFatGrams ?? null,
+              isExtra: m.isExtra || false,
+              foodItems: m.foodItemsJson ? JSON.parse(m.foodItemsJson) : (m.foodItems || []),
             })),
             consumedCalories: backendData.consumedCalories || 0,
             consumedProtein: backendData.consumedProtein || 0,

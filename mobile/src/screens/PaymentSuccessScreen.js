@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { fetchActiveSubscription } from '../store/slices/subscriptionSlice';
-import { colors, spacing } from '../config/theme';
+import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 
 const PaymentSuccessScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
@@ -88,33 +88,33 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.lg },
   successIcon: {
-    width: 100, height: 100, borderRadius: 50, backgroundColor: '#E8F5E9',
+    width: 100, height: 100, borderRadius: 50, backgroundColor: colors.success + '15',
     justifyContent: 'center', alignItems: 'center', marginBottom: spacing.lg,
   },
   successEmoji: { fontSize: 50 },
-  title: { fontSize: 28, fontWeight: 'bold', color: colors.text.primary, marginBottom: spacing.sm },
-  subtitle: { fontSize: 16, color: colors.text.secondary, marginBottom: spacing.xl },
+  title: { ...typography.h2, color: colors.text.primary, marginBottom: spacing.sm },
+  subtitle: { ...typography.body, color: colors.text.secondary, marginBottom: spacing.xl },
   detailsCard: {
-    backgroundColor: colors.surface, borderRadius: 16, padding: spacing.lg, width: '100%',
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2, marginBottom: spacing.xl,
+    backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.lg, width: '100%',
+    ...shadows.sm, marginBottom: spacing.xl,
   },
   detailRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: '#F0F0F0',
+    paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  detailLabel: { fontSize: 14, color: colors.text.secondary },
-  detailValue: { fontSize: 15, fontWeight: '600', color: colors.text.primary },
+  detailLabel: { ...typography.bodySmall, color: colors.text.secondary },
+  detailValue: { ...typography.body, fontWeight: '600', color: colors.text.primary },
   successBadge: {
     backgroundColor: colors.success, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8,
   },
-  successBadgeText: { color: '#FFF', fontSize: 12, fontWeight: 'bold' },
+  successBadgeText: { color: colors.text.inverse, fontSize: 12, fontWeight: 'bold' },
   workoutButton: {
-    backgroundColor: colors.primary, paddingVertical: 16, borderRadius: 12,
-    width: '100%', alignItems: 'center', marginBottom: spacing.md,
+    backgroundColor: colors.primary, paddingVertical: 16, borderRadius: borderRadius.lg,
+    width: '100%', alignItems: 'center', marginBottom: spacing.md, ...shadows.md,
   },
-  workoutButtonText: { color: '#FFF', fontSize: 17, fontWeight: 'bold' },
+  workoutButtonText: { color: colors.text.inverse, fontSize: 17, fontWeight: 'bold' },
   homeButton: {
-    paddingVertical: 14, borderRadius: 12, width: '100%', alignItems: 'center',
+    paddingVertical: 14, borderRadius: borderRadius.lg, width: '100%', alignItems: 'center',
     borderWidth: 1, borderColor: colors.primary,
   },
   homeButtonText: { color: colors.primary, fontSize: 16, fontWeight: '600' },

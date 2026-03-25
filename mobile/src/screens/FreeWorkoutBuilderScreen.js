@@ -24,6 +24,14 @@ const MUSCLE_ICONS = {
   'ARMS': '💪', 'FULL_BODY': '🏋️', 'CARDIO': '❤️', 'CORE': '🎯',
 };
 
+const TIME_OPTIONS = [
+  '5:00 AM', '5:30 AM', '6:00 AM', '6:30 AM', '7:00 AM', '7:30 AM', '8:00 AM', '8:30 AM',
+  '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '12:00 PM',
+  '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM', '3:00 PM', '3:30 PM',
+  '4:00 PM', '4:30 PM', '5:00 PM', '5:30 PM', '6:00 PM', '6:30 PM', '7:00 PM',
+  '7:30 PM', '8:00 PM', '8:30 PM', '9:00 PM', '9:30 PM', '10:00 PM', '10:30 PM',
+];
+
 const formatLabel = (str) => {
   if (!str) return '';
   return str.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
@@ -62,6 +70,7 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
 
   const [saving, setSaving] = useState(false);
   const [restDay, setRestDay] = useState('');
+  const [exerciseTime, setExerciseTime] = useState('6:00 AM');
   const [validationErrors, setValidationErrors] = useState({});
 
   // Only load existing plan if user is explicitly editing (not creating new)
@@ -351,6 +360,11 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
       errors.days = 'Please select at least one workout day';
     }
 
+    // Validate exercise time is selected
+    if (!exerciseTime || !exerciseTime.trim()) {
+      errors.exerciseTime = 'Please select your preferred workout time';
+    }
+
     // Validate every selected workout day has at least one exercise
     const emptyDays = selectedDays.filter(day => !(exercises[day] && exercises[day].length > 0));
     if (emptyDays.length > 0) {
@@ -397,6 +411,7 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
         planType: 'CUSTOM',
         daysPerWeek: selectedDays.length,
         restDay: restDay || null,
+        exerciseTime: exerciseTime,
         exercises: allExercises,
       };
 
@@ -527,6 +542,31 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
           </View>
         )}
 
+        {/* Exercise Time */}
+        <Text style={styles.sectionTitle}>🕐 Exercise Time *</Text>
+        <Text style={styles.sectionHint}>When do you prefer to workout?</Text>
+        {validationErrors.exerciseTime && (
+          <Text style={styles.errorText}>⚠️ {validationErrors.exerciseTime}</Text>
+        )}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.timeRow}>
+          {TIME_OPTIONS.map(time => (
+            <TouchableOpacity
+              key={time}
+              style={[styles.timeChip, exerciseTime === time && styles.timeChipSelected]}
+              onPress={() => {
+                setExerciseTime(time);
+                if (validationErrors.exerciseTime) {
+                  setValidationErrors(prev => ({ ...prev, exerciseTime: null }));
+                }
+              }}
+            >
+              <Text style={[styles.timeChipText, exerciseTime === time && styles.timeChipTextSelected]}>
+                {time}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
         {/* Active Day Tabs */}
         <Text style={styles.sectionTitle}>🏋️ Exercises</Text>
         {validationErrors.exercises && (
@@ -640,6 +680,10 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
               <Text style={[styles.summaryValue, { color: '#374151' }]}>{formatLabel(restDay)}</Text>
             </View>
           ) : null}
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Exercise time</Text>
+            <Text style={styles.summaryValue}>🕐 {exerciseTime}</Text>
+          </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Total exercises</Text>
             <Text style={styles.summaryValue}>
@@ -900,6 +944,16 @@ const styles = StyleSheet.create({
   restDayChipSelected: { backgroundColor: '#374151', borderColor: '#374151' },
   restDayChipTextSelected: { color: '#fff', fontWeight: '700' },
   sectionHint: { ...typography.caption, color: colors.text.light, marginBottom: spacing.sm },
+  // Time picker
+  timeRow: { marginBottom: spacing.md, maxHeight: 44 },
+  timeChip: {
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: borderRadius.md,
+    backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border || '#e0e0e0',
+    marginRight: spacing.sm,
+  },
+  timeChipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  timeChipText: { ...typography.bodySmall, color: colors.text.primary, fontWeight: '600' },
+  timeChipTextSelected: { color: colors.text.inverse, fontWeight: '700' },
   // Cycle preview
   cyclePreview: {
     backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.lg,

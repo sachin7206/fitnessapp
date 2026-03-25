@@ -159,11 +159,11 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
     padding: spacing.md,
     ...typography.body,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
     ...shadows.sm,
   },
   forgotPassword: {
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
     padding: spacing.md,
     alignItems: 'center',
     ...shadows.md,

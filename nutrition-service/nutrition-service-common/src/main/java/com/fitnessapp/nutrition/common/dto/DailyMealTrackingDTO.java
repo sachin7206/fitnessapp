@@ -25,5 +25,7 @@ public class DailyMealTrackingDTO {
     private Double originalProteinGrams;
     private Double originalCarbsGrams;
     private Double originalFatGrams;
+    private Boolean isExtra;
+    private String foodItemsJson;
 }
 

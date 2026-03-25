@@ -169,7 +169,13 @@ export const nutritionService = {
 
   // Get diet report for a date range
   getDietReport: async (startDate, endDate) => {
-    const response = await apiClient.get(`/nutrition/report?startDate=${startDate}&endDate=${endDate}`);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      throw new Error('Invalid date format. Use YYYY-MM-DD.');
+    }
+    if (startDate > endDate) {
+      throw new Error('Start date must be before end date.');
+    }
+    const response = await apiClient.get(`/nutrition/report?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`);
     return response.data;
   },
 };

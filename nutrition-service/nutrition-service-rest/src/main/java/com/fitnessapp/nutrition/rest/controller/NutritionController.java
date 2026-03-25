@@ -195,10 +195,29 @@ public class NutritionController implements NutritionApi {
     public ResponseEntity<DietReportDTO> getDietReport(
             @RequestParam String startDate,
             @RequestParam String endDate) {
-        LocalDate start = LocalDate.parse(startDate);
-        LocalDate end = LocalDate.parse(endDate);
-        if (start.isAfter(end)) throw new IllegalArgumentException("startDate must be before endDate");
-        if (start.isBefore(LocalDate.now().minusYears(1))) throw new IllegalArgumentException("Range cannot exceed 1 year");
+        // Validate format
+        if (startDate == null || endDate == null
+                || !startDate.matches("^\\d{4}-\\d{2}-\\d{2}$")
+                || !endDate.matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+            throw new IllegalArgumentException("Date parameters must be in YYYY-MM-DD format");
+        }
+        LocalDate start;
+        LocalDate end;
+        try {
+            start = LocalDate.parse(startDate);
+            end = LocalDate.parse(endDate);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid date value. Use valid YYYY-MM-DD dates.");
+        }
+        if (start.isAfter(end)) {
+            throw new IllegalArgumentException("startDate must be before or equal to endDate");
+        }
+        if (end.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("endDate cannot be in the future");
+        }
+        if (start.isBefore(end.minusYears(1))) {
+            throw new IllegalArgumentException("Date range cannot exceed 1 year");
+        }
         return ResponseEntity.ok(mealTrackingService.getDietReport(getCurrentUserId(), start, end));
     }
 }

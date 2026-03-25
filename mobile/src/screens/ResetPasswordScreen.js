@@ -247,11 +247,11 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
     padding: spacing.md,
     ...typography.body,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
     ...shadows.sm,
   },
   otpInput: {
@@ -279,12 +279,12 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   criteriaContainer: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: borderRadius.md,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: colors.border,
   },
   criteriaTitle: {
     ...typography.bodySmall,
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
     padding: spacing.md,
     alignItems: 'center',
     ...shadows.md,

@@ -540,11 +540,17 @@ components:
 
     CustomWorkoutPlanRequest:
       type: object
+      required:
+        - planName
+        - daysPerWeek
+        - exerciseTime
+        - exercises
       properties:
         planName: { type: string }
         planType: { type: string }
         daysPerWeek: { type: integer }
         restDay: { type: string, description: 'Day of the week for rest, e.g. SUNDAY' }
+        exerciseTime: { type: string, description: 'Preferred workout time, e.g. 6:00 AM', pattern: '^\d{1,2}:\d{2}\s?(AM|PM)$' }
         exercises:
           type: array
           items:

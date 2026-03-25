@@ -53,5 +53,11 @@ public class MealCompletionRequest {
     private Double originalProteinGrams;
     private Double originalCarbsGrams;
     private Double originalFatGrams;
+
+    // Extra meal fields
+    private Boolean isExtra;
+
+    @Size(max = 10000, message = "Food items JSON must be ≤ 10000 characters")
+    private String foodItemsJson;
 }
 

@@ -82,6 +82,17 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
             plan.setRestDay(request.getRestDay());
         }
 
+        // Exercise time is required — validate format
+        String exerciseTime = request.getExerciseTime();
+        if (exerciseTime == null || exerciseTime.trim().isEmpty()) {
+            throw new IllegalArgumentException("Exercise time is required. Please select your preferred workout time.");
+        }
+        exerciseTime = exerciseTime.trim();
+        if (!exerciseTime.matches("^\\d{1,2}:\\d{2}\\s?(AM|PM)$")) {
+            throw new IllegalArgumentException("Exercise time must be in format like '6:00 AM' or '10:30 PM'");
+        }
+        plan.setExerciseTime(exerciseTime);
+
         List<WorkoutPlan.WorkoutExercise> exercises = new ArrayList<>();
         if (request.getExercises() != null) {
             for (CustomExerciseEntry entry : request.getExercises()) {

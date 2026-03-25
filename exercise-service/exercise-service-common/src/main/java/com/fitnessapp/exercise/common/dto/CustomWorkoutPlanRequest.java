@@ -24,6 +24,10 @@ public class CustomWorkoutPlanRequest {
 
     private String restDay;
 
+    @NotBlank(message = "Exercise time is required")
+    @Pattern(regexp = "^\\d{1,2}:\\d{2}\\s?(AM|PM)$", message = "Exercise time must be in format like '6:00 AM' or '10:30 PM'")
+    private String exerciseTime;
+
     @NotNull(message = "Exercises list is required")
     @Size(min = 1, message = "At least one exercise is required")
     private List<@Valid CustomExerciseEntry> exercises;

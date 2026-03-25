@@ -4,13 +4,31 @@ import {
   ActivityIndicator, StatusBar, Platform, TextInput, Alert,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import { colors, spacing, borderRadius } from '../config/theme';
+import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import { fetchExerciseReport, fetchDietReport, clearReports } from '../store/slices/reportSlice';
 import ExerciseReportTable from './components/ExerciseReportTable';
 import DietReportTable from './components/DietReportTable';
 import { generateReportPDF } from '../utils/reportPdfGenerator';
 
-const formatDate = (d) => d.toISOString().split('T')[0];
+const formatDate = (d) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+/** Check if a YYYY-MM-DD string represents a real calendar date */
+const isValidDate = (str) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(str)) return false;
+  const [y, m, d] = str.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
+};
+
+/** Sanitize date input — allow only digits and hyphens */
+const sanitizeDateInput = (val) => val.replace(/[^0-9-]/g, '').substring(0, 10);
+
+const MAX_RANGE_DAYS = 365;
 
 const TIMEFRAMES = [
   { label: 'Last Week', days: 7 },
@@ -29,6 +47,7 @@ const ReportGeneratorScreen = ({ navigation }) => {
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
   const [generated, setGenerated] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const scrollRef = useRef(null);
 
   const getDateRange = useCallback(() => {
@@ -45,23 +64,43 @@ const ReportGeneratorScreen = ({ navigation }) => {
   }, [showCustomRange, customStart, customEnd, selectedTimeframe]);
 
   const handleGenerate = async () => {
+    const showError = (title, msg) => Platform.OS === 'web' ? window.alert(`${title}\n${msg}`) : Alert.alert(title, msg);
+
     if (!includeExercise && !includeDiet) {
-      Alert.alert('Select Report', 'Please select at least one report type.');
+      showError('Select Report', 'Please select at least one report type.');
       return;
     }
     const range = getDateRange();
     if (!range) {
-      Alert.alert('Select Timeframe', 'Please select a timeframe or enter a custom date range.');
+      showError('Select Timeframe', 'Please select a timeframe or enter a custom date range.');
       return;
     }
-    // Validate date format
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(range.startDate) || !dateRegex.test(range.endDate)) {
-      Alert.alert('Invalid Date', 'Please use YYYY-MM-DD format for dates.');
+
+    // Validate date format and real calendar dates
+    if (!isValidDate(range.startDate) || !isValidDate(range.endDate)) {
+      showError('Invalid Date', 'Please enter valid dates in YYYY-MM-DD format (e.g. 2026-01-15).');
       return;
     }
+
+    // Start must be before or equal to end
     if (range.startDate > range.endDate) {
-      Alert.alert('Invalid Range', 'Start date must be before end date.');
+      showError('Invalid Range', 'Start date must be before or equal to end date.');
+      return;
+    }
+
+    // No future dates allowed — end date can be at most today
+    const today = formatDate(new Date());
+    if (range.endDate > today) {
+      showError('Invalid Date', 'End date cannot be in the future.');
+      return;
+    }
+
+    // Max range: 1 year
+    const startMs = new Date(range.startDate + 'T00:00:00').getTime();
+    const endMs = new Date(range.endDate + 'T00:00:00').getTime();
+    const diffDays = Math.round((endMs - startMs) / (1000 * 60 * 60 * 24));
+    if (diffDays > MAX_RANGE_DAYS) {
+      showError('Range Too Large', `Date range cannot exceed ${MAX_RANGE_DAYS} days. You selected ${diffDays} days.`);
       return;
     }
 
@@ -77,10 +116,19 @@ const ReportGeneratorScreen = ({ navigation }) => {
   };
 
   const handleDownloadPDF = async () => {
+    if (!exerciseReport && !dietReport) {
+      const msg = 'No report data available. Please generate a report first.';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('No Data', msg);
+      return;
+    }
+    setPdfLoading(true);
     try {
       await generateReportPDF(exerciseReport, dietReport);
     } catch (e) {
-      Alert.alert('PDF Error', 'Could not generate PDF. ' + (e.message || ''));
+      const msg = 'Could not generate PDF. ' + (e.message || '');
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('PDF Error', msg);
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -94,7 +142,7 @@ const ReportGeneratorScreen = ({ navigation }) => {
       <StatusBar barStyle="light-content" />
 
       {/* ─── Header ─── */}
-      <View style={[styles.header, { backgroundColor: '#111827' }]}>
+      <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
@@ -171,7 +219,7 @@ const ReportGeneratorScreen = ({ navigation }) => {
               <TextInput
                 style={styles.dateInput}
                 value={customStart}
-                onChangeText={setCustomStart}
+                onChangeText={(v) => setCustomStart(sanitizeDateInput(v))}
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor={colors.text.light}
                 maxLength={10}
@@ -183,7 +231,7 @@ const ReportGeneratorScreen = ({ navigation }) => {
               <TextInput
                 style={styles.dateInput}
                 value={customEnd}
-                onChangeText={setCustomEnd}
+                onChangeText={(v) => setCustomEnd(sanitizeDateInput(v))}
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor={colors.text.light}
                 maxLength={10}
@@ -203,7 +251,7 @@ const ReportGeneratorScreen = ({ navigation }) => {
         onPress={handleGenerate}
         disabled={loading}
       >
-        <View style={[styles.generateBtnGradient, { backgroundColor: '#111827' }]}>
+          <View style={styles.generateBtnGradient}>
           {loading ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
@@ -224,8 +272,8 @@ const ReportGeneratorScreen = ({ navigation }) => {
         <View style={styles.resultsSection}>
           <View style={styles.resultsTitleRow}>
             <Text style={styles.resultsTitle}>📋 Report Results</Text>
-            <TouchableOpacity style={styles.pdfBtn} onPress={handleDownloadPDF}>
-              <Text style={styles.pdfBtnText}>📥 Download PDF</Text>
+            <TouchableOpacity style={[styles.pdfBtn, pdfLoading && { opacity: 0.6 }]} onPress={handleDownloadPDF} disabled={pdfLoading}>
+              <Text style={styles.pdfBtnText}>{pdfLoading ? '⏳ Preparing...' : '📥 Download PDF'}</Text>
             </TouchableOpacity>
           </View>
 
@@ -253,24 +301,19 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 24,
     paddingHorizontal: spacing.lg,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    backgroundColor: colors.primary,
   },
-  backText: { color: '#fff', fontSize: 16, marginBottom: 8 },
-  title: { color: '#fff', fontSize: 28, fontWeight: 'bold' },
-  subtitle: { color: 'rgba(255,255,255,0.8)', fontSize: 14, marginTop: 4 },
+  backText: { color: colors.text.inverse, fontSize: 16, fontWeight: '600', marginBottom: 8 },
+  title: { color: colors.text.inverse, fontSize: 28, fontWeight: 'bold' },
+  subtitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 4 },
 
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     marginHorizontal: spacing.md,
     marginTop: spacing.md,
-    borderRadius: 16,
+    borderRadius: borderRadius.lg,
     padding: spacing.md,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
-      android: { elevation: 2 },
-      web: { boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
-    }),
+    ...shadows.sm,
   },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: colors.text.primary, marginBottom: 12 },
 
@@ -281,18 +324,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 12,
+    borderRadius: borderRadius.lg,
     borderWidth: 1.5,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#FAFAFA',
+    borderColor: colors.border,
+    backgroundColor: colors.background,
   },
   checkboxActive: {
-    borderColor: '#111827',
-    backgroundColor: 'rgba(102,126,234,0.08)',
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + '08',
   },
   checkIcon: { fontSize: 20, marginRight: 8 },
   checkLabel: { fontSize: 14, fontWeight: '600', color: colors.text.secondary },
-  checkLabelActive: { color: '#111827' },
+  checkLabelActive: { color: colors.primary },
 
   // Timeframe buttons
   timeframeRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 12 },
@@ -301,29 +344,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#FAFAFA',
+    borderColor: colors.border,
+    backgroundColor: colors.background,
   },
   timeframeBtnActive: {
-    borderColor: '#111827',
-    backgroundColor: '#111827',
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
   },
   timeframeBtnText: { fontSize: 13, fontWeight: '600', color: colors.text.secondary },
-  timeframeBtnTextActive: { color: '#fff' },
+  timeframeBtnTextActive: { color: colors.text.inverse },
 
   // Custom range
   customRangeToggle: {
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 12,
+    borderRadius: borderRadius.lg,
     borderWidth: 1.5,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#FAFAFA',
+    borderColor: colors.border,
+    backgroundColor: colors.background,
     alignSelf: 'flex-start',
   },
   customRangeToggleActive: {
-    borderColor: '#1F2937',
-    backgroundColor: '#1F2937',
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
   },
   customRangeToggleText: { fontSize: 13, fontWeight: '600', color: colors.text.secondary },
 
@@ -337,12 +380,12 @@ const styles = StyleSheet.create({
   dateLabel: { fontSize: 12, color: colors.text.secondary, marginBottom: 4, fontWeight: '600' },
   dateInput: {
     borderWidth: 1.5,
-    borderColor: '#E0E0E0',
-    borderRadius: 10,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.background,
     color: colors.text.primary,
   },
   dateArrow: { fontSize: 18, color: colors.text.light, marginTop: 16 },
@@ -350,7 +393,7 @@ const styles = StyleSheet.create({
   rangePreview: {
     marginTop: 10,
     fontSize: 12,
-    color: '#111827',
+    color: colors.primary,
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -359,18 +402,19 @@ const styles = StyleSheet.create({
   generateBtn: { marginHorizontal: spacing.md, marginTop: spacing.lg },
   generateBtnGradient: {
     paddingVertical: 16,
-    borderRadius: 14,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.primary,
   },
-  generateBtnText: { color: '#fff', fontSize: 17, fontWeight: '700' },
+  generateBtnText: { color: colors.text.inverse, fontSize: 17, fontWeight: '700' },
 
   // Error
   errorBox: {
     marginHorizontal: spacing.md,
     marginTop: spacing.md,
-    backgroundColor: 'rgba(239,71,111,0.08)',
-    borderRadius: 12,
+    backgroundColor: colors.error + '10',
+    borderRadius: borderRadius.lg,
     padding: spacing.md,
     borderLeftWidth: 4,
     borderLeftColor: colors.error,
@@ -388,12 +432,12 @@ const styles = StyleSheet.create({
   },
   resultsTitle: { fontSize: 20, fontWeight: '700', color: colors.text.primary },
   pdfBtn: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.primary,
     paddingVertical: 8,
     paddingHorizontal: 14,
-    borderRadius: 10,
+    borderRadius: borderRadius.md,
   },
-  pdfBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  pdfBtnText: { color: colors.text.inverse, fontSize: 13, fontWeight: '600' },
 
   // Empty
   emptyBox: {
