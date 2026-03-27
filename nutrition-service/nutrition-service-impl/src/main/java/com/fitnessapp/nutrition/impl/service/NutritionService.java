@@ -5,6 +5,7 @@ import com.fitnessapp.user.common.dto.UserDto;
 import com.fitnessapp.user.sal.UserServiceSalClient;
 import com.fitnessapp.nutrition.impl.model.*;
 import com.fitnessapp.nutrition.impl.repository.*;
+import com.fitnessapp.nutrition.impl.validation.NutritionValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ public class NutritionService implements NutritionOperations {
     private final DailyNutritionSummaryRepository dailyNutritionSummaryRepository;
     private final FoodLogRepository foodLogRepository;
     private final UserServiceSalClient userServiceSalClient;
+    private final NutritionValidator nutritionValidator;
 
     @Transactional(readOnly = true)
     public List<NutritionPlanDTO> getAllPlans() {
@@ -116,7 +118,7 @@ public class NutritionService implements NutritionOperations {
     @Transactional
     public UserNutritionPlanDTO updatePlanProgress(Long userId, Long userPlanId, Integer completedMeals) {
         UserNutritionPlan up = userNutritionPlanRepository.findByIdWithPlan(userPlanId).orElseThrow(() -> new RuntimeException("Plan not found"));
-        if (!up.getUserId().equals(userId)) throw new RuntimeException("Unauthorized");
+        nutritionValidator.validateUserAuthorized(up.getUserId(), userId);
         up.setCompletedMeals(completedMeals);
         if (up.getTotalMeals() > 0) up.setAdherencePercentage((double) completedMeals / up.getTotalMeals() * 100);
         up.setCurrentDay((int) java.time.temporal.ChronoUnit.DAYS.between(up.getStartDate(), LocalDate.now()) + 1);
@@ -126,7 +128,7 @@ public class NutritionService implements NutritionOperations {
     @Transactional
     public void cancelPlan(Long userId, Long userPlanId) {
         UserNutritionPlan up = userNutritionPlanRepository.findById(userPlanId).orElseThrow(() -> new RuntimeException("Plan not found"));
-        if (!up.getUserId().equals(userId)) throw new RuntimeException("Unauthorized");
+        nutritionValidator.validateUserAuthorized(up.getUserId(), userId);
         up.setStatus("CANCELLED");
         userNutritionPlanRepository.save(up);
     }

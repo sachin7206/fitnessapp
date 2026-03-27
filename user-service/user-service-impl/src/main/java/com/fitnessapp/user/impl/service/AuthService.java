@@ -4,6 +4,7 @@ import com.fitnessapp.common.security.JwtTokenProvider;
 import com.fitnessapp.user.common.dto.*;
 import com.fitnessapp.user.impl.model.User;
 import com.fitnessapp.user.impl.repository.UserRepository;
+import com.fitnessapp.user.impl.validation.AuthValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -23,13 +24,11 @@ public class AuthService implements AuthOperations {
     private final UserDetailsService userDetailsService;
     private final UserService userService;
     private final PasswordResetService passwordResetService;
+    private final AuthValidator authValidator;
 
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail()))
-            throw new RuntimeException("You are already registered. Please login. If you forgot your password, please reset your password.");
-
-        // Validate password strength
-        validatePasswordStrength(request.getPassword());
+        authValidator.validateEmailNotRegistered(request.getEmail());
+        authValidator.validatePasswordStrength(request.getPassword());
 
         User user = new User();
         user.setEmail(request.getEmail());
@@ -64,7 +63,7 @@ public class AuthService implements AuthOperations {
         String email = jwtTokenProvider.extractUsername(refreshToken);
         UserDetails ud = userDetailsService.loadUserByUsername(email);
         if (!jwtTokenProvider.validateToken(refreshToken, ud))
-            throw new RuntimeException("Invalid refresh token");
+            authValidator.validateRefreshToken(false);
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return new AuthResponse(jwtTokenProvider.generateAccessToken(ud, user.getId()),
@@ -80,22 +79,6 @@ public class AuthService implements AuthOperations {
     public void resetPassword(ResetPasswordRequest request) {
         passwordResetService.resetPassword(request.getToken(), request.getNewPassword());
     }
-
-    private void validatePasswordStrength(String password) {
-        if (password == null || password.length() < 8) {
-            throw new RuntimeException("Password must be at least 8 characters long");
-        }
-        if (!password.matches(".*[A-Z].*")) {
-            throw new RuntimeException("Password must contain at least one uppercase letter");
-        }
-        if (!password.matches(".*[a-z].*")) {
-            throw new RuntimeException("Password must contain at least one lowercase letter");
-        }
-        if (!password.matches(".*[0-9].*")) {
-            throw new RuntimeException("Password must contain at least one number");
-        }
-        if (!password.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?].*")) {
-            throw new RuntimeException("Password must contain at least one special character (!@#$%^&*...)");
-        }
-    }
 }
+
+

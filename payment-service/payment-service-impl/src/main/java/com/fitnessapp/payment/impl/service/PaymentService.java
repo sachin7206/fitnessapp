@@ -4,6 +4,7 @@ import com.fitnessapp.payment.common.dto.*;
 import com.fitnessapp.payment.impl.model.Payment;
 import com.fitnessapp.payment.impl.repository.PaymentRepository;
 import com.fitnessapp.payment.impl.util.UpiQrCodeGenerator;
+import com.fitnessapp.payment.impl.validation.PaymentValidator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class PaymentService implements PaymentOperations {
     private final WebClient.Builder webClientBuilder;
     private final RazorpayService razorpayService;
     private final ObjectMapper objectMapper;
+    private final PaymentValidator paymentValidator;
 
     @Value("${merchant.upi.id:fitnessapp@upi}")
     private String merchantUpiId;
@@ -104,8 +106,7 @@ public class PaymentService implements PaymentOperations {
     @Override
     @Transactional
     public PaymentDTO confirmPayment(Long paymentId, String transactionRef) {
-        Payment payment = paymentRepo.findById(paymentId)
-                .orElseThrow(() -> new RuntimeException("Payment not found: " + paymentId));
+        Payment payment = paymentValidator.validatePaymentExists(paymentId);
 
         if ("SUCCESS".equals(payment.getStatus())) {
             return toDTO(payment);
@@ -126,8 +127,7 @@ public class PaymentService implements PaymentOperations {
     @Transactional
     public PaymentDTO verifyRazorpayPayment(String razorpayOrderId, String razorpayPaymentId, String razorpaySignature) {
         // Find payment by Razorpay order ID
-        Payment payment = paymentRepo.findByRazorpayOrderId(razorpayOrderId)
-                .orElseThrow(() -> new RuntimeException("Payment not found for Razorpay orderId: " + razorpayOrderId));
+        Payment payment = paymentValidator.validatePaymentExistsByRazorpayOrderId(razorpayOrderId);
 
         if ("SUCCESS".equals(payment.getStatus())) {
             return toDTO(payment); // Already verified
@@ -135,12 +135,7 @@ public class PaymentService implements PaymentOperations {
 
         // Verify signature
         boolean valid = razorpayService.verifyPaymentSignature(razorpayOrderId, razorpayPaymentId, razorpaySignature);
-        if (!valid) {
-            payment.setStatus("FAILED");
-            payment.setGatewayResponse("Signature verification failed");
-            paymentRepo.save(payment);
-            throw new RuntimeException("Razorpay payment signature verification failed");
-        }
+        paymentValidator.validateRazorpaySignature(valid, payment);
 
         payment.setStatus("SUCCESS");
         payment.setRazorpayPaymentId(razorpayPaymentId);
@@ -156,9 +151,7 @@ public class PaymentService implements PaymentOperations {
     @Transactional
     public PaymentDTO handleRazorpayWebhook(String rawBody, String xRazorpaySignature) {
         boolean valid = razorpayService.verifyWebhookSignature(rawBody, xRazorpaySignature);
-        if (!valid) {
-            throw new RuntimeException("Razorpay webhook signature verification failed");
-        }
+        paymentValidator.validateWebhookSignature(valid);
 
         try {
             JsonNode json = objectMapper.readTree(rawBody);

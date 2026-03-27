@@ -72,7 +72,7 @@ const mealTrackingSlice = createSlice({
       if (state.trackingDate !== date) {
         state.trackingDate = date;
         state.meals = sortByTime(meals.map(m => ({
-          mealId: m.id || m.mealId,
+          mealId: m.id != null ? m.id : m.mealId,
           name: m.name,
           mealType: m.mealType,
           timeOfDay: m.timeOfDay,
@@ -82,6 +82,16 @@ const mealTrackingSlice = createSlice({
           fatGrams: m.fatGrams || 0,
           completed: false,
           completedAt: null,
+          foodItems: (m.foodItems || []).map((fi, idx) => ({
+            id: fi.id != null ? fi.id : idx,
+            name: fi.name || '',
+            quantity: fi.quantity || '',
+            calories: fi.calories || 0,
+            proteinGrams: fi.proteinGrams || 0,
+            carbsGrams: fi.carbsGrams || 0,
+            fatGrams: fi.fatGrams || 0,
+            completed: false,
+          })),
         })));
         state.consumedCalories = 0;
         state.consumedProtein = 0;
@@ -90,15 +100,63 @@ const mealTrackingSlice = createSlice({
       } else {
         // Same day — merge new meals but keep completed state; also preserve extra meals
         const existingMap = {};
-        state.meals.forEach(m => { existingMap[m.mealId] = m; });
+        state.meals.forEach(m => { existingMap[String(m.mealId)] = m; });
 
         // Keep extra meals that are already in state
         const existingExtras = state.meals.filter(m => m.isExtra);
 
         state.meals = sortByTime([
           ...meals.map(m => {
-            const id = m.id || m.mealId;
-            if (existingMap[id]) return existingMap[id];
+            const id = m.id != null ? m.id : m.mealId;
+            const existing = existingMap[String(id)];
+            if (existing) {
+              // Existing meal found — preserve completion state
+              // BUT if existing has no food items and new data does, bring them in
+              const newFoodItems = (m.foodItems || []);
+              if ((!existing.foodItems || existing.foodItems.length === 0) && newFoodItems.length > 0) {
+                existing.foodItems = newFoodItems.map((fi, idx) => ({
+                  id: fi.id != null ? fi.id : idx,
+                  name: fi.name || '',
+                  quantity: fi.quantity || '',
+                  calories: fi.calories || 0,
+                  proteinGrams: fi.proteinGrams || 0,
+                  carbsGrams: fi.carbsGrams || 0,
+                  fatGrams: fi.fatGrams || 0,
+                  completed: false,
+                }));
+              } else if (existing.foodItems && existing.foodItems.length > 0 && newFoodItems.length > 0) {
+                // Both have food items — merge: keep completion state, update details from API
+                const existingItemMap = {};
+                existing.foodItems.forEach(fi => { existingItemMap[String(fi.id)] = fi; });
+                existing.foodItems = newFoodItems.map((fi, idx) => {
+                  const fiId = fi.id != null ? fi.id : idx;
+                  const existingItem = existingItemMap[String(fiId)];
+                  if (existingItem) {
+                    // Preserve completed state, update name/macros from API
+                    return {
+                      ...existingItem,
+                      name: fi.name || existingItem.name,
+                      quantity: fi.quantity || existingItem.quantity,
+                      calories: fi.calories || existingItem.calories,
+                      proteinGrams: fi.proteinGrams || existingItem.proteinGrams,
+                      carbsGrams: fi.carbsGrams || existingItem.carbsGrams,
+                      fatGrams: fi.fatGrams || existingItem.fatGrams,
+                    };
+                  }
+                  return {
+                    id: fiId,
+                    name: fi.name || '',
+                    quantity: fi.quantity || '',
+                    calories: fi.calories || 0,
+                    proteinGrams: fi.proteinGrams || 0,
+                    carbsGrams: fi.carbsGrams || 0,
+                    fatGrams: fi.fatGrams || 0,
+                    completed: false,
+                  };
+                });
+              }
+              return existing;
+            }
             return {
               mealId: id,
               name: m.name,
@@ -110,6 +168,16 @@ const mealTrackingSlice = createSlice({
               fatGrams: m.fatGrams || 0,
               completed: false,
               completedAt: null,
+              foodItems: (m.foodItems || []).map((fi, idx) => ({
+                id: fi.id != null ? fi.id : idx,
+                name: fi.name || '',
+                quantity: fi.quantity || '',
+                calories: fi.calories || 0,
+                proteinGrams: fi.proteinGrams || 0,
+                carbsGrams: fi.carbsGrams || 0,
+                fatGrams: fi.fatGrams || 0,
+                completed: false,
+              })),
             };
           }),
           ...existingExtras,
@@ -117,27 +185,95 @@ const mealTrackingSlice = createSlice({
       }
     },
 
+    completeFoodItem: (state, action) => {
+      const { mealId, foodItemId } = action.payload;
+      // Use loose matching for mealId (number vs string)
+      const meal = state.meals.find(m => String(m.mealId) === String(mealId));
+      if (meal && meal.foodItems) {
+        const item = meal.foodItems.find(fi => String(fi.id) === String(foodItemId));
+        if (item && !item.completed) {
+          item.completed = true;
+          state.consumedCalories += item.calories || 0;
+          state.consumedProtein += item.proteinGrams || 0;
+          state.consumedCarbs += item.carbsGrams || 0;
+          state.consumedFat += item.fatGrams || 0;
+          // Check if all items in this meal are now completed
+          const allDone = meal.foodItems.every(fi => fi.completed);
+          if (allDone) {
+            meal.completed = true;
+            meal.completedAt = new Date().toISOString();
+          }
+        }
+      }
+    },
+
+    uncompleteFoodItem: (state, action) => {
+      const { mealId, foodItemId } = action.payload;
+      const meal = state.meals.find(m => String(m.mealId) === String(mealId));
+      if (meal && meal.foodItems) {
+        const item = meal.foodItems.find(fi => String(fi.id) === String(foodItemId));
+        if (item && item.completed) {
+          item.completed = false;
+          state.consumedCalories = Math.max(0, state.consumedCalories - (item.calories || 0));
+          state.consumedProtein = Math.max(0, state.consumedProtein - (item.proteinGrams || 0));
+          state.consumedCarbs = Math.max(0, state.consumedCarbs - (item.carbsGrams || 0));
+          state.consumedFat = Math.max(0, state.consumedFat - (item.fatGrams || 0));
+          // If meal was marked completed, unmark it
+          if (meal.completed) {
+            meal.completed = false;
+            meal.completedAt = null;
+          }
+        }
+      }
+    },
+
     completeMeal: (state, action) => {
       const { mealId } = action.payload;
-      const meal = state.meals.find(m => m.mealId === mealId);
+      const meal = state.meals.find(m => String(m.mealId) === String(mealId));
       if (meal && !meal.completed) {
         meal.completed = true;
         meal.completedAt = new Date().toISOString();
-        state.consumedCalories += meal.calories;
-        state.consumedProtein += meal.proteinGrams;
-        state.consumedCarbs += meal.carbsGrams;
-        state.consumedFat += meal.fatGrams;
+        // Mark all food items as completed if they exist
+        if (meal.foodItems && meal.foodItems.length > 0) {
+          meal.foodItems.forEach(fi => {
+            if (!fi.completed) {
+              fi.completed = true;
+              state.consumedCalories += fi.calories || 0;
+              state.consumedProtein += fi.proteinGrams || 0;
+              state.consumedCarbs += fi.carbsGrams || 0;
+              state.consumedFat += fi.fatGrams || 0;
+            }
+          });
+        } else {
+          state.consumedCalories += meal.calories;
+          state.consumedProtein += meal.proteinGrams;
+          state.consumedCarbs += meal.carbsGrams;
+          state.consumedFat += meal.fatGrams;
+        }
       }
     },
 
     uncompleteMeal: (state, action) => {
       const { mealId } = action.payload;
-      const meal = state.meals.find(m => m.mealId === mealId);
+      const meal = state.meals.find(m => String(m.mealId) === String(mealId));
       if (meal && meal.completed) {
-        state.consumedCalories = Math.max(0, state.consumedCalories - meal.calories);
-        state.consumedProtein = Math.max(0, state.consumedProtein - meal.proteinGrams);
-        state.consumedCarbs = Math.max(0, state.consumedCarbs - meal.carbsGrams);
-        state.consumedFat = Math.max(0, state.consumedFat - meal.fatGrams);
+        // Subtract macros for all completed food items
+        if (meal.foodItems && meal.foodItems.length > 0) {
+          meal.foodItems.forEach(fi => {
+            if (fi.completed) {
+              state.consumedCalories = Math.max(0, state.consumedCalories - (fi.calories || 0));
+              state.consumedProtein = Math.max(0, state.consumedProtein - (fi.proteinGrams || 0));
+              state.consumedCarbs = Math.max(0, state.consumedCarbs - (fi.carbsGrams || 0));
+              state.consumedFat = Math.max(0, state.consumedFat - (fi.fatGrams || 0));
+              fi.completed = false;
+            }
+          });
+        } else {
+          state.consumedCalories = Math.max(0, state.consumedCalories - meal.calories);
+          state.consumedProtein = Math.max(0, state.consumedProtein - meal.proteinGrams);
+          state.consumedCarbs = Math.max(0, state.consumedCarbs - meal.carbsGrams);
+          state.consumedFat = Math.max(0, state.consumedFat - meal.fatGrams);
+        }
         // Restore original macros if this was a replaced meal
         if (meal.replaced && meal.originalCalories != null) {
           meal.calories = meal.originalCalories;
@@ -160,8 +296,19 @@ const mealTrackingSlice = createSlice({
 
     replaceMeal: (state, action) => {
       const { mealId, foodName, calories, proteinGrams, carbsGrams, fatGrams } = action.payload;
-      const meal = state.meals.find(m => m.mealId === mealId);
+      const meal = state.meals.find(m => String(m.mealId) === String(mealId));
       if (meal && !meal.completed) {
+        // First subtract any already-completed individual food items
+        if (meal.foodItems && meal.foodItems.length > 0) {
+          meal.foodItems.forEach(fi => {
+            if (fi.completed) {
+              state.consumedCalories = Math.max(0, state.consumedCalories - (fi.calories || 0));
+              state.consumedProtein = Math.max(0, state.consumedProtein - (fi.proteinGrams || 0));
+              state.consumedCarbs = Math.max(0, state.consumedCarbs - (fi.carbsGrams || 0));
+              state.consumedFat = Math.max(0, state.consumedFat - (fi.fatGrams || 0));
+            }
+          });
+        }
         meal.completed = true;
         meal.completedAt = new Date().toISOString();
         meal.replaced = true;
@@ -180,6 +327,8 @@ const mealTrackingSlice = createSlice({
         meal.proteinGrams = proteinGrams;
         meal.carbsGrams = carbsGrams;
         meal.fatGrams = fatGrams;
+        // Clear food items since this is now a replacement meal
+        meal.foodItems = [];
       }
     },
 
@@ -195,12 +344,15 @@ const mealTrackingSlice = createSlice({
 
     addExtraMeal: (state, action) => {
       const { mealName, foodItems } = action.payload;
-      // Generate a unique numeric ID for the extra meal (timestamp-based, fits in Java Long)
-      const extraId = Date.now();
+      // Use a negative ID for extra meals — clearly distinguishes from real meal IDs (positive)
+      // Format: -(HHMMSS + index) to keep it small and unique within a day
       const now = new Date();
       const hours = now.getHours();
       const items = foodItems || [];
       const mins = now.getMinutes();
+      const secs = now.getSeconds();
+      const existingExtras = state.meals.filter(m => m.isExtra).length;
+      const extraId = -(hours * 10000 + mins * 100 + secs + existingExtras * 100000 + 1);
       const period = hours >= 12 ? 'PM' : 'AM';
       const displayHours = hours > 12 ? hours - 12 : (hours === 0 ? 12 : hours);
       const timeOfDay = `${displayHours}:${String(mins).padStart(2, '0')} ${period}`;
@@ -234,7 +386,7 @@ const mealTrackingSlice = createSlice({
 
     removeExtraMeal: (state, action) => {
       const { mealId } = action.payload;
-      const idx = state.meals.findIndex(m => m.mealId === mealId && m.isExtra);
+      const idx = state.meals.findIndex(m => String(m.mealId) === String(mealId) && m.isExtra);
       if (idx !== -1) {
         const meal = state.meals[idx];
         if (meal.completed) {
@@ -249,7 +401,7 @@ const mealTrackingSlice = createSlice({
   },
 });
 
-export const { loadTracking, initMealsForToday, completeMeal, uncompleteMeal, replaceMeal, clearTracking, addExtraMeal, removeExtraMeal } = mealTrackingSlice.actions;
+export const { loadTracking, initMealsForToday, completeMeal, uncompleteMeal, completeFoodItem, uncompleteFoodItem, replaceMeal, clearTracking, addExtraMeal, removeExtraMeal } = mealTrackingSlice.actions;
 
 // Export the helper so screens can use the same local date logic
 export { getLocalDateString };
@@ -306,7 +458,7 @@ export const persistTracking = () => async (dispatch, getState) => {
           originalCarbsGrams: m.originalCarbsGrams ?? null,
           originalFatGrams: m.originalFatGrams ?? null,
           isExtra: m.isExtra || false,
-          foodItemsJson: m.isExtra && m.foodItems ? JSON.stringify(m.foodItems) : null,
+          foodItemsJson: m.foodItems && m.foodItems.length > 0 ? JSON.stringify(m.foodItems) : null,
         })),
         consumedCalories: mealTracking.consumedCalories || 0,
         consumedProtein: mealTracking.consumedProtein || 0,
@@ -364,11 +516,12 @@ export const persistTrackingNow = () => async (dispatch, getState) => {
           originalCarbsGrams: m.originalCarbsGrams ?? null,
           originalFatGrams: m.originalFatGrams ?? null,
           isExtra: m.isExtra || false,
-          foodItemsJson: m.isExtra && m.foodItems ? JSON.stringify(m.foodItems) : null,
+          foodItemsJson: m.foodItems && m.foodItems.length > 0 ? JSON.stringify(m.foodItems) : null,
         })),
         consumedProtein: mealTracking.consumedProtein || 0,
         consumedCarbs: mealTracking.consumedCarbs || 0,
         consumedFat: mealTracking.consumedFat || 0,
+        consumedCalories: mealTracking.consumedCalories || 0,
       });
     } catch (e) {
       
@@ -417,6 +570,7 @@ export const loadTrackingLocal = () => async (dispatch, getState) => {
               originalProteinGrams: null,
               originalCarbsGrams: null,
               originalFatGrams: null,
+              foodItems: (m.foodItems || []).map(fi => ({ ...fi, completed: false })),
             };
           }),
           consumedCalories: 0, consumedProtein: 0, consumedCarbs: 0, consumedFat: 0,
@@ -424,7 +578,15 @@ export const loadTrackingLocal = () => async (dispatch, getState) => {
         dispatch(loadTracking(resetData));
         await AsyncStorage.setItem(storageKey, JSON.stringify(resetData));
       } else {
-        dispatch(loadTracking(data));
+        // Same day — only overwrite if AsyncStorage data has at least as many completions
+        const currentState = getState().mealTracking;
+        const currentCompletions = (currentState.meals || []).reduce((sum, m) =>
+          sum + (m.completed ? 1 : 0) + (m.foodItems ? m.foodItems.filter(fi => fi.completed).length : 0), 0);
+        const storageCompletions = (data.meals || []).reduce((sum, m) =>
+          sum + (m.completed ? 1 : 0) + (m.foodItems ? m.foodItems.filter(fi => fi.completed).length : 0), 0);
+        if (storageCompletions >= currentCompletions) {
+          dispatch(loadTracking(data));
+        }
       }
     } else {
       // No local cache — do NOT clear if meals already initialized in Redux
@@ -474,6 +636,11 @@ export const loadTrackingFromStorage = () => async (dispatch, getState) => {
     }
 
     // 3. Active plan exists — load from local cache
+    // BUT only if the state hasn't already been populated by initMealsForToday
+    const currentStateBeforeLoad = getState().mealTracking;
+    const alreadyInitialized = currentStateBeforeLoad.meals && currentStateBeforeLoad.meals.length > 0
+      && currentStateBeforeLoad.trackingDate === today;
+
     if (raw) {
       const data = JSON.parse(raw);
       if (data.trackingDate && data.trackingDate !== today) {
@@ -506,14 +673,21 @@ export const loadTrackingFromStorage = () => async (dispatch, getState) => {
               originalProteinGrams: null,
               originalCarbsGrams: null,
               originalFatGrams: null,
+              foodItems: (m.foodItems || []).map(fi => ({ ...fi, completed: false })),
             };
           }),
           consumedCalories: 0, consumedProtein: 0, consumedCarbs: 0, consumedFat: 0,
         };
-        dispatch(loadTracking(resetData));
+        // Only overwrite if not already initialized with today's data
+        if (!alreadyInitialized) {
+          dispatch(loadTracking(resetData));
+        }
         await AsyncStorage.setItem(storageKey, JSON.stringify(resetData));
       } else {
-        dispatch(loadTracking(data));
+        // Same day data from AsyncStorage — only load if Redux state isn't already populated
+        if (!alreadyInitialized) {
+          dispatch(loadTracking(data));
+        }
       }
     } else {
       // No local cache — do NOT clear if initMealsForToday already populated the state
@@ -530,10 +704,26 @@ export const loadTrackingFromStorage = () => async (dispatch, getState) => {
         // Use CURRENT Redux state for comparison (not stale AsyncStorage data)
         const currentState = getState().mealTracking;
         const currentMeals = currentState.meals || [];
+        // Count meal-level AND food item-level completions for comparison
         const localCompletedCount = currentMeals.filter(m => m.completed).length;
+        const localItemCompletedCount = currentMeals.reduce((sum, m) =>
+          sum + (m.foodItems ? m.foodItems.filter(fi => fi.completed).length : 0), 0);
         const backendCompletedCount = backendData.meals.filter(m => m.completed).length;
+        // Count food item completions from backend foodItemsJson
+        let backendItemCompletedCount = 0;
+        for (const m of backendData.meals) {
+          if (m.foodItemsJson) {
+            try {
+              const items = JSON.parse(m.foodItemsJson);
+              backendItemCompletedCount += items.filter(i => i.completed).length;
+            } catch (e) { /* ignore parse errors */ }
+          }
+        }
 
-        if (backendCompletedCount > localCompletedCount) {
+        const localTotal = localCompletedCount + localItemCompletedCount;
+        const backendTotal = backendCompletedCount + backendItemCompletedCount;
+
+        if (backendTotal > localTotal) {
           const restoredData = {
             trackingDate: today,
             meals: backendData.meals.map(m => ({

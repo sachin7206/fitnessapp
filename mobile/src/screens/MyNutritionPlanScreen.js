@@ -21,6 +21,8 @@ import {
   initMealsForToday,
   completeMeal,
   uncompleteMeal,
+  completeFoodItem,
+  uncompleteFoodItem,
   replaceMeal,
   addExtraMeal,
   removeExtraMeal,
@@ -116,7 +118,7 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
         // Init tracking state for today
         const today = getLocalDateString();
         dispatch(initMealsForToday({ date: today, meals: todayMeals }));
-        dispatch(persistTracking());
+        dispatch(persistTrackingNow());
       } else {
         // No active plan, go back to nutrition plans
         navigation.replace('NutritionPlans');
@@ -218,7 +220,7 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
    *  - 'upcoming'  : not yet 30 min before meal
    */
   const getMealStatus = (meal) => {
-    const tracked = tracking.meals.find(m => m.mealId === (meal.id || meal.mealId));
+    const tracked = tracking.meals.find(m => String(m.mealId) === String(meal.id || meal.mealId));
     if (tracked?.completed) return 'completed';
 
     const mealMin = getTimeInMinutes(meal.timeOfDay);
@@ -240,6 +242,25 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
 
   const handleCheckMeal = (meal) => {
     dispatch(completeMeal({ mealId: meal.id || meal.mealId }));
+    dispatch(persistTrackingNow());
+  };
+
+  const handleToggleFoodItem = (meal, foodItem) => {
+    const mealId = meal.id || meal.mealId;
+    const foodItemId = foodItem.id;
+    console.log('[MealTracking] Toggle food item:', {
+      mealId,
+      foodItemId,
+      currentCompleted: foodItem.completed,
+      mealIdType: typeof mealId,
+      foodItemIdType: typeof foodItemId,
+      trackingMealIds: tracking.meals.map(m => ({ id: m.mealId, type: typeof m.mealId })),
+    });
+    if (foodItem.completed) {
+      dispatch(uncompleteFoodItem({ mealId, foodItemId }));
+    } else {
+      dispatch(completeFoodItem({ mealId, foodItemId }));
+    }
     dispatch(persistTrackingNow());
   };
 
@@ -495,7 +516,7 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
 
   const renderMealCard = (meal, index) => {
     const status = getMealStatus(meal);
-    const tracked = tracking.meals.find(m => m.mealId === (meal.id || meal.mealId));
+    const tracked = tracking.meals.find(m => String(m.mealId) === String(meal.id || meal.mealId));
     const isCompleted = tracked?.completed === true;
     const isReplaced = tracked?.replaced === true;
     const ordinal = getOrdinal(index);
@@ -575,22 +596,67 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
           </View>
         </View>
 
-        {/* Food items — only show if not replaced */}
+        {/* Food items — show with per-item checkboxes if not replaced */}
         {!isReplaced && meal.foodItems && meal.foodItems.length > 0 && (
           <View style={styles.foodItemsContainer}>
-            {meal.foodItems.map((item, idx) => (
-              <View key={idx} style={styles.foodItem}>
-                <Text style={styles.foodItemBullet}>•</Text>
-                <View style={styles.foodItemContent}>
-                  <Text style={[styles.foodItemText, isCompleted && styles.foodItemDone]}>
-                    {item.name} {item.quantity ? `(${item.quantity})` : ''}
-                  </Text>
-                  <Text style={styles.foodItemMacros}>
-                    P: {item.proteinGrams?.toFixed(0) || 0}g | C: {item.carbsGrams?.toFixed(0) || 0}g | F: {item.fatGrams?.toFixed(0) || 0}g
-                  </Text>
+            {(() => {
+              // Get food item completion state from tracking
+              const trackedFoodItems = tracked?.foodItems || [];
+              return meal.foodItems.map((item, idx) => {
+                // Match tracked state by id or index
+                const trackedItem = trackedFoodItems.find(
+                  fi => String(fi.id) === String(item.id) || (item.id == null && fi.id === idx)
+                ) || {};
+                const itemCompleted = trackedItem.completed === true;
+                const canToggle = status === 'active' || status === 'missed' || isCompleted;
+
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[styles.foodItem, { alignItems: 'center' }]}
+                    onPress={() => canToggle && handleToggleFoodItem(meal, { ...item, id: item.id != null ? item.id : idx, completed: itemCompleted })}
+                    activeOpacity={canToggle ? 0.7 : 1}
+                    disabled={!canToggle}
+                  >
+                    {canToggle ? (
+                      <View style={[
+                        styles.foodItemCheckbox,
+                        itemCompleted && styles.foodItemCheckboxChecked,
+                      ]}>
+                        {itemCompleted && <Text style={styles.foodItemCheckmark}>✓</Text>}
+                      </View>
+                    ) : (
+                      <Text style={styles.foodItemBullet}>•</Text>
+                    )}
+                    <View style={styles.foodItemContent}>
+                      <Text style={[
+                        styles.foodItemText,
+                        itemCompleted && styles.foodItemDone,
+                      ]}>
+                        {item.name} {item.quantity ? `(${item.quantity})` : ''}
+                      </Text>
+                      <Text style={styles.foodItemMacros}>
+                        {item.calories || 0} kcal • P: {item.proteinGrams?.toFixed(0) || 0}g | C: {item.carbsGrams?.toFixed(0) || 0}g | F: {item.fatGrams?.toFixed(0) || 0}g
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              });
+            })()}
+            {/* Per-item progress indicator */}
+            {(status === 'active' || status === 'missed' || isCompleted) && (() => {
+              const trackedFoodItems = tracked?.foodItems || [];
+              const completedItems = trackedFoodItems.filter(fi => fi.completed).length;
+              const totalItems = meal.foodItems.length;
+              return (
+                <View style={styles.itemProgressRow}>
+                  <View style={styles.itemProgressBarBg}>
+                    <View style={[styles.itemProgressBarFill, { width: `${totalItems > 0 ? (completedItems / totalItems) * 100 : 0}%` }]} />
+                  </View>
+                  <Text style={styles.itemProgressText}>{completedItems} of {totalItems} items eaten</Text>
                 </View>
-              </View>
-            ))}
+              );
+            })()}
           </View>
         )}
 
@@ -643,8 +709,24 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
           </View>
         )}
 
-        {/* Checkbox – only for active meals (30 min before meal time) */}
-        {!isCompleted && status === 'active' && (
+        {/* Active meal — show "Mark all items eaten" shortcut if items exist */}
+        {!isCompleted && status === 'active' && meal.foodItems && meal.foodItems.length > 0 && (
+          <TouchableOpacity
+            style={[styles.checkboxRow, styles.checkboxRowActive]}
+            onPress={() => handleCheckMeal(meal)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.checkbox}>
+              <Text style={styles.checkboxInner}> </Text>
+            </View>
+            <Text style={styles.checkboxLabel}>
+              Mark all items as eaten
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Active meal — no food items, show classic checkbox */}
+        {!isCompleted && status === 'active' && (!meal.foodItems || meal.foodItems.length === 0) && (
           <TouchableOpacity
             style={[styles.checkboxRow, styles.checkboxRowActive]}
             onPress={() => handleCheckMeal(meal)}
@@ -659,21 +741,37 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         )}
 
-        {/* Missed meal — two options: mark as taken OR ate something else */}
+        {/* Missed meal — "Mark all eaten" + "I ate something else" */}
         {!isCompleted && status === 'missed' && (
           <View>
-            <TouchableOpacity
-              style={[styles.checkboxRow, styles.checkboxRowMissed]}
-              onPress={() => handleCheckMeal(meal)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.checkbox}>
-                <Text style={styles.checkboxInner}> </Text>
-              </View>
-              <Text style={styles.checkboxLabel}>
-                Mark {ordinal} meal as taken
-              </Text>
-            </TouchableOpacity>
+            {meal.foodItems && meal.foodItems.length > 0 && (
+              <TouchableOpacity
+                style={[styles.checkboxRow, styles.checkboxRowMissed]}
+                onPress={() => handleCheckMeal(meal)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.checkbox}>
+                  <Text style={styles.checkboxInner}> </Text>
+                </View>
+                <Text style={styles.checkboxLabel}>
+                  Mark all items as eaten
+                </Text>
+              </TouchableOpacity>
+            )}
+            {(!meal.foodItems || meal.foodItems.length === 0) && (
+              <TouchableOpacity
+                style={[styles.checkboxRow, styles.checkboxRowMissed]}
+                onPress={() => handleCheckMeal(meal)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.checkbox}>
+                  <Text style={styles.checkboxInner}> </Text>
+                </View>
+                <Text style={styles.checkboxLabel}>
+                  Mark {ordinal} meal as taken
+                </Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={styles.ateSomethingElseBtn}
               onPress={() => handleAteSomethingElse(meal)}
@@ -687,7 +785,7 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
           </View>
         )}
 
-        {/* Completed — tap to undo */}
+        {/* Completed — tap to undo all */}
         {isCompleted && (
           <TouchableOpacity
             style={styles.completedRow}
@@ -698,9 +796,9 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
               <Text style={styles.checkboxCheck}>✓</Text>
             </View>
             <Text style={styles.completedLabel}>
-              {isReplaced ? 'Replaced' : 'Meal taken'} ✅
+              {isReplaced ? 'Replaced' : 'All items eaten'} ✅
             </Text>
-            <Text style={styles.undoHint}>Tap to undo</Text>
+            <Text style={styles.undoHint}>Tap to undo all</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -789,7 +887,24 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
             />
           </View>
           <Text style={styles.progressSub}>
-            {tracking.meals.filter(m => m.completed).length} of {tracking.meals.length} meals completed
+            {(() => {
+              const regularMeals = tracking.meals.filter(m => !m.isExtra);
+              const extraMeals = tracking.meals.filter(m => m.isExtra);
+              const totalItems = regularMeals.reduce((sum, m) => sum + (m.foodItems ? m.foodItems.length : 0), 0);
+              const completedItems = regularMeals.reduce((sum, m) => sum + (m.foodItems ? m.foodItems.filter(fi => fi.completed).length : (m.completed ? 1 : 0)), 0);
+              const completedRegularMeals = regularMeals.filter(m => m.completed).length;
+              const extraItemCount = extraMeals.reduce((sum, m) => sum + (m.foodItems ? m.foodItems.length : 1), 0);
+              let text = '';
+              if (totalItems > 0) {
+                text = `${completedItems} of ${totalItems} items eaten • ${completedRegularMeals} of ${regularMeals.length} meals done`;
+              } else {
+                text = `${completedRegularMeals} of ${regularMeals.length} meals completed`;
+              }
+              if (extraItemCount > 0) {
+                text += ` + ${extraItemCount} extra`;
+              }
+              return text;
+            })()}
           </Text>
         </View>
 
@@ -1416,6 +1531,26 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
+  foodItemCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    marginRight: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF',
+  },
+  foodItemCheckboxChecked: {
+    backgroundColor: colors.success,
+    borderColor: colors.success,
+  },
+  foodItemCheckmark: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
   foodItemContent: {
     flex: 1,
   },
@@ -1426,6 +1561,37 @@ const styles = StyleSheet.create({
   foodItemMacros: {
     ...typography.caption,
     color: colors.text.secondary,
+  },
+  foodItemDone: {
+    textDecorationLine: 'line-through',
+    color: colors.text.light,
+  },
+  itemProgressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  itemProgressBarBg: {
+    flex: 1,
+    height: 6,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 3,
+    marginRight: spacing.sm,
+    overflow: 'hidden',
+  },
+  itemProgressBarFill: {
+    height: 6,
+    backgroundColor: colors.success,
+    borderRadius: 3,
+  },
+  itemProgressText: {
+    fontSize: 11,
+    color: colors.text.secondary,
+    fontWeight: '600',
+    minWidth: 100,
   },
   macrosRow: {
     flexDirection: 'row',
@@ -1560,10 +1726,6 @@ const styles = StyleSheet.create({
   mealNameDone: {
     textDecorationLine: 'line-through',
     color: colors.text.secondary,
-  },
-  foodItemDone: {
-    textDecorationLine: 'line-through',
-    color: colors.text.light,
   },
   // --- Checkbox row ---
   checkboxRow: {

@@ -5,6 +5,7 @@ import com.fitnessapp.subscription.impl.model.Subscription;
 import com.fitnessapp.subscription.impl.model.SubscriptionPlan;
 import com.fitnessapp.subscription.impl.repository.SubscriptionPlanRepository;
 import com.fitnessapp.subscription.impl.repository.SubscriptionRepository;
+import com.fitnessapp.subscription.impl.validation.SubscriptionValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ public class SubscriptionService implements SubscriptionOperations {
 
     private final SubscriptionPlanRepository planRepo;
     private final SubscriptionRepository subscriptionRepo;
+    private final SubscriptionValidator subscriptionValidator;
 
     @Override
     public List<SubscriptionPlanDTO> getAllPlans() {
@@ -31,9 +33,7 @@ public class SubscriptionService implements SubscriptionOperations {
 
     @Override
     public SubscriptionPlanDTO getPlanById(Long planId) {
-        return planRepo.findById(planId)
-                .map(this::toPlanDTO)
-                .orElseThrow(() -> new RuntimeException("Plan not found: " + planId));
+        return toPlanDTO(subscriptionValidator.validatePlanExists(planId));
     }
 
     @Override
@@ -47,8 +47,7 @@ public class SubscriptionService implements SubscriptionOperations {
     @Override
     @Transactional
     public SubscriptionDTO createSubscription(Long userId, CreateSubscriptionRequest request) {
-        SubscriptionPlan newPlan = planRepo.findById(request.getPlanId())
-                .orElseThrow(() -> new RuntimeException("Plan not found: " + request.getPlanId()));
+        SubscriptionPlan newPlan = subscriptionValidator.validatePlanExists(request.getPlanId());
 
         // If user already has an active subscription, cancel it (upgrade flow)
         subscriptionRepo.findFirstByUserIdAndStatusOrderByCreatedAtDesc(userId, "ACTIVE")
@@ -87,12 +86,8 @@ public class SubscriptionService implements SubscriptionOperations {
     @Override
     @Transactional
     public SubscriptionDTO activateSubscription(Long subscriptionId, String transactionRef) {
-        Subscription subscription = subscriptionRepo.findById(subscriptionId)
-                .orElseThrow(() -> new RuntimeException("Subscription not found: " + subscriptionId));
-
-        if ("ACTIVE".equals(subscription.getStatus())) {
-            throw new RuntimeException("Subscription is already active");
-        }
+        Subscription subscription = subscriptionValidator.validateSubscriptionExists(subscriptionId);
+        subscriptionValidator.validateNotAlreadyActive(subscription);
 
         LocalDate startDate = LocalDate.now();
         int months = subscription.getPlan().getDurationMonths() != null ? subscription.getPlan().getDurationMonths() : 3;
@@ -117,8 +112,7 @@ public class SubscriptionService implements SubscriptionOperations {
     @Override
     @Transactional
     public void cancelSubscription(Long userId, Long subscriptionId) {
-        Subscription subscription = subscriptionRepo.findByIdAndUserId(subscriptionId, userId)
-                .orElseThrow(() -> new RuntimeException("Subscription not found"));
+        Subscription subscription = subscriptionValidator.validateSubscriptionExistsForUser(subscriptionId, userId);
         subscription.setStatus("CANCELLED");
         subscriptionRepo.save(subscription);
         log.info("Cancelled subscription {} for userId {}", subscriptionId, userId);

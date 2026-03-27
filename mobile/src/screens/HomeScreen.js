@@ -11,10 +11,7 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../store/slices/authSlice';
 import {
-  completeMeal,
-  uncompleteMeal,
   persistTracking,
-  persistTrackingNow,
   loadTrackingFromStorage,
   loadTrackingLocal,
   getLocalDateString,
@@ -264,52 +261,20 @@ const HomeScreen = ({ navigation }) => {
     return 'upcoming';
   };
 
-  const getOrdinal = (idx) => {
-    const n = idx + 1;
-    if (n === 1) return '1st';
-    if (n === 2) return '2nd';
-    if (n === 3) return '3rd';
-    return `${n}th`;
-  };
-
-  const handleCheckMeal = (mealId) => {
-    dispatch(completeMeal({ mealId }));
-    dispatch(persistTrackingNow());
-  };
-
-  const handleUncheckMeal = (mealId) => {
-    if (Platform.OS === 'web') {
-      if (window.confirm('Undo this meal? Calories will be subtracted.')) {
-        dispatch(uncompleteMeal({ mealId }));
-        dispatch(persistTrackingNow());
-      }
-    } else {
-      Alert.alert('Undo Meal', 'Undo this meal? Calories will be subtracted.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Undo', style: 'destructive', onPress: () => { dispatch(uncompleteMeal({ mealId })); dispatch(persistTrackingNow()); } },
-      ]);
-    }
-  };
-
-  // Find the current / next actionable meal (first non-completed that is active or missed)
-  const getActiveMealInfo = () => {
+  // Find the next upcoming meal (first non-completed)
+  const getNextMealInfo = () => {
     const meals = tracking.meals || [];
-    for (let i = 0; i < meals.length; i++) {
-      const status = getMealStatus(meals[i]);
-      if (status === 'active' || status === 'missed') {
-        return { meal: meals[i], index: i, status };
-      }
-    }
-    // All done or all upcoming – find first upcoming
+    // Find the next non-completed meal
     for (let i = 0; i < meals.length; i++) {
       if (!meals[i].completed) {
-        return { meal: meals[i], index: i, status: 'upcoming' };
+        const status = getMealStatus(meals[i]);
+        return { meal: meals[i], index: i, status };
       }
     }
     return null; // all completed
   };
 
-  const activeMealInfo = tracking.meals.length > 0 ? getActiveMealInfo() : null;
+  const nextMealInfo = tracking.meals.length > 0 ? getNextMealInfo() : null;
   const completedCount = tracking.meals.filter(m => m.completed).length;
   const totalMealCalories = tracking.meals.reduce((s, m) => s + (m.calories || 0), 0);
 
@@ -384,9 +349,33 @@ const HomeScreen = ({ navigation }) => {
   // Ring color — purple on rest day, green on workout day
   const ringColor = isRestDay ? '#8B5CF6' : colors.success;
 
-  // Workout card info
-  const exerciseCount = workoutTracking.activePlan?.workoutPlan?.exercises?.length
-    || workoutTracking.activePlan?.exercises?.length || 8;
+  // Workout card info — count only TODAY's exercises (not all days)
+  const getTodayExerciseCount = () => {
+    const allExercises = workoutTracking.activePlan?.workoutPlan?.exercises || [];
+    if (allExercises.length === 0) return workoutTracking.activePlan?.exercises?.length || 0;
+
+    // Direct exercises for today
+    const directExercises = allExercises.filter(e => e.dayOfWeek === todayDayName);
+    if (directExercises.length > 0) return directExercises.length;
+
+    // Cycling: if today has no direct exercises, inherit from a workout day
+    const ORDERED_DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+    const workoutDays = ORDERED_DAYS.filter(d => allExercises.some(e => e.dayOfWeek === d));
+    if (workoutDays.length === 0 || workoutDays.length >= 7) return 0;
+
+    let cycleIndex = 0;
+    for (const day of ORDERED_DAYS) {
+      if (workoutDays.includes(day)) continue;
+      if (day === planRestDay) continue;
+      if (day === todayDayName) {
+        const mappedDay = workoutDays[cycleIndex % workoutDays.length];
+        return allExercises.filter(e => e.dayOfWeek === mappedDay).length;
+      }
+      cycleIndex++;
+    }
+    return 0;
+  };
+  const exerciseCount = getTodayExerciseCount();
   const workoutType = workoutTracking.activePlan?.workoutPlan?.focusArea
     || workoutTracking.activePlan?.workoutPlan?.planName || 'Workout';
 
@@ -600,72 +589,32 @@ const HomeScreen = ({ navigation }) => {
           </TouchableOpacity>
         )}
 
-        {/* -------- Meal Tracking Widget (inline action for current meal) -------- */}
-        {tracking.meals.length > 0 && activeMealInfo && (
-          <View style={styles.mealActionCard}>
-            {activeMealInfo.status === 'active' && (
-              <View style={styles.mealBanner}>
-                <Text style={styles.bannerEmoji}>🍽️</Text>
-                <Text style={styles.bannerText}>
-                  Time for your {getOrdinal(activeMealInfo.index)} meal!
-                </Text>
-              </View>
-            )}
-            {activeMealInfo.status === 'missed' && (
-              <View style={styles.mealBannerMissed}>
-                <Text style={styles.bannerEmoji}>😔</Text>
-                <Text style={styles.bannerTextMissed}>You are not on track</Text>
-              </View>
-            )}
-            {activeMealInfo.status === 'upcoming' && (
-              <View style={styles.mealBannerUpcoming}>
-                <Text style={styles.bannerEmoji}>⏰</Text>
-                <Text style={styles.bannerTextUpcoming}>
-                  Next: {activeMealInfo.meal.name} at {activeMealInfo.meal.timeOfDay}
-                </Text>
-              </View>
-            )}
-
-            <View style={styles.currentMealRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.currentMealName}>
-                  {activeMealInfo.meal.replacedWith || activeMealInfo.meal.name}
-                </Text>
-                {activeMealInfo.meal.replaced && (
-                  <Text style={styles.currentMealReplaced}>
-                    ✕ {activeMealInfo.meal.originalName}
-                  </Text>
-                )}
-                <Text style={styles.currentMealTime}>
-                  🕐 {activeMealInfo.meal.timeOfDay}  •  {activeMealInfo.meal.calories} kcal
-                </Text>
-              </View>
+        {/* -------- Next Meal Info -------- */}
+        {tracking.meals.length > 0 && nextMealInfo && (
+          <TouchableOpacity
+            style={styles.nextMealCard}
+            onPress={() => navigation.navigate('MyNutritionPlan')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.nextMealHeader}>
+              <Text style={styles.nextMealBadge}>
+                {nextMealInfo.status === 'active' ? '🍽️ Current Meal' : nextMealInfo.status === 'missed' ? '⏰ Pending' : '⏰ Up Next'}
+              </Text>
             </View>
-
-            {(activeMealInfo.status === 'active' || activeMealInfo.status === 'missed') && (
-              <TouchableOpacity
-                style={[
-                  styles.mealCheckBtn,
-                  activeMealInfo.status === 'missed' && styles.mealCheckBtnMissed,
-                ]}
-                onPress={() => handleCheckMeal(activeMealInfo.meal.mealId)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.mealCheckbox}>
-                  <Text> </Text>
-                </View>
-                <Text style={styles.mealCheckLabel}>
-                  {activeMealInfo.status === 'missed'
-                    ? `Mark ${getOrdinal(activeMealInfo.index)} meal as taken`
-                    : `Have you taken your ${getOrdinal(activeMealInfo.index)} meal?`}
+            <View style={styles.nextMealRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.nextMealName}>{nextMealInfo.meal.name}</Text>
+                <Text style={styles.nextMealMeta}>
+                  🕐 {nextMealInfo.meal.timeOfDay}  •  {nextMealInfo.meal.calories || 0} kcal
                 </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+              </View>
+              <Text style={styles.vmArrow}>›</Text>
+            </View>
+          </TouchableOpacity>
         )}
 
-        {/* All meals completed inline */}
-        {tracking.meals.length > 0 && !activeMealInfo && completedCount > 0 && (
+        {/* All meals completed */}
+        {tracking.meals.length > 0 && !nextMealInfo && completedCount > 0 && (
           <View style={styles.allMealsDoneCard}>
             <Text style={styles.allDoneEmoji}>🎉</Text>
             <Text style={styles.allDoneText}>All meals completed! Great job!</Text>
@@ -1045,6 +994,38 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontWeight: '500',
     flex: 1,
+  },
+  // ---- Next Meal Card ----
+  nextMealCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 12,
+    ...shadows.sm,
+  },
+  nextMealHeader: {
+    marginBottom: 8,
+  },
+  nextMealBadge: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+    letterSpacing: 0.3,
+  },
+  nextMealRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  nextMealName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  nextMealMeta: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
   },
   // ---- All Meals Done
   allMealsDoneCard: {

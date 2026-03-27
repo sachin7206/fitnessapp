@@ -1,6 +1,7 @@
 package com.fitnessapp.ai.impl.service;
 
 import com.fitnessapp.ai.impl.config.GeminiConfig;
+import com.fitnessapp.ai.impl.validation.AiValidator;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
 import com.google.genai.types.Content;
@@ -21,9 +22,11 @@ import java.util.List;
 public class GeminiClientService {
 
     private final GeminiConfig geminiConfig;
+    private final AiValidator aiValidator;
 
-    public GeminiClientService(GeminiConfig geminiConfig) {
+    public GeminiClientService(GeminiConfig geminiConfig, AiValidator aiValidator) {
         this.geminiConfig = geminiConfig;
+        this.aiValidator = aiValidator;
     }
 
     @PostConstruct
@@ -44,9 +47,7 @@ public class GeminiClientService {
      */
     public String generateContent(String prompt, boolean jsonMode) {
         List<String> apiKeys = geminiConfig.getApiKeys();
-        if (apiKeys.isEmpty()) {
-            throw new RuntimeException("No Gemini API keys configured");
-        }
+        aiValidator.validateApiKeysConfigured(!apiKeys.isEmpty());
 
         for (String apiKey : apiKeys) {
             try {
@@ -107,9 +108,7 @@ public class GeminiClientService {
      */
     public String generateContentWithImage(String prompt, String imageBase64, boolean jsonMode) {
         List<String> apiKeys = geminiConfig.getApiKeys();
-        if (apiKeys.isEmpty()) {
-            throw new RuntimeException("No Gemini API keys configured");
-        }
+        aiValidator.validateApiKeysConfigured(!apiKeys.isEmpty());
 
         for (String apiKey : apiKeys) {
             try {

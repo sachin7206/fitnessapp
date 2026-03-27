@@ -9,6 +9,7 @@ import com.fitnessapp.exercise.impl.repository.CustomWorkoutLogRepository;
 import com.fitnessapp.exercise.impl.repository.WorkoutCompletionRepository;
 import com.fitnessapp.exercise.impl.repository.WorkoutExerciseRepository;
 import com.fitnessapp.exercise.impl.repository.WorkoutPlanRepository;
+import com.fitnessapp.exercise.impl.validation.CustomWorkoutValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
     private final CustomWorkoutLogRepository customLogRepo;
     private final WorkoutCompletionRepository completionRepo;
     private final ObjectMapper objectMapper;
+    private final CustomWorkoutValidator customWorkoutValidator;
 
     @Override
     @Transactional
@@ -36,35 +38,11 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
         log.info("Saving custom workout plan for user id: {}", userId);
 
         // --- Validation ---
-        if (request.getExercises() == null || request.getExercises().isEmpty()) {
-            throw new IllegalArgumentException("Please add at least one exercise to your plan");
-        }
-
-        // Cap total exercises to prevent abuse
-        if (request.getExercises().size() > 200) {
-            throw new IllegalArgumentException("A plan can have at most 200 exercises");
-        }
-
-        int expectedDays = request.getDaysPerWeek() != null ? request.getDaysPerWeek() : 0;
-        if (expectedDays > 0) {
-            // Collect distinct workout days from exercises
-            Set<String> daysWithExercises = request.getExercises().stream()
-                    .map(CustomExerciseEntry::getDayOfWeek)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toSet());
-
-            if (daysWithExercises.size() < expectedDays) {
-                int missingCount = expectedDays - daysWithExercises.size();
-                throw new IllegalArgumentException(
-                        "Each workout day must have at least one exercise. " +
-                        missingCount + " day(s) are missing exercises. " +
-                        "Please add exercises for all " + expectedDays + " selected days.");
-            }
-        }
+        customWorkoutValidator.validateCustomWorkoutPlanRequest(request);
 
         // Sanitize plan name
         String planName = request.getPlanName() != null ? request.getPlanName().trim() : "My Custom Workout";
-        planName = sanitizeInput(planName, 100);
+        planName = customWorkoutValidator.sanitizeInput(planName, 100);
 
         WorkoutPlan plan = new WorkoutPlan();
         plan.setUserId(userId);
@@ -84,20 +62,14 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
 
         // Exercise time is required — validate format
         String exerciseTime = request.getExerciseTime();
-        if (exerciseTime == null || exerciseTime.trim().isEmpty()) {
-            throw new IllegalArgumentException("Exercise time is required. Please select your preferred workout time.");
-        }
-        exerciseTime = exerciseTime.trim();
-        if (!exerciseTime.matches("^\\d{1,2}:\\d{2}\\s?(AM|PM)$")) {
-            throw new IllegalArgumentException("Exercise time must be in format like '6:00 AM' or '10:30 PM'");
-        }
-        plan.setExerciseTime(exerciseTime);
+        customWorkoutValidator.validateExerciseTime(exerciseTime);
+        plan.setExerciseTime(exerciseTime.trim());
 
         List<WorkoutPlan.WorkoutExercise> exercises = new ArrayList<>();
         if (request.getExercises() != null) {
             for (CustomExerciseEntry entry : request.getExercises()) {
                 WorkoutPlan.WorkoutExercise ex = new WorkoutPlan.WorkoutExercise();
-                ex.setExerciseName(sanitizeInput(entry.getExerciseName(), 200));
+                ex.setExerciseName(customWorkoutValidator.sanitizeInput(entry.getExerciseName(), 200));
                 ex.setSets(entry.getSets() != null ? entry.getSets() : 3);
                 ex.setReps(entry.getReps() != null ? entry.getReps() : 12);
                 ex.setWeight(entry.getWeight());
@@ -109,13 +81,7 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
                 ex.setOrder(entry.getOrder() != null ? entry.getOrder() : 1);
                 ex.setCaloriesBurned(entry.getCaloriesBurned() != null ? entry.getCaloriesBurned() : 0);
                 // Validate setDetailsJson is valid JSON
-                if (entry.getSetDetailsJson() != null) {
-                    try {
-                        objectMapper.readTree(entry.getSetDetailsJson());
-                    } catch (Exception e) {
-                        throw new IllegalArgumentException("Invalid JSON in setDetailsJson for exercise: " + entry.getExerciseName());
-                    }
-                }
+                customWorkoutValidator.validateSetDetailsJson(entry.getSetDetailsJson(), entry.getExerciseName());
                 ex.setSetDetailsJson(entry.getSetDetailsJson());
                 exercises.add(ex);
             }
@@ -137,79 +103,35 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
     public WorkoutExerciseDTO updateExercise(Long userId, Long exerciseId, UpdateExerciseRequest request) {
         log.info("Updating exercise {} for user: {}", exerciseId, userId);
 
-        if (exerciseId == null || exerciseId <= 0) {
-            throw new IllegalArgumentException("Invalid exercise ID");
-        }
+        customWorkoutValidator.validateExerciseId(exerciseId);
 
         WorkoutPlan.WorkoutExercise exercise = workoutExerciseRepo.findById(exerciseId)
                 .orElseThrow(() -> new RuntimeException("Exercise not found: " + exerciseId));
 
         // SECURITY: Verify this exercise belongs to the current user's plan
         WorkoutPlan plan = exercise.getWorkoutPlan();
-        if (plan == null || !userId.equals(plan.getUserId())) {
-            throw new IllegalArgumentException("You do not have permission to modify this exercise");
-        }
+        customWorkoutValidator.validateExerciseOwnership(plan, userId);
 
         // Server-side range validation (defense in depth — DTO annotations may not always trigger)
+        customWorkoutValidator.validateUpdateExerciseRequest(request);
+
         if (request.getSets() != null) {
-            if (request.getSets() < 1 || request.getSets() > 50) {
-                throw new IllegalArgumentException("Sets must be between 1 and 50");
-            }
             exercise.setSets(request.getSets());
         }
         if (request.getReps() != null) {
-            if (request.getReps() < 1 || request.getReps() > 500) {
-                throw new IllegalArgumentException("Reps must be between 1 and 500");
-            }
             exercise.setReps(request.getReps());
         }
         if (request.getWeight() != null) {
-            if (request.getWeight() < 0 || request.getWeight() > 1000) {
-                throw new IllegalArgumentException("Weight must be between 0 and 1000 kg");
-            }
             exercise.setWeight(request.getWeight());
         }
         if (request.getRestTimeSeconds() != null) {
-            if (request.getRestTimeSeconds() < 0 || request.getRestTimeSeconds() > 600) {
-                throw new IllegalArgumentException("Rest time must be between 0 and 600 seconds");
-            }
             exercise.setRestTimeSeconds(request.getRestTimeSeconds());
         }
         if (request.getSetDetailsJson() != null) {
-            if (request.getSetDetailsJson().length() > 5000) {
-                throw new IllegalArgumentException("Set details JSON must be ≤ 5000 characters");
-            }
-            // Validate JSON structure and individual set values
-            try {
-                List<Map<String, Object>> setDetails = objectMapper.readValue(
-                        request.getSetDetailsJson(),
-                        objectMapper.getTypeFactory().constructCollectionType(List.class, Map.class));
-
-                if (setDetails.size() > 50) {
-                    throw new IllegalArgumentException("Maximum 50 sets allowed in setDetailsJson");
-                }
-                for (int i = 0; i < setDetails.size(); i++) {
-                    Map<String, Object> s = setDetails.get(i);
-                    int reps = toInt(s.get("reps"));
-                    double weight = toDouble(s.get("weight"));
-                    if (reps < 0 || reps > 500) {
-                        throw new IllegalArgumentException("Set " + (i + 1) + ": reps must be between 0 and 500");
-                    }
-                    if (weight < 0 || weight > 1000) {
-                        throw new IllegalArgumentException("Set " + (i + 1) + ": weight must be between 0 and 1000 kg");
-                    }
-                }
-            } catch (IllegalArgumentException e) {
-                throw e; // re-throw our validation errors
-            } catch (Exception e) {
-                throw new IllegalArgumentException("Invalid JSON in setDetailsJson");
-            }
+            customWorkoutValidator.validateSetDetailsJsonForUpdate(request.getSetDetailsJson());
             exercise.setSetDetailsJson(request.getSetDetailsJson());
         }
         if (request.getDurationSeconds() != null) {
-            if (request.getDurationSeconds() < 0 || request.getDurationSeconds() > 86400) {
-                throw new IllegalArgumentException("Duration must be between 0 and 86400 seconds");
-            }
             exercise.setDurationSeconds(request.getDurationSeconds());
         }
 
@@ -339,21 +261,7 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
         log.info("Syncing custom workout logs for user: {} on date: {}", userId, request.getDate());
 
         // Validate date format and range
-        LocalDate logDate;
-        try {
-            logDate = LocalDate.parse(request.getDate());
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid date format. Use YYYY-MM-DD.");
-        }
-
-        // Reject future dates
-        if (logDate.isAfter(LocalDate.now())) {
-            throw new IllegalArgumentException("Cannot log exercises for a future date.");
-        }
-        // Reject dates more than 90 days in the past
-        if (logDate.isBefore(LocalDate.now().minusDays(90))) {
-            throw new IllegalArgumentException("Cannot log exercises more than 90 days in the past.");
-        }
+        LocalDate logDate = customWorkoutValidator.validateLogDate(request.getDate());
 
         final LocalDate finalLogDate = logDate;
 
@@ -363,9 +271,7 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
         }
 
         // Validate: max 7 day entries
-        if (logs.size() > 7) {
-            throw new IllegalArgumentException("Maximum 7 day entries allowed per sync.");
-        }
+        customWorkoutValidator.validateSyncLogEntries(logs);
 
         // Valid day names
         Set<String> validDays = Set.of("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY");
@@ -386,9 +292,7 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
             Map<String, Object> exerciseLogs = (Map<String, Object>) dayEntry.getValue();
 
             // Limit max exercises per day to 50
-            if (exerciseLogs.size() > 50) {
-                throw new IllegalArgumentException("Maximum 50 exercises per day allowed.");
-            }
+            customWorkoutValidator.validateMaxExercisesPerDay(exerciseLogs.size());
 
             for (Map.Entry<String, Object> exEntry : exerciseLogs.entrySet()) {
                 int exerciseIndex;
@@ -749,22 +653,5 @@ public class CustomWorkoutService implements CustomWorkoutOperations {
         try { return Integer.parseInt(val.toString()); } catch (NumberFormatException e) { return 0; }
     }
 
-    /**
-     * Sanitize user input strings to prevent XSS and injection attacks.
-     * Strips HTML tags, script content, and control characters.
-     */
-    private String sanitizeInput(String input, int maxLength) {
-        if (input == null) return null;
-        String sanitized = input
-                .replaceAll("<[^>]*>", "")                   // strip HTML tags
-                .replaceAll("(?i)javascript:", "")            // remove javascript: protocol
-                .replaceAll("(?i)on\\w+\\s*=", "")           // remove inline event handlers
-                .replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]", "") // strip control chars
-                .trim();
-        if (sanitized.length() > maxLength) {
-            sanitized = sanitized.substring(0, maxLength);
-        }
-        return sanitized;
-    }
 }
 

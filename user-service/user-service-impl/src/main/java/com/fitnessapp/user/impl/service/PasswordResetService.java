@@ -2,6 +2,7 @@ package com.fitnessapp.user.impl.service;
 
 import com.fitnessapp.user.impl.model.User;
 import com.fitnessapp.user.impl.repository.UserRepository;
+import com.fitnessapp.user.impl.validation.PasswordResetValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,13 +21,16 @@ public class PasswordResetService {
     private final UserRepository userRepository;
     private final JavaMailSender mailSender;
     private final PasswordEncoder passwordEncoder;
+    private final PasswordResetValidator passwordResetValidator;
 
     public PasswordResetService(UserRepository userRepository,
                                 @Autowired(required = false) JavaMailSender mailSender,
-                                PasswordEncoder passwordEncoder) {
+                                PasswordEncoder passwordEncoder,
+                                PasswordResetValidator passwordResetValidator) {
         this.userRepository = userRepository;
         this.mailSender = mailSender;
         this.passwordEncoder = passwordEncoder;
+        this.passwordResetValidator = passwordResetValidator;
         if (mailSender == null) {
             log.warn("JavaMailSender not available. Password reset emails will NOT be sent. OTP will be logged to console only.");
         }
@@ -42,8 +46,7 @@ public class PasswordResetService {
      * Generate OTP, save to DB, return immediately, send email in background thread.
      */
     public void sendPasswordResetEmail(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("No account found with email: " + email));
+        User user = passwordResetValidator.validateAccountExists(email);
 
         String token = generateOTP();
         user.setPasswordResetToken(token);
@@ -72,17 +75,10 @@ public class PasswordResetService {
      * Validate the token and reset the password.
      */
     public void resetPassword(String token, String newPassword) {
-        validatePasswordStrength(newPassword);
+        passwordResetValidator.validatePasswordStrength(newPassword);
 
-        User user = userRepository.findByPasswordResetToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid or expired reset token"));
-
-        if (user.getPasswordResetExpiry() == null || user.getPasswordResetExpiry().isBefore(LocalDateTime.now())) {
-            user.setPasswordResetToken(null);
-            user.setPasswordResetExpiry(null);
-            userRepository.save(user);
-            throw new RuntimeException("Reset token has expired. Please request a new one.");
-        }
+        User user = passwordResetValidator.validateResetToken(token);
+        passwordResetValidator.validateTokenNotExpired(user);
 
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setPasswordResetToken(null);
@@ -96,23 +92,6 @@ public class PasswordResetService {
         return String.valueOf(otp);
     }
 
-    private void validatePasswordStrength(String password) {
-        if (password == null || password.length() < 8) {
-            throw new RuntimeException("Password must be at least 8 characters long");
-        }
-        if (!password.matches(".*[A-Z].*")) {
-            throw new RuntimeException("Password must contain at least one uppercase letter");
-        }
-        if (!password.matches(".*[a-z].*")) {
-            throw new RuntimeException("Password must contain at least one lowercase letter");
-        }
-        if (!password.matches(".*[0-9].*")) {
-            throw new RuntimeException("Password must contain at least one number");
-        }
-        if (!password.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?].*")) {
-            throw new RuntimeException("Password must contain at least one special character (!@#$%^&*...)");
-        }
-    }
 
     private void sendEmail(String toEmail, String token, String firstName) {
         if (mailSender == null || fromEmail == null || fromEmail.isBlank()) {

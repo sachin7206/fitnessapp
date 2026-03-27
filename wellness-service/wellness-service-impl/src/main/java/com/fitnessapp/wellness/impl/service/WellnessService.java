@@ -7,6 +7,7 @@ import com.fitnessapp.ai.sal.AiServiceSalClient;
 import com.fitnessapp.wellness.common.dto.*;
 import com.fitnessapp.wellness.impl.model.*;
 import com.fitnessapp.wellness.impl.repository.*;
+import com.fitnessapp.wellness.impl.validation.WellnessValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ public class WellnessService implements WellnessOperations {
     private final WellnessTipRepository tipRepo;
     private final ObjectMapper objectMapper;
     private final AiServiceSalClient aiServiceSalClient;
+    private final WellnessValidator wellnessValidator;
 
     @Override
     public List<YogaPoseDTO> getYogaPoses(String difficulty) {
@@ -192,7 +194,7 @@ public class WellnessService implements WellnessOperations {
 
     @Override @Transactional
     public UserWellnessPlanDTO assignPlan(Long userId, Long planId) {
-        WellnessPlan plan = planRepo.findById(planId).orElseThrow(() -> new RuntimeException("Wellness plan not found"));
+        WellnessPlan plan = wellnessValidator.validatePlanExists(planId);
         boolean hasActive = userPlanRepo.findByUserIdAndStatus(userId, "ACTIVE").isPresent();
         LocalDate startDate;
 

@@ -1,5 +1,7 @@
 package com.fitnessapp.nutrition.impl.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fitnessapp.nutrition.common.dto.*;
 import com.fitnessapp.nutrition.impl.model.DailyMealTracking;
 import com.fitnessapp.nutrition.impl.model.DailyNutritionSummary;
@@ -8,6 +10,7 @@ import com.fitnessapp.nutrition.impl.model.UserNutritionPlan;
 import com.fitnessapp.nutrition.impl.repository.DailyMealTrackingRepository;
 import com.fitnessapp.nutrition.impl.repository.DailyNutritionSummaryRepository;
 import com.fitnessapp.nutrition.impl.repository.UserNutritionPlanRepository;
+import com.fitnessapp.nutrition.impl.validation.MealTrackingValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,6 +22,7 @@ import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +33,8 @@ public class MealTrackingService implements MealTrackingOperations {
     private final DailyMealTrackingRepository mealTrackingRepo;
     private final DailyNutritionSummaryRepository summaryRepo;
     private final UserNutritionPlanRepository userNutritionPlanRepo;
+    private final MealTrackingValidator mealTrackingValidator;
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     @Transactional
@@ -36,24 +42,7 @@ public class MealTrackingService implements MealTrackingOperations {
         LocalDate today = LocalDate.now();
 
         // Validate replaced meals have required macro details
-        if (request.getMeals() != null) {
-            for (MealCompletionRequest mealReq : request.getMeals()) {
-                if (Boolean.TRUE.equals(mealReq.getReplaced())) {
-                    if (mealReq.getReplacedWith() == null || mealReq.getReplacedWith().trim().isEmpty()) {
-                        throw new IllegalArgumentException("Replaced meal (mealId=" + mealReq.getMealId() + ") must have a food name (replacedWith)");
-                    }
-                    if (mealReq.getProteinGrams() == null || mealReq.getProteinGrams() < 0) {
-                        throw new IllegalArgumentException("Replaced meal (mealId=" + mealReq.getMealId() + ") must have valid protein value (≥ 0)");
-                    }
-                    if (mealReq.getCarbsGrams() == null || mealReq.getCarbsGrams() < 0) {
-                        throw new IllegalArgumentException("Replaced meal (mealId=" + mealReq.getMealId() + ") must have valid carbs value (≥ 0)");
-                    }
-                    if (mealReq.getFatGrams() == null || mealReq.getFatGrams() < 0) {
-                        throw new IllegalArgumentException("Replaced meal (mealId=" + mealReq.getMealId() + ") must have valid fat value (≥ 0)");
-                    }
-                }
-            }
-        }
+        mealTrackingValidator.validateMealCompletionRequests(request.getMeals());
 
         // Upsert each meal record (deduplicate by mealId — keep last occurrence)
         if (request.getMeals() != null) {
@@ -138,7 +127,8 @@ public class MealTrackingService implements MealTrackingOperations {
             }
         }
 
-        // Recalculate daily summary from actual DB meal records (only completed meals count)
+        // Recalculate daily summary from actual DB meal records
+        // Per-item tracking: sum calories/macros only from completed food items within each meal
         List<DailyMealTracking> allMealsToday = mealTrackingRepo.findByUserIdAndTrackingDate(userId, today);
 
         int totalCalories = 0;
@@ -147,11 +137,21 @@ public class MealTrackingService implements MealTrackingOperations {
 
         for (DailyMealTracking m : allMealsToday) {
             if (Boolean.TRUE.equals(m.getCompleted())) {
+                // Fully completed meal (replaced meals or legacy) — use meal-level macros
                 totalCalories += m.getCalories() != null ? m.getCalories() : 0;
                 totalProtein += m.getProteinGrams() != null ? m.getProteinGrams() : 0.0;
                 totalCarbs += m.getCarbsGrams() != null ? m.getCarbsGrams() : 0.0;
                 totalFat += m.getFatGrams() != null ? m.getFatGrams() : 0.0;
                 completedCount++;
+            } else if (m.getFoodItemsJson() != null && !m.getFoodItemsJson().isBlank()) {
+                // Partially completed meal — sum only completed food items
+                int[] itemTotals = calculateCompletedFoodItemMacros(m.getFoodItemsJson());
+                if (itemTotals[4] > 0) { // itemTotals[4] = completed item count
+                    totalCalories += itemTotals[0];
+                    totalProtein += itemTotals[1];
+                    totalCarbs += itemTotals[2];
+                    totalFat += itemTotals[3];
+                }
             }
         }
 
@@ -181,7 +181,7 @@ public class MealTrackingService implements MealTrackingOperations {
     private DailyNutritionSummaryDTO buildSummaryDTO(Long userId, LocalDate date) {
         List<DailyMealTracking> meals = mealTrackingRepo.findByUserIdAndTrackingDate(userId, date);
 
-        // Always recalculate from actual completed meal records
+        // Recalculate from actual completed meal records + per-item completion
         int totalCalories = 0;
         double totalProtein = 0.0, totalCarbs = 0.0, totalFat = 0.0;
         int completedCount = 0;
@@ -193,6 +193,14 @@ public class MealTrackingService implements MealTrackingOperations {
                 totalCarbs += m.getCarbsGrams() != null ? m.getCarbsGrams() : 0.0;
                 totalFat += m.getFatGrams() != null ? m.getFatGrams() : 0.0;
                 completedCount++;
+            } else if (m.getFoodItemsJson() != null && !m.getFoodItemsJson().isBlank()) {
+                int[] itemTotals = calculateCompletedFoodItemMacros(m.getFoodItemsJson());
+                if (itemTotals[4] > 0) {
+                    totalCalories += itemTotals[0];
+                    totalProtein += itemTotals[1];
+                    totalCarbs += itemTotals[2];
+                    totalFat += itemTotals[3];
+                }
             }
         }
 
@@ -320,6 +328,53 @@ public class MealTrackingService implements MealTrackingOperations {
         report.setDailyBreakdown(breakdown);
         report.setAverages(averages);
         return report;
+    }
+
+    /**
+     * Parse foodItemsJson and sum macros of completed items only.
+     * Returns int[5]: [calories, protein*10, carbs*10, fat*10, completedItemCount]
+     * (protein/carbs/fat are stored as double but returned as int tenths for simplicity — callers cast)
+     * Actually returns double-compatible: [calories, protein, carbs, fat, completedCount]
+     */
+    private int[] calculateCompletedFoodItemMacros(String foodItemsJson) {
+        int totalCal = 0;
+        double totalP = 0, totalC = 0, totalF = 0;
+        int completedItems = 0;
+        try {
+            List<Map<String, Object>> items = objectMapper.readValue(
+                    foodItemsJson, new TypeReference<List<Map<String, Object>>>() {});
+            for (Map<String, Object> item : items) {
+                Object completedObj = item.get("completed");
+                boolean itemCompleted = false;
+                if (completedObj instanceof Boolean) {
+                    itemCompleted = (Boolean) completedObj;
+                } else if (completedObj instanceof String) {
+                    itemCompleted = "true".equalsIgnoreCase((String) completedObj);
+                }
+                if (itemCompleted) {
+                    totalCal += toInt(item.get("calories"));
+                    totalP += toDouble(item.get("proteinGrams"));
+                    totalC += toDouble(item.get("carbsGrams"));
+                    totalF += toDouble(item.get("fatGrams"));
+                    completedItems++;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to parse foodItemsJson for per-item tracking: {}", e.getMessage());
+        }
+        return new int[]{ totalCal, (int) Math.round(totalP), (int) Math.round(totalC), (int) Math.round(totalF), completedItems };
+    }
+
+    private int toInt(Object obj) {
+        if (obj == null) return 0;
+        if (obj instanceof Number) return ((Number) obj).intValue();
+        try { return Integer.parseInt(obj.toString()); } catch (NumberFormatException e) { return 0; }
+    }
+
+    private double toDouble(Object obj) {
+        if (obj == null) return 0.0;
+        if (obj instanceof Number) return ((Number) obj).doubleValue();
+        try { return Double.parseDouble(obj.toString()); } catch (NumberFormatException e) { return 0.0; }
     }
 }
 
