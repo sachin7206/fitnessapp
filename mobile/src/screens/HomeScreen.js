@@ -30,6 +30,7 @@ import {
   loadWorkoutTrackingLocal,
   updateSteps,
   setStepGoal,
+  mergeStepHistory,
   clearWorkoutTracking,
 } from '../store/slices/workoutTrackingSlice';
 import workoutService from '../services/workoutService';
@@ -96,6 +97,12 @@ const HomeScreen = ({ navigation }) => {
   const [sheetSelectedBar, setSheetSelectedBar] = useState(null);
   const sheetAnim = useState(new Animated.Value(0))[0];
   const SCREEN_HEIGHT = Dimensions.get('window').height;
+
+  // Step history bottom sheet state
+  const [stepSheetVisible, setStepSheetVisible] = useState(false);
+  const [stepSheetWeekOffset, setStepSheetWeekOffset] = useState(0);
+  const [stepSheetSelectedBar, setStepSheetSelectedBar] = useState(null);
+  const stepSheetAnim = useState(new Animated.Value(0))[0];
 
   const getDateString = (d) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -202,6 +209,81 @@ const HomeScreen = ({ navigation }) => {
     if (sorted.length === 1) best = 1;
     if (current > best) best = current;
     return { current, best };
+  };
+
+  // ---------- Step History Bottom Sheet ----------
+  const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  const openStepSheet = async () => {
+    setStepSheetVisible(true);
+    setStepSheetWeekOffset(0);
+    setStepSheetSelectedBar(null);
+    // Load step history from backend
+    try {
+      const historyData = await workoutService.getStepHistory(90);
+      if (historyData && historyData.length > 0) {
+        dispatch(mergeStepHistory(historyData.map(h => ({
+          date: h.trackingDate,
+          steps: h.steps,
+          caloriesBurned: h.caloriesBurned || Math.round(h.steps * 0.04),
+        }))));
+        dispatch(persistWorkoutTracking());
+      }
+    } catch (e) { /* non-critical */ }
+    Animated.spring(stepSheetAnim, { toValue: 1, useNativeDriver: true, tension: 65, friction: 11 }).start();
+  };
+
+  const closeStepSheet = () => {
+    Animated.timing(stepSheetAnim, { toValue: 0, useNativeDriver: true, duration: 200 }).start(() => {
+      setStepSheetVisible(false);
+    });
+  };
+
+  const getStepSheetWeekData = () => {
+    const rawSteps = workoutTracking.todaySteps;
+    const rawHistory = workoutTracking.stepHistory;
+    const todayStepsVal = (typeof rawSteps === 'number' && !isNaN(rawSteps)) ? rawSteps : 0;
+    const history = Array.isArray(rawHistory) ? rawHistory.filter(h => h && typeof h.steps === 'number') : [];
+
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    const dayOfWeek = today.getDay();
+    const diffToMon = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    startOfWeek.setDate(today.getDate() - diffToMon + (stepSheetWeekOffset * 7));
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startOfWeek);
+      d.setDate(startOfWeek.getDate() + i);
+      const dateStr = getDateString(d);
+      const isToday = dateStr === getDateString(today);
+      let steps = 0;
+      if (isToday) {
+        steps = todayStepsVal || 0;
+      } else {
+        const entry = history.find(h => h.date === dateStr);
+        steps = entry ? entry.steps : 0;
+      }
+      const caloriesBurned = Math.round(steps * 0.04);
+      days.push({
+        date: dateStr,
+        dayLabel: DAY_SHORT[d.getDay()],
+        dayNum: d.getDate(),
+        month: d.toLocaleString('default', { month: 'short' }),
+        steps,
+        caloriesBurned,
+        isToday,
+      });
+    }
+    return days;
+  };
+
+  const getStepSheetWeekLabel = () => {
+    if (stepSheetWeekOffset === 0) return 'This Week';
+    if (stepSheetWeekOffset === -1) return 'Last Week';
+    const wd = getStepSheetWeekData();
+    return `${wd[0].dayNum} ${wd[0].month} – ${wd[6].dayNum} ${wd[6].month}`;
   };
 
   // Load persisted tracking on mount (with backend sync — one time only)
@@ -667,7 +749,7 @@ const HomeScreen = ({ navigation }) => {
             {/* Steps Ring */}
             <TouchableOpacity
               style={styles.ringItem}
-              onPress={() => navigation.navigate('StepHistory')}
+              onPress={openStepSheet}
               activeOpacity={0.7}
             >
               <ProgressRing progress={stepProgress} color={ringColor}>
@@ -1045,6 +1127,194 @@ const HomeScreen = ({ navigation }) => {
                     </View>
                   ))}
                 </View>
+
+                <View style={{ height: 20 }} />
+              </ScrollView>
+            </TouchableOpacity>
+          </Animated.View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* -------- Step History Bottom Sheet -------- */}
+      <Modal visible={stepSheetVisible} transparent animationType="none" onRequestClose={closeStepSheet}>
+        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={closeStepSheet}>
+          <Animated.View
+            style={[
+              styles.sheetContainer,
+              {
+                transform: [{
+                  translateY: stepSheetAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [SCREEN_HEIGHT, 0],
+                  }),
+                }],
+              },
+            ]}
+          >
+            <TouchableOpacity activeOpacity={1}>
+              {/* Handle bar */}
+              <View style={styles.sheetHandle}>
+                <View style={styles.sheetHandleBar} />
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} bounces={false} style={{ maxHeight: SCREEN_HEIGHT * 0.85 }}>
+                {/* Header */}
+                <View style={styles.sheetHeader}>
+                  <Text style={styles.sheetTitle}>👟 Step Tracker</Text>
+                  <TouchableOpacity onPress={closeStepSheet}>
+                    <Text style={styles.sheetCloseBtn}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Today's summary card */}
+                {(() => {
+                  const rawSteps = workoutTracking.todaySteps;
+                  const rawGoal = workoutTracking.stepGoal;
+                  const stepsVal = (typeof rawSteps === 'number' && !isNaN(rawSteps)) ? rawSteps : 0;
+                  const goalVal = (typeof rawGoal === 'number' && !isNaN(rawGoal)) ? rawGoal : 0;
+                  const todayCal = Math.round(stepsVal * 0.04);
+                  const todayKm = (stepsVal * 0.0008).toFixed(1);
+                  const goalPct = goalVal > 0 ? Math.min(100, Math.round((stepsVal / goalVal) * 100)) : 0;
+                  return (
+                    <View style={styles.stepSheetTodayCard}>
+                      <Text style={styles.stepSheetTodayIcon}>👟</Text>
+                      <Text style={styles.stepSheetTodaySteps}>{stepsVal.toLocaleString()}</Text>
+                      <Text style={styles.stepSheetTodayLabel}>Steps Today</Text>
+                      <View style={styles.stepSheetMetaRow}>
+                        <View style={styles.stepSheetMetaItem}>
+                          <Text style={styles.stepSheetMetaValue}>🔥 {todayCal}</Text>
+                          <Text style={styles.stepSheetMetaLabel}>Calories</Text>
+                        </View>
+                        <View style={styles.stepSheetMetaItem}>
+                          <Text style={styles.stepSheetMetaValue}>📏 {todayKm}</Text>
+                          <Text style={styles.stepSheetMetaLabel}>km</Text>
+                        </View>
+                        {goalVal > 0 && (
+                          <View style={styles.stepSheetMetaItem}>
+                            <Text style={styles.stepSheetMetaValue}>🎯 {goalPct}%</Text>
+                            <Text style={styles.stepSheetMetaLabel}>Goal</Text>
+                          </View>
+                        )}
+                      </View>
+                      {goalVal > 0 && (
+                        <View style={styles.stepSheetGoalProgress}>
+                          <View style={styles.stepSheetGoalBarBg}>
+                            <View style={[styles.stepSheetGoalBarFill, {
+                              width: `${Math.min(100, (stepsVal / goalVal) * 100)}%`,
+                              backgroundColor: stepsVal >= goalVal ? colors.success : colors.primary,
+                            }]} />
+                          </View>
+                          <Text style={styles.stepSheetGoalText}>
+                            {stepsVal.toLocaleString()} / {goalVal.toLocaleString()} steps
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })()}
+
+                {/* Week navigation */}
+                <View style={styles.sheetChartNav}>
+                  <TouchableOpacity onPress={() => { setStepSheetWeekOffset(w => w - 1); setStepSheetSelectedBar(null); }}>
+                    <Text style={styles.sheetChartArrow}>◀</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.sheetSectionTitle}>{getStepSheetWeekLabel()}</Text>
+                  <TouchableOpacity
+                    onPress={() => { if (stepSheetWeekOffset < 0) { setStepSheetWeekOffset(w => w + 1); setStepSheetSelectedBar(null); } }}
+                    disabled={stepSheetWeekOffset >= 0}
+                  >
+                    <Text style={[styles.sheetChartArrow, stepSheetWeekOffset >= 0 && { opacity: 0.3 }]}>▶</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Bar chart */}
+                {(() => {
+                  const weekData = getStepSheetWeekData();
+                  const maxSteps = Math.max(...weekData.map(d => d.steps), 1000);
+                  const CHART_H = 160;
+                  const BAR_LABEL_H = 24;
+                  const MAX_BAR_H = CHART_H - BAR_LABEL_H;
+                  return (
+                    <View style={[styles.sheetChartContainer, { height: CHART_H + 10 }]}>
+                      {/* Y-axis */}
+                      <View style={[styles.sheetYAxis, { height: MAX_BAR_H, marginBottom: BAR_LABEL_H }]}>
+                        <Text style={styles.sheetYLabel}>{maxSteps.toLocaleString()}</Text>
+                        <Text style={styles.sheetYLabel}>{Math.round(maxSteps / 2).toLocaleString()}</Text>
+                        <Text style={styles.sheetYLabel}>0</Text>
+                      </View>
+                      {/* Bars */}
+                      <View style={[styles.sheetBarsArea, { height: CHART_H }]}>
+                        {weekData.map((day, idx) => {
+                          const barH = day.steps > 0 ? Math.max(4, (day.steps / maxSteps) * MAX_BAR_H) : 3;
+                          const isSelected = stepSheetSelectedBar === idx;
+                          return (
+                            <TouchableOpacity key={idx} style={styles.sheetBarCol}
+                              onPress={() => setStepSheetSelectedBar(isSelected ? null : idx)} activeOpacity={0.7}>
+                              {isSelected && day.steps > 0 && (
+                                <View style={styles.sheetTooltip}>
+                                  <Text style={styles.sheetTooltipText}>{day.steps.toLocaleString()} steps</Text>
+                                  <Text style={styles.sheetTooltipCount}>🔥 {day.caloriesBurned} cal</Text>
+                                </View>
+                              )}
+                              <View style={[styles.sheetBarWrap, { maxWidth: 28 }]}>
+                                <View style={[styles.sheetBar, {
+                                  height: barH,
+                                  backgroundColor: day.isToday ? colors.primary : day.steps > 0 ? colors.primary + '60' : '#E5E7EB',
+                                  borderWidth: isSelected ? 1.5 : 0, borderColor: colors.primary,
+                                }]} />
+                              </View>
+                              <Text style={[styles.sheetBarLbl, { fontSize: 9 }, day.isToday && { color: colors.primary, fontWeight: '700' }]}>
+                                {day.dayLabel}
+                              </Text>
+                              <Text style={[styles.sheetBarLbl, { fontSize: 8 }]}>{day.dayNum}</Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  );
+                })()}
+
+                {/* Week summary stats */}
+                {(() => {
+                  const weekData = getStepSheetWeekData();
+                  const weekTotalSteps = weekData.reduce((s, d) => s + d.steps, 0);
+                  const weekTotalCal = weekData.reduce((s, d) => s + d.caloriesBurned, 0);
+                  const weekAvgSteps = Math.round(weekTotalSteps / 7);
+                  return (
+                    <View style={styles.sheetCountRow}>
+                      <View style={styles.sheetCountCard}>
+                        <Text style={styles.sheetCountValue}>{weekTotalSteps.toLocaleString()}</Text>
+                        <Text style={styles.sheetCountLabel}>👟 Total Steps</Text>
+                      </View>
+                      <View style={styles.sheetCountCard}>
+                        <Text style={styles.sheetCountValue}>{weekAvgSteps.toLocaleString()}</Text>
+                        <Text style={styles.sheetCountLabel}>📊 Daily Avg</Text>
+                      </View>
+                      <View style={styles.sheetCountCard}>
+                        <Text style={styles.sheetCountValue}>{weekTotalCal.toLocaleString()}</Text>
+                        <Text style={styles.sheetCountLabel}>🔥 Calories</Text>
+                      </View>
+                    </View>
+                  );
+                })()}
+
+                {/* Daily breakdown */}
+                <Text style={[styles.sheetSectionTitle, { marginTop: 4 }]}>Daily Breakdown</Text>
+                {getStepSheetWeekData().slice().reverse().map((day, idx) => (
+                  <View key={idx} style={[styles.stepSheetDayRow, day.isToday && styles.stepSheetDayRowToday]}>
+                    <View style={styles.stepSheetDayLeft}>
+                      <Text style={[styles.stepSheetDayName, day.isToday && { color: colors.primary }]}>
+                        {day.dayLabel} {day.dayNum}
+                      </Text>
+                      {day.isToday && <Text style={styles.stepSheetTodayBadge}>Today</Text>}
+                    </View>
+                    <View style={styles.stepSheetDayRight}>
+                      <Text style={styles.stepSheetDaySteps}>{day.steps.toLocaleString()} steps</Text>
+                      <Text style={styles.stepSheetDayCal}>🔥 {day.caloriesBurned} cal</Text>
+                    </View>
+                  </View>
+                ))}
 
                 <View style={{ height: 20 }} />
               </ScrollView>
@@ -1683,6 +1953,37 @@ const styles = StyleSheet.create({
   },
   sheetConsistencyFill: { height: '100%', borderRadius: 5 },
   sheetConsistencyCount: { fontSize: 10, fontWeight: '600', color: '#9CA3AF', width: 26, textAlign: 'right' },
+  // ---- Step History Bottom Sheet ----
+  stepSheetTodayCard: {
+    backgroundColor: '#F9FAFB', borderRadius: 14, padding: 16,
+    alignItems: 'center', marginBottom: 12,
+  },
+  stepSheetTodayIcon: { fontSize: 32, marginBottom: 4 },
+  stepSheetTodaySteps: { fontSize: 38, fontWeight: '800', color: colors.primary },
+  stepSheetTodayLabel: { fontSize: 12, color: '#9CA3AF', marginBottom: 10 },
+  stepSheetMetaRow: { flexDirection: 'row', gap: 24 },
+  stepSheetMetaItem: { alignItems: 'center' },
+  stepSheetMetaValue: { fontSize: 13, fontWeight: '700', color: '#111827' },
+  stepSheetMetaLabel: { fontSize: 9, color: '#9CA3AF', marginTop: 2 },
+  stepSheetGoalProgress: { width: '100%', marginTop: 12 },
+  stepSheetGoalBarBg: { height: 8, backgroundColor: colors.primary + '20', borderRadius: 4, overflow: 'hidden' },
+  stepSheetGoalBarFill: { height: '100%', borderRadius: 4 },
+  stepSheetGoalText: { fontSize: 10, color: '#9CA3AF', textAlign: 'center', marginTop: 4 },
+  stepSheetDayRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: 10, backgroundColor: '#F9FAFB', borderRadius: 10, marginBottom: 4,
+  },
+  stepSheetDayRowToday: { borderLeftWidth: 3, borderLeftColor: colors.primary },
+  stepSheetDayLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  stepSheetDayName: { fontSize: 13, fontWeight: '600', color: '#111827' },
+  stepSheetTodayBadge: {
+    fontSize: 9, color: colors.primary, fontWeight: '700',
+    backgroundColor: colors.primary + '15', paddingHorizontal: 6, paddingVertical: 2,
+    borderRadius: 4, overflow: 'hidden',
+  },
+  stepSheetDayRight: { alignItems: 'flex-end' },
+  stepSheetDaySteps: { fontSize: 13, fontWeight: '600', color: '#111827' },
+  stepSheetDayCal: { fontSize: 10, color: '#F59E0B' },
 });
 
 export default HomeScreen;
