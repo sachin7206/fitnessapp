@@ -20,7 +20,7 @@ gemini:
   api:
     keys: ${GEMINI_API_KEYS:}
     url: https://generativelanguage.googleapis.com/v1beta/models
-  model: ${GEMINI_MODEL:gemma-3-27b-it}
+  model: ${GEMINI_MODEL:gemini-2.0-flash}
   enabled: true
   timeout:
     connect: 15000

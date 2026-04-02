@@ -95,3 +95,13 @@ databaseChangeLog:
               - column: { name: features, value: '["Everything in Pro","Personal AI Coach","Advanced Analytics","Custom Workout Builder","Early Feature Access"]' }
               - column: { name: is_active, valueBoolean: true }
               - column: { name: created_at, valueComputed: "NOW()" }
+  - changeSet:
+      id: 004-add-max-plan-generations
+      author: fitnessapp
+      changes:
+        - addColumn:
+            tableName: subscription_plans
+            columns:
+              - column: { name: max_plan_generations, type: INT, defaultValueNumeric: 3 }
+        - sql:
+            sql: "UPDATE subscription_plans SET max_plan_generations = duration_months WHERE max_plan_generations IS NULL"

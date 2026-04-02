@@ -50,5 +50,30 @@ public class GenerateWorkoutPlanRequest {
     private Integer cardioSteps;
 
     private List<String> focusMuscleGroups;
+
+    // Custom exercises provided by user for AI plan generation
+    private List<CustomExerciseInput> customExercises;
+
+    // Plan name and workout days
+    private String planName;
+    private List<String> workoutDays;
+
+    // Plan generation limit (from subscription)
+    private Integer maxPlanGenerations;
+    private String subscriptionStartDate; // YYYY-MM-DD format
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CustomExerciseInput {
+        private String dayOfWeek;
+        private String exerciseName;
+        private String muscleGroup;
+        private Integer sets;
+        private Integer reps;
+        private Double weight;
+        private Boolean isCardio;
+        private Integer durationMinutes;
+    }
 }
 

@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -92,20 +93,6 @@ public class WorkoutController implements WorkoutApi {
         return ResponseEntity.ok(exerciseEnhancementService.suggestExerciseSubstitutes(getCurrentUserId(), request));
     }
 
-    @Override
-    public ResponseEntity<Object> submitWorkoutFeedback(WorkoutFeedbackRequest request) {
-        return ResponseEntity.ok(exerciseEnhancementService.submitWorkoutFeedback(getCurrentUserId(), request));
-    }
-
-    @Override
-    public ResponseEntity<WorkoutAdjustmentResponseDTO> adjustWorkoutProgression() {
-        return ResponseEntity.ok(exerciseEnhancementService.adjustWorkoutProgression(getCurrentUserId()));
-    }
-
-    @Override
-    public ResponseEntity<List<WorkoutFeedbackDTO>> getWorkoutFeedbackHistory() {
-        return ResponseEntity.ok(exerciseEnhancementService.getWorkoutFeedbackHistory(getCurrentUserId()));
-    }
 
     // ========== CUSTOM WORKOUT PLAN ENDPOINTS ==========
 
@@ -158,5 +145,17 @@ public class WorkoutController implements WorkoutApi {
             throw new IllegalArgumentException("Date range cannot exceed 1 year");
         }
         return ResponseEntity.ok(customWorkoutService.getExerciseReport(getCurrentUserId(), start, end));
+    }
+
+    @GetMapping("/workouts/completion-history")
+    public ResponseEntity<List<Map<String, Object>>> getCompletionHistory() {
+        return ResponseEntity.ok(workoutTrackingService.getCompletionHistory(getCurrentUserId()));
+    }
+
+    @GetMapping("/workouts/ai-plan-count")
+    public ResponseEntity<Map<String, Object>> getAiPlanCount(@RequestParam String since) {
+        LocalDateTime sinceDate = LocalDate.parse(since).atStartOfDay();
+        long count = aiWorkoutService.getAiPlanCount(getCurrentUserId(), sinceDate);
+        return ResponseEntity.ok(Map.of("count", count));
     }
 }

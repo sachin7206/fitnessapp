@@ -38,6 +38,9 @@ public class SubscriptionPlan {
     @Column(name = "is_active")
     private Boolean isActive;
 
+    @Column(name = "max_plan_generations")
+    private Integer maxPlanGenerations;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -47,6 +50,7 @@ public class SubscriptionPlan {
         if (isActive == null) isActive = true;
         if (currency == null) currency = "INR";
         if (durationMonths == null) durationMonths = 3;
+        if (maxPlanGenerations == null) maxPlanGenerations = durationMonths;
     }
 }
 

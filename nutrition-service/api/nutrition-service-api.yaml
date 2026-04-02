@@ -257,58 +257,6 @@ paths:
 
   # ========== NEW FEATURE ENDPOINTS ==========
 
-  /nutrition/food-log:
-    post:
-      tags: [Nutrition]
-      operationId: logFoodPhoto
-      summary: Log food via photo analysis
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FoodPhotoLogRequest'
-      responses:
-        '200':
-          description: Food logged
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FoodLogDTO'
-
-  /nutrition/food-log/today:
-    get:
-      tags: [Nutrition]
-      operationId: getTodayFoodLogs
-      summary: Get today food logs
-      responses:
-        '200':
-          description: Today food logs
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/FoodLogDTO'
-
-  /nutrition/food-log/history:
-    get:
-      tags: [Nutrition]
-      operationId: getFoodLogHistory
-      summary: Get food log history
-      parameters:
-        - name: days
-          in: query
-          schema: { type: integer, default: 7 }
-      responses:
-        '200':
-          description: Food log history
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/FoodLogDTO'
 
   /nutrition/my-plan/swap-meal:
     post:
@@ -641,32 +589,6 @@ components:
 
     # ========== NEW FEATURE SCHEMAS ==========
 
-    FoodPhotoLogRequest:
-      type: object
-      properties:
-        imageBase64: { type: string }
-        description: { type: string }
-        mealType: { type: string }
-        source: { type: string, enum: [PHOTO, MANUAL] }
-
-    FoodLogDTO:
-      type: object
-      properties:
-        id: { type: integer, format: int64 }
-        logDate: { type: string, format: date }
-        mealType: { type: string }
-        description: { type: string }
-        source: { type: string }
-        totalCalories: { type: integer }
-        totalProtein: { type: number, format: double }
-        totalCarbs: { type: number, format: double }
-        totalFat: { type: number, format: double }
-        confidence: { type: number, format: double }
-        foodItems:
-          type: array
-          items:
-            type: object
-        createdAt: { type: string, format: date-time }
 
     MealSwapRequestDTO:
       type: object

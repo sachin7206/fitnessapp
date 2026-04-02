@@ -29,7 +29,7 @@ const getApiUrl = () => {
           window.location.hostname !== 'localhost' &&
           window.location.hostname !== '127.0.0.1') {
         // We're deployed but no API URL was set - show error
-        
+
         // Fall through to localhost which will fail gracefully
       }
       return `http://localhost:${BACKEND_PORT}/api`;

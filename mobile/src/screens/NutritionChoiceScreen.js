@@ -1,25 +1,53 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ActivityIndicator,
+  View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ActivityIndicator, ScrollView,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/core';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import subscriptionService from '../services/subscriptionService';
 import nutritionService from '../services/nutritionService';
+import PremiumSubscriptionBanner from './components/PremiumSubscriptionBanner';
+import { useTranslation } from '../i18n';
 
 const NutritionChoiceScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const [hasSubscription, setHasSubscription] = useState(false);
   const [loading, setLoading] = useState(true);
   const [navigating, setNavigating] = useState(false);
+  const [remainingPlans, setRemainingPlans] = useState(null); // null = not loaded, number = remaining
+  const [maxPlans, setMaxPlans] = useState(null);
 
-  useEffect(() => {
-    checkSubscription();
-  }, []);
+  // Re-check subscription every time screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      checkSubscription();
+    }, [])
+  );
 
   const checkSubscription = async () => {
     try {
       const response = await subscriptionService.getActiveSubscription();
+      // Handle ApiResponse wrapper: { status, data: { id, status, ... } }
       const sub = response?.data || response;
-      setHasSubscription(sub && sub.status === 'ACTIVE');
+      const isActive = !!(sub && (sub.status === 'ACTIVE' || sub.planName));
+      setHasSubscription(isActive);
+
+      if (isActive && sub) {
+        const maxGen = sub.maxPlanGenerations || sub.durationMonths || 3;
+        setMaxPlans(maxGen);
+        // Fetch AI plan count for this subscription period
+        if (sub.startDate) {
+          try {
+            const countResp = await nutritionService.getAiPlanCount(sub.startDate);
+            const count = countResp?.count ?? 0;
+            setRemainingPlans(Math.max(0, maxGen - count));
+          } catch (err) {
+            setRemainingPlans(maxGen); // If count fails, allow generation
+          }
+        } else {
+          setRemainingPlans(maxGen);
+        }
+      }
     } catch (e) {
       setHasSubscription(false);
     } finally {
@@ -27,7 +55,7 @@ const NutritionChoiceScreen = ({ navigation }) => {
     }
   };
 
-  const handleSubscribePress = async () => {
+  const handleGeneratePlan = async () => {
     setNavigating(true);
     try {
       const status = await nutritionService.checkProfileStatus();
@@ -48,63 +76,96 @@ const NutritionChoiceScreen = ({ navigation }) => {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Nutrition Plan</Text>
-          <View style={{ width: 60 }} />
-        </View>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </SafeAreaView>
-    );
+          <Text style={styles.backText}>{t('common.back')}</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t('nutrition.title')}</Text>
+        <View style={{ width: 60 }} />
+      </View>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    </SafeAreaView>
+  );
   }
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Nutrition Plan</Text>
+        <Text style={styles.headerTitle}>{t('nutrition.title')}</Text>
         <View style={{ width: 60 }} />
       </View>
 
-      <View style={styles.content}>
-        <Text style={styles.title}>Choose Your Nutrition Style</Text>
-        <Text style={styles.subtitle}>Pick the option that works best for you</Text>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.title}>{t('nutrition.chooseStyle')}</Text>
+        <Text style={styles.subtitle}>{t('nutrition.pickOption')}</Text>
 
-        {/* Subscribe Now - AI Generated */}
-        <TouchableOpacity
-          style={[styles.optionCard, navigating && { opacity: 0.6 }]}
-          onPress={handleSubscribePress}
-          activeOpacity={0.85}
-          disabled={navigating}
-        >
-          <View style={styles.optionIconContainer}>
-            <Text style={styles.optionIcon}>🤖</Text>
-          </View>
-          <View style={styles.optionContent}>
-            <Text style={styles.optionTitle}>Subscribe Now</Text>
-            <Text style={styles.optionDescription}>
-              Get a personalized AI-generated nutrition plan tailored to your goals, dietary preferences, and regional cuisine.
-            </Text>
-            <View style={styles.featureList}>
-              <Text style={styles.featureItem}>✅ AI-powered meal planning</Text>
-              <Text style={styles.featureItem}>✅ Detailed food preferences</Text>
-              <Text style={styles.featureItem}>✅ Supplement recommendations</Text>
-              <Text style={styles.featureItem}>✅ Regional cuisine based plans</Text>
+        {/* Premium Subscription Banner — shown only when NOT subscribed */}
+        {!hasSubscription && (
+          <PremiumSubscriptionBanner
+            onSubscribe={() => navigation.navigate('SubscriptionPlans')}
+          />
+        )}
+
+        {/* AI Generated Nutrition — shown only when subscribed AND has remaining plans */}
+        {hasSubscription && remainingPlans !== null && remainingPlans > 0 && (
+          <TouchableOpacity
+            style={[styles.optionCard, styles.subscribedCard, navigating && { opacity: 0.6 }]}
+            onPress={handleGeneratePlan}
+            activeOpacity={0.85}
+            disabled={navigating}
+          >
+            <View style={[styles.optionIconContainer, styles.subscribedIconContainer]}>
+              <Text style={styles.optionIcon}>🚀</Text>
             </View>
-            {!hasSubscription && (
-              <View style={styles.premiumBadge}>
-                <Text style={styles.premiumBadgeText}>PREMIUM ✨</Text>
+            <View style={styles.optionContent}>
+              <View style={styles.activeBadge}>
+                <Text style={styles.activeBadgeText}>{t('nutrition.premiumActive')} ✅</Text>
               </View>
-            )}
+              <Text style={styles.optionTitle}>{t('nutrition.generateAiPlan')}</Text>
+              <Text style={styles.optionDescription}>
+                {t('nutrition.aiPremiumDesc')}
+              </Text>
+              <View style={styles.remainingBadge}>
+                <Text style={styles.remainingBadgeText}>
+                  {remainingPlans} of {maxPlans} plan{maxPlans !== 1 ? 's' : ''} remaining
+                </Text>
+              </View>
+              <View style={styles.featureList}>
+                <Text style={styles.featureItem}>✅ {t('nutrition.aiPowered')}</Text>
+                <Text style={styles.featureItem}>✅ {t('nutrition.detailedPrefs')}</Text>
+                <Text style={styles.featureItem}>✅ {t('nutrition.supplementRecs')}</Text>
+                <Text style={styles.featureItem}>✅ {t('nutrition.regionalPlans')}</Text>
+              </View>
+            </View>
+            <View style={styles.arrowContainer}>
+              <Text style={styles.arrow}>→</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* Show exhausted message when subscribed but no remaining plans */}
+        {hasSubscription && remainingPlans !== null && remainingPlans <= 0 && (
+          <View style={[styles.optionCard, styles.exhaustedCard]}>
+            <View style={[styles.optionIconContainer, { backgroundColor: colors.text.secondary + '15' }]}>
+              <Text style={styles.optionIcon}>🔒</Text>
+            </View>
+            <View style={styles.optionContent}>
+              <View style={styles.activeBadge}>
+                <Text style={styles.activeBadgeText}>{t('nutrition.premiumActive')} ✅</Text>
+              </View>
+              <Text style={styles.optionTitle}>{t('nutrition.aiNutritionPlans')}</Text>
+              <Text style={styles.optionDescription}>
+                {t('nutrition.usedAllPlans', { max: maxPlans })}
+              </Text>
+              <View style={styles.exhaustedBadge}>
+                <Text style={styles.exhaustedBadgeText}>0 of {maxPlans} plans remaining</Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.arrowContainer}>
-            <Text style={styles.arrow}>→</Text>
-          </View>
-        </TouchableOpacity>
+        )}
 
         {/* Free Service - Manual Nutrition Plan */}
         <TouchableOpacity
@@ -116,25 +177,27 @@ const NutritionChoiceScreen = ({ navigation }) => {
             <Text style={styles.optionIcon}>📝</Text>
           </View>
           <View style={styles.optionContent}>
-            <Text style={styles.optionTitle}>Free Service</Text>
+            <Text style={styles.optionTitle}>{t('nutrition.freeService')}</Text>
             <Text style={styles.optionDescription}>
-              Create your own custom nutrition plan. Choose your meal times and add your own food items with protein, carbs, fats, and calories.
+              {t('nutrition.freeServiceDesc')}
             </Text>
             <View style={styles.featureList}>
-              <Text style={styles.featureItem}>✅ Build your own diet plan</Text>
-              <Text style={styles.featureItem}>✅ Add custom food items</Text>
-              <Text style={styles.featureItem}>✅ Track macros per meal</Text>
-              <Text style={styles.featureItem}>✅ Full control over meals</Text>
+              <Text style={styles.featureItem}>✅ {t('nutrition.buildOwnPlan')}</Text>
+              <Text style={styles.featureItem}>✅ {t('nutrition.addCustomFood')}</Text>
+              <Text style={styles.featureItem}>✅ {t('nutrition.trackMacros')}</Text>
+              <Text style={styles.featureItem}>✅ {t('nutrition.fullControl')}</Text>
             </View>
             <View style={styles.freeBadge}>
-              <Text style={styles.freeBadgeText}>FREE</Text>
+              <Text style={styles.freeBadgeText}>{t('common.free')}</Text>
             </View>
           </View>
           <View style={styles.arrowContainer}>
             <Text style={styles.arrow}>→</Text>
           </View>
         </TouchableOpacity>
-      </View>
+
+        <View style={{ height: spacing.lg }} />
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -156,11 +219,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg, flexDirection: 'row', alignItems: 'flex-start',
     borderWidth: 2, borderColor: colors.primary + '30', ...shadows.md,
   },
+  subscribedCard: { borderColor: colors.success, backgroundColor: colors.success + '06' },
+  exhaustedCard: { borderColor: colors.text.secondary + '30', backgroundColor: colors.surface, opacity: 0.7 },
   freeCard: { borderColor: colors.success + '30' },
   optionIconContainer: {
     width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary + '15',
     justifyContent: 'center', alignItems: 'center', marginRight: spacing.md,
   },
+  subscribedIconContainer: { backgroundColor: colors.success + '15' },
   freeIconContainer: { backgroundColor: colors.success + '15' },
   optionIcon: { fontSize: 28 },
   optionContent: { flex: 1 },
@@ -168,6 +234,11 @@ const styles = StyleSheet.create({
   optionDescription: { ...typography.bodySmall, color: colors.text.secondary, marginBottom: spacing.sm, lineHeight: 20 },
   featureList: { marginTop: spacing.xs },
   featureItem: { ...typography.caption, color: colors.text.secondary, marginBottom: 3, lineHeight: 18 },
+  activeBadge: {
+    alignSelf: 'flex-start', backgroundColor: colors.success, borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.sm, paddingVertical: 3, marginBottom: spacing.sm,
+  },
+  activeBadgeText: { ...typography.caption, color: '#FFF', fontWeight: '700' },
   premiumBadge: {
     alignSelf: 'flex-start', backgroundColor: colors.primary, borderRadius: borderRadius.sm,
     paddingHorizontal: spacing.sm, paddingVertical: 2, marginTop: spacing.sm,
@@ -178,6 +249,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm, paddingVertical: 2, marginTop: spacing.sm,
   },
   freeBadgeText: { ...typography.caption, color: '#FFF', fontWeight: '700' },
+  remainingBadge: {
+    alignSelf: 'flex-start', backgroundColor: '#2563EB', borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.sm, paddingVertical: 3, marginTop: spacing.xs, marginBottom: spacing.xs,
+  },
+  remainingBadgeText: { ...typography.caption, color: '#FFF', fontWeight: '700' },
+  exhaustedBadge: {
+    alignSelf: 'flex-start', backgroundColor: '#EF4444', borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.sm, paddingVertical: 3, marginTop: spacing.xs,
+  },
+  exhaustedBadgeText: { ...typography.caption, color: '#FFF', fontWeight: '700' },
   arrowContainer: { justifyContent: 'center', paddingLeft: spacing.sm },
   arrow: { fontSize: 20, color: colors.text.secondary },
 });

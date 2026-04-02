@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,6 +14,7 @@ import java.util.Optional;
 public interface UserNutritionPlanRepository extends JpaRepository<UserNutritionPlan, Long> {
     List<UserNutritionPlan> findByUserId(Long userId);
     List<UserNutritionPlan> findByUserIdAndStatus(Long userId, String status);
+    long countByUserIdAndEnrolledAtAfter(Long userId, LocalDateTime after);
 
     @Query("SELECT unp FROM UserNutritionPlan unp JOIN FETCH unp.nutritionPlan WHERE unp.userId = :userId AND unp.status = 'ACTIVE' ORDER BY unp.enrolledAt DESC LIMIT 1")
     Optional<UserNutritionPlan> findActiveByUserId(@Param("userId") Long userId);

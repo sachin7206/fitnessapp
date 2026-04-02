@@ -7,6 +7,9 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
+  Modal,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../store/slices/authSlice';
@@ -84,6 +87,122 @@ const HomeScreen = ({ navigation }) => {
   const { t } = useTranslation();
   const workoutTracking = useSelector((state) => state.workoutTracking);
   const [now, setNow] = useState(new Date());
+  const [dailyStreak, setDailyStreak] = useState({ current: 0, best: 0 });
+
+  // Workout summary bottom sheet state
+  const [workoutSheetVisible, setWorkoutSheetVisible] = useState(false);
+  const [completionDates, setCompletionDates] = useState([]);
+  const [sheetWeekOffset, setSheetWeekOffset] = useState(0);
+  const [sheetSelectedBar, setSheetSelectedBar] = useState(null);
+  const sheetAnim = useState(new Animated.Value(0))[0];
+  const SCREEN_HEIGHT = Dimensions.get('window').height;
+
+  const getDateString = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  const getWeekStart = (date, offset = 0) => {
+    const d = new Date(date);
+    const dayOfWeek = d.getDay();
+    const diffToMon = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    d.setDate(d.getDate() - diffToMon + (offset * 7));
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const openWorkoutSheet = async () => {
+    setWorkoutSheetVisible(true);
+    setSheetWeekOffset(0);
+    setSheetSelectedBar(null);
+    try {
+      const data = await workoutService.getCompletionHistory();
+      const raw = data?.completionDates || data || [];
+      if (Array.isArray(raw)) {
+        setCompletionDates(raw.map(d => typeof d === 'string' ? d : d.date));
+      }
+    } catch (e) { /* non-critical */ }
+    Animated.spring(sheetAnim, { toValue: 1, useNativeDriver: true, tension: 65, friction: 11 }).start();
+  };
+
+  const closeWorkoutSheet = () => {
+    Animated.timing(sheetAnim, { toValue: 0, useNativeDriver: true, duration: 200 }).start(() => {
+      setWorkoutSheetVisible(false);
+    });
+  };
+
+  // 12-week bar chart data
+  const getSheetWeeksData = () => {
+    const weeks = [];
+    const dateSet = new Set(completionDates);
+    for (let w = 0; w < 12; w++) {
+      const ws = getWeekStart(new Date(), sheetWeekOffset - 11 + w);
+      const we = new Date(ws); we.setDate(ws.getDate() + 6);
+      let count = 0;
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(ws); d.setDate(ws.getDate() + i);
+        if (dateSet.has(getDateString(d))) count++;
+      }
+      weeks.push({
+        weekLabel: `${ws.getDate()} ${ws.toLocaleString('default', { month: 'short' })}`,
+        count,
+        isCurrentWeek: sheetWeekOffset === 0 && w === 11,
+      });
+    }
+    return weeks;
+  };
+
+  // Current week day-by-day
+  const getSheetCurrentWeekDays = () => {
+    const ws = getWeekStart(new Date(), sheetWeekOffset);
+    const today = getDateString(new Date());
+    const DAY_S = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dateSet = new Set(completionDates);
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(ws); d.setDate(ws.getDate() + i);
+      const ds = getDateString(d);
+      days.push({
+        dayLabel: DAY_S[d.getDay()],
+        dayNum: d.getDate(),
+        completed: dateSet.has(ds),
+        isToday: ds === today,
+        isFuture: d > new Date(),
+      });
+    }
+    return days;
+  };
+
+  // Sheet week label
+  const getSheetWeekLabel = () => {
+    if (sheetWeekOffset === 0) return 'This Week';
+    if (sheetWeekOffset === -1) return 'Last Week';
+    const ws = getWeekStart(new Date(), sheetWeekOffset);
+    const we = new Date(ws); we.setDate(ws.getDate() + 6);
+    return `${ws.getDate()} ${ws.toLocaleString('default', { month: 'short' })} – ${we.getDate()} ${we.toLocaleString('default', { month: 'short' })}`;
+  };
+
+  // Streak from completion dates (for sheet)
+  const getSheetStreakData = () => {
+    if (!completionDates || completionDates.length === 0) return { current: 0, best: 0 };
+    const sorted = [...new Set(completionDates)].sort();
+    let current = 0;
+    const today = getDateString(new Date());
+    const yesterday = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return getDateString(d); })();
+    let checkDate = sorted.includes(today) ? today : (sorted.includes(yesterday) ? yesterday : null);
+    if (checkDate) {
+      let d = new Date(checkDate + 'T00:00:00');
+      while (sorted.includes(getDateString(d))) { current++; d.setDate(d.getDate() - 1); }
+    }
+    let best = 0, run = 1;
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = new Date(sorted[i - 1] + 'T00:00:00');
+      const curr = new Date(sorted[i] + 'T00:00:00');
+      if ((curr - prev) / 86400000 === 1) { run++; } else { run = 1; }
+      if (run > best) best = run;
+    }
+    if (sorted.length === 1) best = 1;
+    if (current > best) best = current;
+    return { current, best };
+  };
 
   // Load persisted tracking on mount (with backend sync — one time only)
   useEffect(() => {
@@ -92,6 +211,7 @@ const HomeScreen = ({ navigation }) => {
       // Fetch workout plan data only after tracking is loaded (avoids double step calls)
       fetchWorkoutData();
     });
+    fetchDailyStreak();
   }, []);
 
   // Refresh clock every 30 seconds; detect day change to auto-reset
@@ -117,9 +237,46 @@ const HomeScreen = ({ navigation }) => {
       dispatch(loadTrackingLocal());
       dispatch(loadWorkoutTrackingLocal());
       setNow(new Date());
+      fetchDailyStreak();
     });
     return unsubscribe;
   }, [navigation]);
+
+  // Fetch daily streak from workout completion history
+  const fetchDailyStreak = async () => {
+    try {
+      const data = await workoutService.getCompletionHistory();
+      const dates = data?.completionDates || data || [];
+      if (!Array.isArray(dates) || dates.length === 0) return;
+
+      const getDS = (d) => d.toISOString().split('T')[0];
+      const sorted = [...new Set(dates)].sort();
+
+      // Current streak
+      let current = 0;
+      const today = getDS(new Date());
+      const yesterday = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return getDS(d); })();
+      let checkDate = sorted.includes(today) ? today : (sorted.includes(yesterday) ? yesterday : null);
+      if (checkDate) {
+        let d = new Date(checkDate + 'T00:00:00');
+        while (sorted.includes(getDS(d))) {
+          current++;
+          d.setDate(d.getDate() - 1);
+        }
+      }
+      // Best streak
+      let best = 0, run = 1;
+      for (let i = 1; i < sorted.length; i++) {
+        const prev = new Date(sorted[i - 1] + 'T00:00:00');
+        const curr = new Date(sorted[i] + 'T00:00:00');
+        if ((curr - prev) / 86400000 === 1) { run++; } else { run = 1; }
+        if (run > best) best = run;
+      }
+      if (sorted.length === 1) best = 1;
+      if (current > best) best = current;
+      setDailyStreak({ current, best });
+    } catch (e) { /* streak is non-critical */ }
+  };
 
   const fetchWorkoutData = async () => {
     try {
@@ -298,7 +455,13 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handleUncompleteWorkout = () => {
-    const doUndo = () => { dispatch(uncompleteWorkout()); dispatch(persistWorkoutTracking()); };
+    const doUndo = async () => {
+      try {
+        await workoutService.markWorkoutUncomplete();
+      } catch (e) { /* continue with local update even if backend fails */ }
+      dispatch(uncompleteWorkout());
+      dispatch(persistWorkoutTracking());
+    };
     if (Platform.OS === 'web') {
       if (window.confirm('Undo workout completion?')) doUndo();
     } else {
@@ -422,32 +585,18 @@ const HomeScreen = ({ navigation }) => {
       onPress: () => navigation.navigate('WellnessHome'),
     },
     {
-      title: 'Food Log',
-      description: 'Log meals',
-      icon: '📸',
-      bg: '#FDF2F8',
-      onPress: () => navigation.navigate('FoodPhotoLog'),
-    },
-    {
-      title: 'Grocery List',
-      description: 'Shopping list',
-      icon: '🛒',
-      bg: '#F0FDFA',
-      onPress: () => navigation.navigate('GroceryList'),
-    },
-    {
-      title: 'Feedback',
-      description: 'Rate workouts',
-      icon: '⚡',
-      bg: '#FFF7ED',
-      onPress: () => navigation.navigate('WorkoutFeedback'),
-    },
-    {
       title: 'Reports',
       description: 'View reports',
       icon: '📄',
       bg: '#F8FAFC',
       onPress: () => navigation.navigate('ReportGenerator'),
+    },
+    {
+      title: 'Photo Log',
+      description: 'Before & after',
+      icon: '📸',
+      bg: '#FFF1F2',
+      onPress: () => navigation.navigate('PhotoLog'),
     },
   ];
 
@@ -494,13 +643,7 @@ const HomeScreen = ({ navigation }) => {
             {/* Workout Ring */}
             <TouchableOpacity
               style={styles.ringItem}
-              onPress={() => {
-                if (workoutTracking.activePlan) {
-                  navigation.navigate('MyWorkout');
-                } else {
-                  navigation.navigate('WorkoutChoice');
-                }
-              }}
+              onPress={openWorkoutSheet}
               activeOpacity={0.7}
             >
               <ProgressRing
@@ -543,6 +686,25 @@ const HomeScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* -------- Daily Streak -------- */}
+        {dailyStreak.current > 0 && (
+          <View style={styles.streakCard}>
+            <View style={styles.streakLeft}>
+              <Text style={styles.streakFlame}>🔥</Text>
+              <View>
+                <Text style={styles.streakCount}>{dailyStreak.current} day{dailyStreak.current !== 1 ? 's' : ''}</Text>
+                <Text style={styles.streakLabel}>Current Streak</Text>
+              </View>
+            </View>
+            {dailyStreak.best > 0 && (
+              <View style={styles.streakRight}>
+                <Text style={styles.streakBestIcon}>🏆</Text>
+                <Text style={styles.streakBestText}>Best: {dailyStreak.best}</Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* -------- All-Complete Celebration -------- */}
         {allComplete && (
@@ -709,6 +871,187 @@ const HomeScreen = ({ navigation }) => {
           ))}
         </View>
       </ScrollView>
+
+      {/* -------- Workout History Bottom Sheet -------- */}
+      <Modal visible={workoutSheetVisible} transparent animationType="none" onRequestClose={closeWorkoutSheet}>
+        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={closeWorkoutSheet}>
+          <Animated.View
+            style={[
+              styles.sheetContainer,
+              {
+                transform: [{
+                  translateY: sheetAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [SCREEN_HEIGHT, 0],
+                  }),
+                }],
+              },
+            ]}
+          >
+            <TouchableOpacity activeOpacity={1}>
+              {/* Handle bar */}
+              <View style={styles.sheetHandle}>
+                <View style={styles.sheetHandleBar} />
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} bounces={false} style={{ maxHeight: SCREEN_HEIGHT * 0.78 }}>
+                {/* Header */}
+                <View style={styles.sheetHeader}>
+                  <Text style={styles.sheetTitle}>🏋️ Workout History</Text>
+                  <TouchableOpacity onPress={closeWorkoutSheet}>
+                    <Text style={styles.sheetCloseBtn}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Streak */}
+                {(() => {
+                  const s = getSheetStreakData();
+                  return (s.current > 0 || s.best > 0) ? (
+                    <View style={styles.sheetStreakRow}>
+                      <View style={styles.sheetStreakItem}>
+                        <Text style={{ fontSize: 22 }}>🔥</Text>
+                        <Text style={styles.sheetStreakVal}>{s.current}</Text>
+                        <Text style={styles.sheetStreakLbl}>Current</Text>
+                      </View>
+                      <View style={styles.sheetStreakDivider} />
+                      <View style={styles.sheetStreakItem}>
+                        <Text style={{ fontSize: 22 }}>🏆</Text>
+                        <Text style={styles.sheetStreakVal}>{s.best}</Text>
+                        <Text style={styles.sheetStreakLbl}>Best</Text>
+                      </View>
+                    </View>
+                  ) : null;
+                })()}
+
+                {/* Summary stats */}
+                {(() => {
+                  const weeksData = getSheetWeeksData();
+                  const thisWeekCount = weeksData[weeksData.length - 1]?.count || 0;
+                  const last4WeeksTotal = weeksData.slice(-4).reduce((s, w) => s + w.count, 0);
+                  const totalCount = workoutTracking.workoutCount || 0;
+                  return (
+                    <View style={styles.sheetCountRow}>
+                      <View style={styles.sheetCountCard}>
+                        <Text style={styles.sheetCountValue}>{totalCount}</Text>
+                        <Text style={styles.sheetCountLabel}>💪 Total</Text>
+                      </View>
+                      <View style={styles.sheetCountCard}>
+                        <Text style={styles.sheetCountValue}>{thisWeekCount}</Text>
+                        <Text style={styles.sheetCountLabel}>🔥 This Week</Text>
+                      </View>
+                      <View style={styles.sheetCountCard}>
+                        <Text style={styles.sheetCountValue}>{last4WeeksTotal}</Text>
+                        <Text style={styles.sheetCountLabel}>📅 Last 4 Wks</Text>
+                      </View>
+                    </View>
+                  );
+                })()}
+
+                {/* 12-Week Bar Chart */}
+                <View style={styles.sheetChartNav}>
+                  <TouchableOpacity onPress={() => { setSheetWeekOffset(w => w - 12); setSheetSelectedBar(null); }}>
+                    <Text style={styles.sheetChartArrow}>◀</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.sheetSectionTitle}>Weekly Overview</Text>
+                  <TouchableOpacity
+                    onPress={() => { if (sheetWeekOffset < 0) { setSheetWeekOffset(w => Math.min(0, w + 12)); setSheetSelectedBar(null); } }}
+                    disabled={sheetWeekOffset >= 0}
+                  >
+                    <Text style={[styles.sheetChartArrow, sheetWeekOffset >= 0 && { opacity: 0.3 }]}>▶</Text>
+                  </TouchableOpacity>
+                </View>
+                {(() => {
+                  const weeksData = getSheetWeeksData();
+                  const maxCount = Math.max(...weeksData.map(w => w.count), 1);
+                  const CHART_H = 130;
+                  const BAR_LABEL_H = 18;
+                  const MAX_BAR_H = CHART_H - BAR_LABEL_H;
+                  return (
+                    <View style={styles.sheetChartContainer}>
+                      {/* Y-axis */}
+                      <View style={[styles.sheetYAxis, { height: MAX_BAR_H, marginBottom: BAR_LABEL_H }]}>
+                        <Text style={styles.sheetYLabel}>{maxCount}</Text>
+                        <Text style={styles.sheetYLabel}>{Math.ceil(maxCount / 2)}</Text>
+                        <Text style={styles.sheetYLabel}>0</Text>
+                      </View>
+                      {/* Bars */}
+                      <View style={[styles.sheetBarsArea, { height: CHART_H }]}>
+                        {weeksData.map((week, idx) => {
+                          const barH = week.count > 0 ? Math.max(4, (week.count / maxCount) * MAX_BAR_H) : 3;
+                          const isSelected = sheetSelectedBar === idx;
+                          return (
+                            <TouchableOpacity key={idx} style={styles.sheetBarCol}
+                              onPress={() => setSheetSelectedBar(isSelected ? null : idx)} activeOpacity={0.7}>
+                              {isSelected && (
+                                <View style={styles.sheetTooltip}>
+                                  <Text style={styles.sheetTooltipText}>{week.weekLabel}</Text>
+                                  <Text style={styles.sheetTooltipCount}>{week.count}</Text>
+                                </View>
+                              )}
+                              <View style={styles.sheetBarWrap}>
+                                <View style={[styles.sheetBar, {
+                                  height: barH,
+                                  backgroundColor: week.isCurrentWeek ? colors.primary : week.count > 0 ? colors.primary + '60' : '#E5E7EB',
+                                  borderWidth: isSelected ? 1.5 : 0, borderColor: colors.primary,
+                                }]} />
+                              </View>
+                              <Text style={[styles.sheetBarLbl, week.isCurrentWeek && { color: colors.primary, fontWeight: '700' }]}>
+                                {week.weekLabel.split(' ')[0]}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  );
+                })()}
+
+                {/* Current Week Day-by-Day */}
+                <Text style={[styles.sheetSectionTitle, { marginTop: 12 }]}>{getSheetWeekLabel()}</Text>
+                <View style={styles.sheetDayRow}>
+                  {getSheetCurrentWeekDays().map((day, idx) => (
+                    <View key={idx} style={styles.sheetDayItem}>
+                      <Text style={[styles.sheetDayLabel, day.isToday && styles.sheetDayLabelToday]}>{day.dayLabel}</Text>
+                      <View style={[
+                        styles.sheetDayCircle,
+                        day.completed && styles.sheetDayCircleDone,
+                        day.isToday && !day.completed && styles.sheetDayCircleToday,
+                        day.isFuture && { backgroundColor: '#FAFAFA' },
+                      ]}>
+                        {day.completed ? (
+                          <Text style={{ color: colors.success, fontWeight: '800', fontSize: 14 }}>✓</Text>
+                        ) : (
+                          <Text style={{ fontSize: 11, fontWeight: '600', color: day.isFuture ? '#D1D5DB' : '#6B7280' }}>{day.dayNum}</Text>
+                        )}
+                      </View>
+                      {day.isToday && <Text style={{ color: colors.primary, fontSize: 5 }}>●</Text>}
+                    </View>
+                  ))}
+                </View>
+
+                {/* Consistency */}
+                <Text style={[styles.sheetSectionTitle, { marginTop: 12 }]}>Consistency</Text>
+                <View style={styles.sheetConsistencyCard}>
+                  {getSheetWeeksData().slice(-8).map((week, idx) => (
+                    <View key={idx} style={styles.sheetConsistencyRow}>
+                      <Text style={styles.sheetConsistencyLabel}>{week.weekLabel}</Text>
+                      <View style={styles.sheetConsistencyTrack}>
+                        <View style={[styles.sheetConsistencyFill, {
+                          width: `${Math.min(100, (week.count / 7) * 100)}%`,
+                          backgroundColor: week.count >= 5 ? colors.success : week.count >= 3 ? colors.primary : week.count > 0 ? '#F59E0B' : '#E5E7EB',
+                        }]} />
+                      </View>
+                      <Text style={styles.sheetConsistencyCount}>{week.count}/7</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={{ height: 20 }} />
+              </ScrollView>
+            </TouchableOpacity>
+          </Animated.View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -809,6 +1152,37 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     marginTop: 4,
   },
+  // ---- Streak ----
+  streakCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFF7ED',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#FDBA7420',
+  },
+  streakLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  streakFlame: { fontSize: 32 },
+  streakCount: { fontSize: 18, fontWeight: '800', color: '#EA580C' },
+  streakLabel: { fontSize: 11, color: '#9A3412', fontWeight: '600' },
+  streakRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FED7AA40',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  streakBestIcon: { fontSize: 16 },
+  streakBestText: { fontSize: 12, fontWeight: '700', color: '#C2410C' },
   // ---- Celebration ----
   celebrationCard: {
     alignItems: 'center',
@@ -1200,6 +1574,115 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginTop: 2,
   },
+  // ---- Workout History Bottom Sheet ----
+  sheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  sheetContainer: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+  },
+  sheetHandle: {
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  sheetHandleBar: {
+    width: 40, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB',
+  },
+  sheetHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12,
+  },
+  sheetTitle: {
+    fontSize: 18, fontWeight: '800', color: '#111827',
+  },
+  sheetCloseBtn: {
+    fontSize: 20, color: '#9CA3AF', fontWeight: '600', padding: 4,
+  },
+  // Streak
+  sheetStreakRow: {
+    flexDirection: 'row', backgroundColor: '#F9FAFB', borderRadius: 14,
+    paddingVertical: 10, marginBottom: 10, alignItems: 'center', justifyContent: 'center',
+  },
+  sheetStreakItem: { flex: 1, alignItems: 'center' },
+  sheetStreakVal: { fontSize: 22, fontWeight: '800', color: colors.primary },
+  sheetStreakLbl: { fontSize: 9, fontWeight: '600', color: '#9CA3AF', marginTop: 2 },
+  sheetStreakDivider: { width: 1, height: 36, backgroundColor: '#E5E7EB' },
+  // Count cards
+  sheetCountRow: {
+    flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, gap: 6,
+  },
+  sheetCountCard: {
+    flex: 1, backgroundColor: '#F9FAFB', borderRadius: 12, paddingVertical: 10, alignItems: 'center',
+  },
+  sheetCountValue: {
+    fontSize: 20, fontWeight: '900', color: '#111827',
+  },
+  sheetCountLabel: {
+    fontSize: 9, fontWeight: '600', color: '#9CA3AF', marginTop: 2, textAlign: 'center',
+  },
+  sheetSectionTitle: {
+    fontSize: 11, fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase',
+    letterSpacing: 1, marginBottom: 8,
+  },
+  // Chart navigation
+  sheetChartNav: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6,
+  },
+  sheetChartArrow: { fontSize: 16, color: colors.primary, fontWeight: '700', padding: 4 },
+  // 12-week chart
+  sheetChartContainer: {
+    flexDirection: 'row', backgroundColor: '#F9FAFB', borderRadius: 14,
+    padding: 8, paddingBottom: 10, marginBottom: 4, overflow: 'hidden',
+  },
+  sheetYAxis: {
+    width: 22, justifyContent: 'space-between', alignItems: 'flex-end', paddingRight: 3,
+  },
+  sheetYLabel: { fontSize: 8, color: '#D1D5DB' },
+  sheetBarsArea: {
+    flex: 1, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-around', overflow: 'hidden',
+  },
+  sheetBarCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
+  sheetBarWrap: { width: '55%', maxWidth: 14, justifyContent: 'flex-end', borderRadius: 3, overflow: 'hidden' },
+  sheetBar: { width: '100%', borderRadius: 3, minHeight: 3 },
+  sheetBarLbl: { fontSize: 7, color: '#D1D5DB', marginTop: 2 },
+  sheetTooltip: {
+    position: 'absolute', bottom: '100%', marginBottom: 2, backgroundColor: colors.primary,
+    borderRadius: 6, paddingHorizontal: 5, paddingVertical: 2, alignItems: 'center', zIndex: 10, minWidth: 50,
+  },
+  sheetTooltipText: { color: '#FFF', fontSize: 7, fontWeight: '600' },
+  sheetTooltipCount: { color: '#FFF', fontSize: 10, fontWeight: '800' },
+  // Day-by-day
+  sheetDayRow: {
+    flexDirection: 'row', justifyContent: 'space-around', backgroundColor: '#F9FAFB',
+    borderRadius: 14, paddingVertical: 10, paddingHorizontal: 4, marginBottom: 4,
+  },
+  sheetDayItem: { alignItems: 'center', gap: 4 },
+  sheetDayLabel: { fontSize: 10, fontWeight: '600', color: '#9CA3AF' },
+  sheetDayLabelToday: { color: colors.primary, fontWeight: '800' },
+  sheetDayCircle: {
+    width: 30, height: 30, borderRadius: 15, backgroundColor: '#F3F4F6',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  sheetDayCircleDone: { backgroundColor: colors.success + '20' },
+  sheetDayCircleToday: { borderWidth: 2, borderColor: colors.primary, backgroundColor: 'transparent' },
+  // Consistency
+  sheetConsistencyCard: {
+    backgroundColor: '#F9FAFB', borderRadius: 14, padding: 10, marginBottom: 4,
+  },
+  sheetConsistencyRow: {
+    flexDirection: 'row', alignItems: 'center', marginBottom: 5,
+  },
+  sheetConsistencyLabel: { fontSize: 9, color: '#9CA3AF', width: 50 },
+  sheetConsistencyTrack: {
+    flex: 1, height: 10, backgroundColor: '#E5E7EB', borderRadius: 5, overflow: 'hidden', marginHorizontal: 6,
+  },
+  sheetConsistencyFill: { height: '100%', borderRadius: 5 },
+  sheetConsistencyCount: { fontSize: 10, fontWeight: '600', color: '#9CA3AF', width: 26, textAlign: 'right' },
 });
 
 export default HomeScreen;

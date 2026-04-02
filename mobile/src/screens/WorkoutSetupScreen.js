@@ -7,8 +7,10 @@ import { useSelector, useDispatch } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import workoutService from '../services/workoutService';
+import subscriptionService from '../services/subscriptionService';
 import userService from '../services/userService';
 import { updateUser } from '../store/slices/authSlice';
+import { useTranslation } from '../i18n';
 
 const PREFS_KEY = '@workout_setup_prefs';
 
@@ -58,6 +60,7 @@ const TIME_OPTIONS = [
 ];
 
 const WorkoutSetupScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
   const profileGender = user?.profile?.gender;
@@ -126,62 +129,62 @@ const WorkoutSetupScreen = ({ navigation }) => {
   const handleGenerate = async () => {
     // Validate exercise type
     if (!exerciseType) {
-      const msg = 'Please select an exercise type';
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Info', msg);
+      const msg = t('workoutSetup.selectExerciseType');
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('common.missingInfo'), msg);
       return;
     }
     // Validate goal
     if (!goal) {
-      const msg = 'Please select a fitness goal';
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Info', msg);
+      const msg = t('workoutSetup.selectGoal');
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('common.missingInfo'), msg);
       return;
     }
     // Validate difficulty
     if (!difficulty) {
-      const msg = 'Please select a difficulty level';
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Info', msg);
+      const msg = t('workoutSetup.selectDifficulty');
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('common.missingInfo'), msg);
       return;
     }
     // Validate days per week
     if (daysPerWeek < 1 || daysPerWeek > 6) {
-      const msg = 'Days per week must be between 1 and 6';
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
+      const msg = t('workoutSetup.daysRange');
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('workoutSetup.invalidInput'), msg);
       return;
     }
     // Validate duration
     if (durationMinutes < 15 || durationMinutes > 120) {
-      const msg = 'Workout duration must be between 15 and 120 minutes';
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
+      const msg = t('workoutSetup.durationRange');
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('workoutSetup.invalidInput'), msg);
       return;
     }
     // Validate exercise time
     if (!exerciseTime) {
-      const msg = 'Please select a workout time';
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Info', msg);
+      const msg = t('workoutSetup.selectWorkoutTime');
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('common.missingInfo'), msg);
       return;
     }
     // Validate cardio settings if included
     if (includeCardio) {
       if (!cardioType) {
-        const msg = 'Please select a cardio type';
-        Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Info', msg);
+        const msg = t('workoutSetup.selectCardioType');
+        Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('common.missingInfo'), msg);
         return;
       }
       if (cardioDuration < 5 || cardioDuration > 60) {
-        const msg = 'Cardio duration must be between 5 and 60 minutes';
-        Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
+        const msg = t('workoutSetup.cardioDurationRange');
+        Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('workoutSetup.invalidInput'), msg);
         return;
       }
       if ((cardioType === 'RUNNING' || cardioType === 'WALKING') && cardioSteps < 0) {
-        const msg = 'Cardio steps cannot be negative';
-        Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Input', msg);
+        const msg = t('workoutSetup.cardioStepsNegative');
+        Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('workoutSetup.invalidInput'), msg);
         return;
       }
     }
     // Validate gender if needed
     if (needsGender && !gender) {
-      const msg = 'Please select your gender to personalize your plan';
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Info', msg);
+      const msg = t('workoutSetup.selectGender');
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('common.missingInfo'), msg);
       return;
     }
 
@@ -216,11 +219,22 @@ const WorkoutSetupScreen = ({ navigation }) => {
         cardioDurationMinutes: includeCardio ? cardioDuration : null,
         cardioSteps: includeCardio ? cardioSteps : null,
       };
+
+      // Add plan generation limit info from subscription
+      try {
+        const subResp = await subscriptionService.getActiveSubscription();
+        const sub = subResp?.data || subResp;
+        if (sub && sub.startDate) {
+          request.maxPlanGenerations = sub.maxPlanGenerations || sub.durationMonths || 3;
+          request.subscriptionStartDate = sub.startDate;
+        }
+      } catch (e) { /* ignore - backend will still work without limit info */ }
+
       const plan = await workoutService.generateWorkoutPlan(request);
       navigation.navigate('GeneratedWorkoutPlanView', { plan, exerciseTime });
     } catch (error) {
-      const msg = error?.response?.data?.message || 'Failed to generate workout plan';
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Error', msg);
+      const msg = error?.response?.data?.message || t('workout.loadingWorkout');
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('common.error'), msg);
     } finally {
       setLoading(false);
     }
@@ -269,8 +283,8 @@ const WorkoutSetupScreen = ({ navigation }) => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Generating your workout plan...</Text>
-        <Text style={styles.loadingSubText}>Using AI to create the perfect plan for you</Text>
+        <Text style={styles.loadingText}>{t('workoutSetup.generatingPlan')}</Text>
+        <Text style={styles.loadingSubText}>{t('workoutSetup.aiCreatingPlan')}</Text>
       </View>
     );
   }
@@ -281,9 +295,9 @@ const WorkoutSetupScreen = ({ navigation }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Text style={styles.backButtonText}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Workout Setup</Text>
+        <Text style={styles.headerTitle}>{t('workoutSetup.title')}</Text>
         <View style={{ width: 60 }} />
       </View>
 
@@ -291,38 +305,38 @@ const WorkoutSetupScreen = ({ navigation }) => {
         {/* Gender — only show if not set in profile */}
         {needsGender && (
           <>
-            <Text style={styles.sectionTitle}>👤 Your Gender</Text>
-            <Text style={styles.sectionHint}>Required to personalize your workout plan</Text>
+            <Text style={styles.sectionTitle}>👤 {t('workoutSetup.yourGender')}</Text>
+            <Text style={styles.sectionHint}>{t('workoutSetup.genderRequired')}</Text>
             {renderRadioGroup(GENDERS, gender, setGender)}
           </>
         )}
 
         {/* Exercise Type */}
-        <Text style={styles.sectionTitle}>🏋️ Exercise Type</Text>
+        <Text style={styles.sectionTitle}>🏋️ {t('workoutSetup.exerciseType')}</Text>
         {renderRadioGroup(EXERCISE_TYPES, exerciseType, setExerciseType)}
 
         {/* Goal — filtered based on exercise type */}
-        <Text style={styles.sectionTitle}>🎯 Your Goal</Text>
+        <Text style={styles.sectionTitle}>🎯 {t('workoutSetup.yourGoal')}</Text>
         {CARDIO_ONLY_TYPES.includes(exerciseType) && (
           <Text style={styles.sectionHint}>
-            Running & Yoga focus on slimming and flexibility
+            {t('workoutSetup.cardioOnlyHint')}
           </Text>
         )}
         {renderRadioGroup(availableGoals, goal, setGoal)}
 
         {/* Difficulty */}
-        <Text style={styles.sectionTitle}>📊 Difficulty Level</Text>
+        <Text style={styles.sectionTitle}>📊 {t('workoutSetup.difficultyLevel')}</Text>
         {renderRadioGroup(DIFFICULTIES, difficulty, setDifficulty)}
 
         {/* Days per week */}
-        {renderNumberPicker('📅 Days Per Week', daysPerWeek, setDaysPerWeek, 1, 6)}
+        {renderNumberPicker(`📅 ${t('workoutSetup.daysPerWeek')}`, daysPerWeek, setDaysPerWeek, 1, 6)}
 
         {/* Duration */}
-        {renderNumberPicker('⏱️ Duration (minutes)', durationMinutes, setDurationMinutes, 15, 120, 15)}
+        {renderNumberPicker(`⏱️ ${t('workoutSetup.durationMinutes')}`, durationMinutes, setDurationMinutes, 15, 120, 15)}
 
         {/* Exercise Time — extended to 10:30 PM */}
         <View style={styles.timeSection}>
-          <Text style={styles.sectionTitle}>🕐 Workout Time</Text>
+          <Text style={styles.sectionTitle}>🕐 {t('workoutSetup.workoutTime')}</Text>
           <View style={styles.timeOptions}>
             {TIME_OPTIONS.map(t => (
               <TouchableOpacity
@@ -344,17 +358,17 @@ const WorkoutSetupScreen = ({ navigation }) => {
           onPress={() => setIncludeCardio(!includeCardio)}
         >
           <Text style={styles.cardioToggleText}>
-            {includeCardio ? '✅' : '⬜'} Include Cardio
+            {includeCardio ? '✅' : '⬜'} {t('workoutSetup.includeCardio')}
           </Text>
         </TouchableOpacity>
 
         {includeCardio && (
           <View style={styles.cardioSection}>
-            <Text style={styles.sectionSubtitle}>Cardio Type</Text>
+            <Text style={styles.sectionSubtitle}>{t('workoutSetup.cardioType')}</Text>
             {renderRadioGroup(CARDIO_TYPES, cardioType, setCardioType)}
-            {renderNumberPicker('Cardio Duration (min)', cardioDuration, setCardioDuration, 5, 60, 5)}
+            {renderNumberPicker(t('workoutSetup.cardioDuration'), cardioDuration, setCardioDuration, 5, 60, 5)}
             {(cardioType === 'RUNNING' || cardioType === 'WALKING') && (
-              renderNumberPicker('Target Steps', cardioSteps, setCardioSteps, 0, 20000, 1000)
+              renderNumberPicker(t('workoutSetup.targetSteps'), cardioSteps, setCardioSteps, 0, 20000, 1000)
             )}
           </View>
         )}
@@ -365,7 +379,7 @@ const WorkoutSetupScreen = ({ navigation }) => {
           onPress={handleGenerate}
           disabled={!canGenerate}
         >
-          <Text style={styles.generateBtnText}>🚀 Generate Workout Plan</Text>
+          <Text style={styles.generateBtnText}>🚀 {t('workoutSetup.generateWorkoutPlan')}</Text>
         </TouchableOpacity>
 
         <View style={{ height: spacing.xxl * 2 }} />

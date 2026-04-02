@@ -22,6 +22,7 @@ public class SubscriptionDTO {
     private LocalDate endDate;
     private String status; // ACTIVE, EXPIRED, CANCELLED, PENDING_PAYMENT
     private String transactionRef;
+    private Integer maxPlanGenerations;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

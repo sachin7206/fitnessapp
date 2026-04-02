@@ -17,6 +17,7 @@ import { useFocusEffect } from '@react-navigation/core';
 import { useDispatch, useSelector } from 'react-redux';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import nutritionService from '../services/nutritionService';
+import subscriptionService from '../services/subscriptionService';
 import {
   initMealsForToday,
   completeMeal,
@@ -31,10 +32,16 @@ import {
   loadTrackingFromStorage,
   loadTrackingLocal,
   getLocalDateString,
+  addWaterGlass,
+  removeWaterGlass,
+  setWaterGoal,
 } from '../store/slices/mealTrackingSlice';
 import MacroPieChart from './components/MacroPieChart';
+import CalorieWeeklyChart from './components/CalorieWeeklyChart';
+import { useTranslation } from '../i18n';
 
 const MyNutritionPlanScreen = ({ navigation, route }) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const tracking = useSelector((state) => state.mealTracking);
   const [activePlan, setActivePlan] = useState(route.params?.userPlan || null);
@@ -42,6 +49,9 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [now, setNow] = useState(new Date());
+  const [hasSubscription, setHasSubscription] = useState(false);
+  const [remainingPlans, setRemainingPlans] = useState(null);
+  const [maxPlans, setMaxPlans] = useState(null);
   const isInitialMount = useRef(true);
 
   // Replacement food modal state
@@ -62,6 +72,7 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
   const [extraSaving, setExtraSaving] = useState(false);
   // Add food item sub-modal for extra meals
   const [extraFoodModalVisible, setExtraFoodModalVisible] = useState(false);
+  const [weeklyCaloriesModalVisible, setWeeklyCaloriesModalVisible] = useState(false);
   const [extraFoodEditIndex, setExtraFoodEditIndex] = useState(null);
   const [extraFoodForm, setExtraFoodForm] = useState({ name: '', quantity: '', protein: '', carbs: '', fat: '', calories: '' });
 
@@ -146,6 +157,7 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     fetchActivePlan();
+    checkSubscription();
   }, []);
 
   useFocusEffect(
@@ -155,8 +167,36 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
         return;
       }
       fetchActivePlan();
+      checkSubscription();
     }, [])
   );
+
+  const checkSubscription = async () => {
+    try {
+      const response = await subscriptionService.getActiveSubscription();
+      const sub = response?.data || response;
+      const isActive = !!(sub && (sub.status === 'ACTIVE' || sub.planName));
+      setHasSubscription(isActive);
+
+      if (isActive && sub) {
+        const maxGen = sub.maxPlanGenerations || sub.durationMonths || 3;
+        setMaxPlans(maxGen);
+        if (sub.startDate) {
+          try {
+            const countResp = await nutritionService.getAiPlanCount(sub.startDate);
+            const count = countResp?.count ?? 0;
+            setRemainingPlans(Math.max(0, maxGen - count));
+          } catch (err) {
+            setRemainingPlans(maxGen);
+          }
+        } else {
+          setRemainingPlans(maxGen);
+        }
+      }
+    } catch (e) {
+      setHasSubscription(false);
+    }
+  };
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -182,16 +222,16 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
 
   const handleCreateNewPlan = () => {
     if (Platform.OS === 'web') {
-      if (window.confirm('Create a new nutrition plan? Your current plan will be replaced immediately.')) {
+      if (window.confirm(t('nutrition.createNewPlanConfirm'))) {
         navigation.navigate('NutritionChoice');
       }
     } else {
       Alert.alert(
-        'Create New Plan',
-        'Your current plan will be replaced immediately. Continue?',
+        t('nutrition.newPlan'),
+        t('nutrition.createNewPlanConfirm'),
         [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Continue', onPress: () => navigation.navigate('NutritionChoice') },
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('common.continue'), onPress: () => navigation.navigate('NutritionChoice') },
         ]
       );
     }
@@ -814,7 +854,7 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading your meal plan...</Text>
+        <Text style={styles.loadingText}>{t('nutrition.loading')}</Text>
       </View>
     );
   }
@@ -823,11 +863,11 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Text style={styles.backButtonText}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Nutrition Plan</Text>
+        <Text style={styles.headerTitle}>{t('nutrition.title')}</Text>
         <TouchableOpacity onPress={handleCreateNewPlan} style={styles.newPlanButton}>
-          <Text style={styles.newPlanButtonText}>New Plan</Text>
+          <Text style={styles.newPlanButtonText}>{t('workout.newPlan')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -845,6 +885,52 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
             <Text style={styles.dayBadgeText}>Day {activePlan?.currentDay || 1}</Text>
           </View>
         </View>
+
+        {/* Upgrade to Premium / Create AI Plan Banner */}
+        {hasSubscription && remainingPlans !== null && remainingPlans > 0 ? (
+          <TouchableOpacity
+            style={[styles.upgradeBanner, { borderColor: colors.success, backgroundColor: colors.success + '08' }]}
+            onPress={() => navigation.navigate('NutritionRegionSelect')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.upgradeBannerLeft}>
+              <Text style={styles.upgradeBannerIcon}>🚀</Text>
+            </View>
+            <View style={styles.upgradeBannerContent}>
+              <Text style={[styles.upgradeBannerTitle, { color: colors.success }]}>Create Your AI Plan</Text>
+              <Text style={styles.upgradeBannerDesc}>Generate a personalized AI nutrition plan based on your goals</Text>
+              <Text style={[styles.upgradeBannerDesc, { color: '#2563EB', fontWeight: '700', marginTop: 4 }]}>
+                {remainingPlans} of {maxPlans} plan{maxPlans !== 1 ? 's' : ''} remaining
+              </Text>
+            </View>
+            <Text style={styles.upgradeBannerArrow}>→</Text>
+          </TouchableOpacity>
+        ) : hasSubscription && remainingPlans !== null && remainingPlans <= 0 ? (
+          <View style={[styles.upgradeBanner, { borderColor: colors.text.secondary + '30', opacity: 0.7 }]}>
+            <View style={styles.upgradeBannerLeft}>
+              <Text style={styles.upgradeBannerIcon}>🔒</Text>
+            </View>
+            <View style={styles.upgradeBannerContent}>
+              <Text style={[styles.upgradeBannerTitle, { color: colors.text.secondary }]}>AI Plan Limit Reached</Text>
+              <Text style={styles.upgradeBannerDesc}>You have used all {maxPlans} nutrition plan generation{maxPlans !== 1 ? 's' : ''} included in your subscription.</Text>
+            </View>
+          </View>
+        ) : !hasSubscription ? (
+          <TouchableOpacity
+            style={styles.upgradeBanner}
+            onPress={() => navigation.navigate('SubscriptionPlans')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.upgradeBannerLeft}>
+              <Text style={styles.upgradeBannerIcon}>🚀</Text>
+            </View>
+            <View style={styles.upgradeBannerContent}>
+              <Text style={styles.upgradeBannerTitle}>Upgrade to Premium</Text>
+              <Text style={styles.upgradeBannerDesc}>Get AI-powered personalized meal plans, smart nutrition & more</Text>
+            </View>
+            <Text style={styles.upgradeBannerArrow}>→</Text>
+          </TouchableOpacity>
+        ) : null}
 
         {/* Daily Totals – consumed / target */}
         <View style={styles.dailyTotals}>
@@ -907,6 +993,83 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
             })()}
           </Text>
         </View>
+
+
+        {/* 💧 Water Intake Tracker */}
+        <View style={styles.waterCard}>
+          <View style={styles.waterHeader}>
+            <Text style={styles.waterTitle}>💧 Water Intake</Text>
+            <Text style={styles.waterCount}>{tracking.waterGlasses} / {tracking.waterGoal} glasses</Text>
+          </View>
+          {/* Progress bar */}
+          <View style={styles.waterProgressBg}>
+            <View style={[styles.waterProgressFill, {
+              width: `${Math.min(100, (tracking.waterGlasses / Math.max(1, tracking.waterGoal)) * 100)}%`,
+              backgroundColor: tracking.waterGlasses >= tracking.waterGoal ? '#22C55E' : '#3B82F6',
+            }]} />
+          </View>
+          {/* Glass icons */}
+          <View style={styles.waterGlassRow}>
+            {Array.from({ length: tracking.waterGoal }, (_, i) => (
+              <TouchableOpacity
+                key={i}
+                onPress={() => {
+                  if (i < tracking.waterGlasses) {
+                    dispatch(removeWaterGlass());
+                  } else {
+                    dispatch(addWaterGlass());
+                  }
+                  dispatch(persistTracking());
+                }}
+                style={styles.waterGlassBtn}
+              >
+                <Text style={[styles.waterGlassIcon, i < tracking.waterGlasses && styles.waterGlassFilled]}>
+                  {i < tracking.waterGlasses ? '💧' : '○'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {/* +/- buttons and goal config */}
+          <View style={styles.waterActions}>
+            <TouchableOpacity
+              style={styles.waterActionBtn}
+              onPress={() => { dispatch(removeWaterGlass()); dispatch(persistTracking()); }}
+            >
+              <Text style={styles.waterActionText}>−</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.waterActionBtn}
+              onPress={() => { dispatch(addWaterGlass()); dispatch(persistTracking()); }}
+            >
+              <Text style={styles.waterActionText}>+</Text>
+            </TouchableOpacity>
+            <View style={styles.waterGoalSetting}>
+              <Text style={styles.waterGoalLabel}>Goal:</Text>
+              <TouchableOpacity onPress={() => dispatch(setWaterGoal(tracking.waterGoal - 1))}>
+                <Text style={styles.waterGoalAdjust}>◀</Text>
+              </TouchableOpacity>
+              <Text style={styles.waterGoalValue}>{tracking.waterGoal}</Text>
+              <TouchableOpacity onPress={() => dispatch(setWaterGoal(tracking.waterGoal + 1))}>
+                <Text style={styles.waterGoalAdjust}>▶</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          {tracking.waterGlasses >= tracking.waterGoal && (
+            <Text style={styles.waterComplete}>✅ Hydration goal reached! Great job!</Text>
+          )}
+        </View>
+
+
+        {/* 📊 Weekly Calorie Chart — button to open slide */}
+        <TouchableOpacity
+          style={styles.weeklyCaloriesBtn}
+          onPress={() => setWeeklyCaloriesModalVisible(true)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.weeklyCaloriesBtnIcon}>📊</Text>
+          <Text style={styles.weeklyCaloriesBtnText}>{t('nutrition.weeklyCalories')}</Text>
+          <Text style={styles.weeklyCaloriesBtnArrow}>→</Text>
+        </TouchableOpacity>
 
 
         {/* Today's Meals */}
@@ -1025,6 +1188,35 @@ const MyNutritionPlanScreen = ({ navigation, route }) => {
 
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
+
+      {/* Weekly Calories Slide-up Modal */}
+      <Modal
+        visible={weeklyCaloriesModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setWeeklyCaloriesModalVisible(false)}
+      >
+        <View style={[styles.modalOverlay, { justifyContent: 'flex-end', padding: 0 }]}>
+          <TouchableOpacity
+            style={{ flex: 1 }}
+            activeOpacity={1}
+            onPress={() => setWeeklyCaloriesModalVisible(false)}
+          />
+          <View style={styles.weeklyCaloriesModalContent}>
+            <View style={styles.weeklyCaloriesModalHeader}>
+              <Text style={styles.weeklyCaloriesModalTitle}>📊 {t('nutrition.weeklyCalories')}</Text>
+              <TouchableOpacity
+                onPress={() => setWeeklyCaloriesModalVisible(false)}
+                style={styles.weeklyCaloriesCloseBtn}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.weeklyCaloriesCloseBtnText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <CalorieWeeklyChart />
+          </View>
+        </View>
+      </Modal>
 
       {/* Replacement Food Modal */}
       <Modal
@@ -1466,6 +1658,43 @@ const styles = StyleSheet.create({
     ...typography.h3,
     color: colors.text.primary,
     marginBottom: spacing.md,
+  },
+  // Water Tracker
+  waterCard: {
+    backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.md,
+    marginBottom: spacing.lg, ...shadows.sm, borderWidth: 1, borderColor: '#3B82F620',
+  },
+  waterHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm,
+  },
+  waterTitle: { ...typography.body, fontWeight: '700', color: colors.text.primary },
+  waterCount: { ...typography.bodySmall, color: '#3B82F6', fontWeight: '700' },
+  waterProgressBg: {
+    height: 6, backgroundColor: '#E5E7EB', borderRadius: 3, overflow: 'hidden', marginBottom: spacing.sm,
+  },
+  waterProgressFill: { height: '100%', borderRadius: 3 },
+  waterGlassRow: {
+    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginBottom: spacing.sm,
+  },
+  waterGlassBtn: { padding: 4 },
+  waterGlassIcon: { fontSize: 20, color: '#D1D5DB' },
+  waterGlassFilled: { color: '#3B82F6' },
+  waterActions: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.md,
+  },
+  waterActionBtn: {
+    width: 36, height: 36, borderRadius: 18, backgroundColor: '#3B82F615',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  waterActionText: { fontSize: 22, fontWeight: '700', color: '#3B82F6', lineHeight: 24 },
+  waterGoalSetting: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: spacing.md,
+  },
+  waterGoalLabel: { ...typography.caption, color: colors.text.secondary, fontWeight: '600' },
+  waterGoalAdjust: { fontSize: 14, color: '#3B82F6', fontWeight: '700', paddingHorizontal: 4 },
+  waterGoalValue: { fontSize: 16, fontWeight: '800', color: colors.text.primary, minWidth: 20, textAlign: 'center' },
+  waterComplete: {
+    ...typography.caption, color: '#22C55E', fontWeight: '700', textAlign: 'center', marginTop: spacing.sm,
   },
   mealCard: {
     backgroundColor: colors.surface,
@@ -2153,6 +2382,104 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     width: 42,
     textAlign: 'right',
+  },
+  // --- Upgrade / AI Plan Banner ---
+  upgradeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary + '08',
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1.5,
+    borderColor: colors.primary + '30',
+  },
+  upgradeBannerLeft: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
+  upgradeBannerIcon: {
+    fontSize: 22,
+  },
+  upgradeBannerContent: {
+    flex: 1,
+  },
+  upgradeBannerTitle: {
+    ...typography.body,
+    fontWeight: '700',
+    color: colors.primary,
+    marginBottom: 2,
+  },
+  upgradeBannerDesc: {
+    ...typography.caption,
+    color: colors.text.secondary,
+    lineHeight: 16,
+  },
+  upgradeBannerArrow: {
+    fontSize: 20,
+    color: colors.text.secondary,
+    marginLeft: spacing.sm,
+  },
+  // Weekly Calories button
+  weeklyCaloriesBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    ...shadows.sm,
+  },
+  weeklyCaloriesBtnIcon: {
+    fontSize: 22,
+    marginRight: spacing.sm,
+  },
+  weeklyCaloriesBtnText: {
+    ...typography.body,
+    fontWeight: '700',
+    color: colors.text.primary,
+    flex: 1,
+  },
+  weeklyCaloriesBtnArrow: {
+    fontSize: 20,
+    color: colors.text.secondary,
+  },
+  // Weekly Calories modal
+  weeklyCaloriesModalContent: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    padding: spacing.lg,
+    paddingBottom: spacing.xxl,
+    maxHeight: '80%',
+  },
+  weeklyCaloriesModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  weeklyCaloriesModalTitle: {
+    ...typography.h3,
+    color: colors.text.primary,
+  },
+  weeklyCaloriesCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.border + '40',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  weeklyCaloriesCloseBtnText: {
+    fontSize: 16,
+    color: colors.text.secondary,
+    fontWeight: '700',
   },
 });
 

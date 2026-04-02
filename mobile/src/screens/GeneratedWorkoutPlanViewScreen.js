@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import workoutService from '../services/workoutService';
+import { useTranslation } from '../i18n';
 
 const formatLabel = (str) => {
   if (!str) return '';

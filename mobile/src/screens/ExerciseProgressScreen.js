@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import workoutService from '../services/workoutService';
+import { useTranslation } from '../i18n';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const MAX_GRAPH_POINTS = 20;
@@ -190,6 +191,7 @@ const SimpleLineGraph = ({ data, label, unit, color, onPointPress, selectedIndex
 };
 
 const ExerciseProgressScreen = ({ navigation, route }) => {
+  const { t } = useTranslation();
   const { exerciseLogs: passedLogs, allExercises: passedExercises } = route.params || {};
   const [exerciseLogs, setExerciseLogs] = useState(passedLogs || {});
   const [allExercises, setAllExercises] = useState(passedExercises || []);
@@ -429,9 +431,9 @@ const ExerciseProgressScreen = ({ navigation, route }) => {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => { setSelectedExercise(null); setRepsTooltipIdx(null); setWeightTooltipIdx(null); }} style={styles.backButton}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>{t('common.back')}</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Exercise Progress</Text>
+          <Text style={styles.headerTitle}>{ t('progress.exerciseProgress')}</Text>
           <View style={{ width: 60 }} />
         </View>
 
@@ -475,16 +477,22 @@ const ExerciseProgressScreen = ({ navigation, route }) => {
                 ) : (
                   <>
                     <View style={styles.statItem}>
-                      <Text style={styles.statValue}>{stats.bestWeight > 0 ? `${stats.bestWeight} kg` : 'N/A'}</Text>
-                      <Text style={styles.statLabel}>Best Weight</Text>
+                      <Text style={styles.statValue}>
+                        {stats.bestWeight > 0 ? `${stats.bestWeight} kg` : 'N/A'}
+                        {stats.bestWeight > 0 ? ' 🏆' : ''}
+                      </Text>
+                      <Text style={styles.statLabel}>Best Weight (PR)</Text>
                     </View>
                     <View style={styles.statItem}>
                       <Text style={styles.statValue}>{stats.highestTotalReps}</Text>
                       <Text style={styles.statLabel}>Highest Total Reps</Text>
                     </View>
                     <View style={styles.statItem}>
-                      <Text style={styles.statValue}>{stats.bestVolume > 0 ? stats.bestVolume : 'N/A'}</Text>
-                      <Text style={styles.statLabel}>Best Volume</Text>
+                      <Text style={styles.statValue}>
+                        {stats.bestVolume > 0 ? stats.bestVolume : 'N/A'}
+                        {stats.bestVolume > 0 ? ' 🏆' : ''}
+                      </Text>
+                      <Text style={styles.statLabel}>Best Volume (PR)</Text>
                     </View>
                   </>
                 )}
@@ -691,17 +699,49 @@ const ExerciseProgressScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Exercise Progress</Text>
+        <Text style={styles.headerTitle}>{ t('progress.exerciseProgress')}</Text>
         <View style={{ width: 60 }} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.pageTitle}>📈 Check Your Progress</Text>
+        <Text style={styles.pageTitle}>{t('progress.exerciseProgress')}</Text>
         <Text style={styles.pageSubtitle}>
           Select an exercise to view your historical performance data
         </Text>
+
+        {/* Personal Records Badges */}
+        {uniqueExercises.length > 0 && (() => {
+          const prs = uniqueExercises
+            .filter(ex => !ex.isCardio)
+            .map(ex => {
+              const history = getExerciseHistory(ex.name, ex.dayOfWeek);
+              const stats = getExerciseStats(history);
+              if (!stats || stats.bestWeight <= 0) return null;
+              return { name: ex.name, bestWeight: stats.bestWeight, bestVolume: stats.bestVolume, muscleGroup: ex.muscleGroup };
+            })
+            .filter(Boolean)
+            .sort((a, b) => b.bestWeight - a.bestWeight)
+            .slice(0, 5);
+          if (prs.length === 0) return null;
+          return (
+            <View style={styles.prCard}>
+              <Text style={styles.prTitle}>🏆 {t('progress.personalRecords')}</Text>
+              {prs.map((pr, i) => (
+                <View key={i} style={styles.prRow}>
+                  <Text style={styles.prMedal}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '🏅'}</Text>
+                  <View style={styles.prInfo}>
+                    <Text style={styles.prName}>{pr.name}</Text>
+                    <Text style={styles.prDetail}>
+                      {pr.bestWeight} kg{pr.bestVolume > 0 ? ` • Volume: ${pr.bestVolume}` : ''}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          );
+        })()}
 
         {uniqueExercises.length === 0 ? (
           <View style={styles.emptyHistory}>
@@ -882,6 +922,20 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm, padding: spacing.xs,
   },
   sessionComparisonText: { ...typography.caption, color: colors.text.secondary, fontStyle: 'italic' },
+  // Personal Records
+  prCard: {
+    backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.md,
+    marginBottom: spacing.lg, ...shadows.md, borderWidth: 1, borderColor: '#FFD70040',
+  },
+  prTitle: { ...typography.h3, color: colors.text.primary, marginBottom: spacing.sm },
+  prRow: {
+    flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm,
+    borderBottomWidth: 0.5, borderBottomColor: colors.border + '30',
+  },
+  prMedal: { fontSize: 24, marginRight: spacing.sm },
+  prInfo: { flex: 1 },
+  prName: { ...typography.body, fontWeight: '700', color: colors.text.primary },
+  prDetail: { ...typography.caption, color: colors.text.secondary, marginTop: 2 },
 });
 
 export default ExerciseProgressScreen;

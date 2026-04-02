@@ -71,6 +71,12 @@ export const nutritionService = {
     return response.data;
   },
 
+  // Get AI plan generation count since a date
+  getAiPlanCount: async (since) => {
+    const response = await apiClient.get(`/nutrition/ai-plan-count?since=${encodeURIComponent(since)}`);
+    return response.data;
+  },
+
   // Update plan progress
   updateProgress: async (userPlanId, completedMeals) => {
     const response = await apiClient.put(`/nutrition/my-plans/${userPlanId}/progress`, {
@@ -119,25 +125,6 @@ export const nutritionService = {
 
   // ========== NEW FEATURES ==========
 
-  // Log food via photo
-  logFoodPhoto: async (request) => {
-    const response = await apiClient.post('/nutrition/food-log', request, {
-      timeout: API_CONFIG.LONG_TIMEOUT,
-    });
-    return response.data;
-  },
-
-  // Get today's food logs
-  getTodayFoodLogs: async () => {
-    const response = await apiClient.get('/nutrition/food-log/today');
-    return response.data;
-  },
-
-  // Get food log history
-  getFoodLogHistory: async (days = 7) => {
-    const response = await apiClient.get(`/nutrition/food-log/history?days=${days}`);
-    return response.data;
-  },
 
   // Get meal swap suggestions
   suggestMealSwap: async (request) => {

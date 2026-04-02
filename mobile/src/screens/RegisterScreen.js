@@ -16,6 +16,7 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { register } from '../store/slices/authSlice';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
+import { useTranslation } from '../i18n';
 
 // Custom Picker Component for better iOS/Android support
 const CustomPicker = ({ label, selectedValue, onValueChange, options, placeholder }) => {
@@ -109,6 +110,7 @@ const REGION_OPTIONS = [
 ];
 
 const RegisterScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -139,31 +141,31 @@ const RegisterScreen = ({ navigation }) => {
 
     // Validation
     if (!formData.email || !formData.password || !formData.firstName || !formData.lastName) {
-      const msg = 'Please fill in all required fields';
+      const msg = t('auth.fillRequired');
       setValidationError(msg);
-      if (Platform.OS !== 'web') Alert.alert('Error', msg);
+      if (Platform.OS !== 'web') Alert.alert(t('common.error'), msg);
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      const msg = 'Please enter a valid email address';
+      const msg = t('auth.validEmail');
       setValidationError(msg);
-      if (Platform.OS !== 'web') Alert.alert('Error', msg);
+      if (Platform.OS !== 'web') Alert.alert(t('common.error'), msg);
       return;
     }
 
     if (!allCriteriaMet) {
-      const msg = 'Please ensure your password meets all the criteria listed below the password field';
+      const msg = t('auth.passwordCriteria');
       setValidationError(msg);
-      if (Platform.OS !== 'web') Alert.alert('Error', msg);
+      if (Platform.OS !== 'web') Alert.alert(t('common.error'), msg);
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      const msg = 'Passwords do not match';
+      const msg = t('auth.passwordsNoMatch');
       setValidationError(msg);
-      if (Platform.OS !== 'web') Alert.alert('Error', msg);
+      if (Platform.OS !== 'web') Alert.alert(t('common.error'), msg);
       return;
     }
 
@@ -172,22 +174,22 @@ const RegisterScreen = ({ navigation }) => {
       await dispatch(register(registrationData)).unwrap();
       // Navigation handled automatically after registration
     } catch (err) {
-      const errorMessage = err || 'Something went wrong';
+      const errorMessage = err || t('common.error');
       // Check if the error is about existing email
       if (typeof errorMessage === 'string' && (errorMessage.toLowerCase().includes('already registered') || errorMessage.toLowerCase().includes('already exist'))) {
-        const msg = 'You are already registered. Please login. If you forgot your password, please reset your password.';
+        const msg = t('auth.alreadyRegistered');
         setValidationError(msg);
         if (Platform.OS !== 'web') {
-          Alert.alert('Already Registered', msg, [
-            { text: 'Login', onPress: () => navigation.navigate('Login') },
-            { text: 'Reset Password', onPress: () => navigation.navigate('ForgotPassword') },
-            { text: 'Cancel', style: 'cancel' },
+          Alert.alert(t('auth.alreadyRegisteredTitle'), msg, [
+            { text: t('auth.login'), onPress: () => navigation.navigate('Login') },
+            { text: t('auth.resetPassword'), onPress: () => navigation.navigate('ForgotPassword') },
+            { text: t('common.cancel'), style: 'cancel' },
           ]);
         }
       } else {
-        const msg = typeof errorMessage === 'string' ? errorMessage : 'Registration failed';
+        const msg = typeof errorMessage === 'string' ? errorMessage : t('auth.registrationFailed');
         setValidationError(msg);
-        if (Platform.OS !== 'web') Alert.alert('Registration Failed', msg);
+        if (Platform.OS !== 'web') Alert.alert(t('auth.registrationFailed'), msg);
       }
     }
   };
@@ -203,27 +205,27 @@ const RegisterScreen = ({ navigation }) => {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Start your personalized fitness journey</Text>
+          <Text style={styles.title}>{t('auth.createAccount')}</Text>
+          <Text style={styles.subtitle}>{t('auth.getStarted')}</Text>
         </View>
 
         <View style={styles.form}>
           <View style={styles.row}>
             <View style={[styles.inputContainer, styles.halfWidth]}>
-              <Text style={styles.label}>First Name *</Text>
+              <Text style={styles.label}>{t('auth.firstName')} *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="First name"
+                placeholder={t('auth.firstName')}
                 value={formData.firstName}
                 onChangeText={(text) => updateFormData('firstName', text)}
               />
             </View>
 
             <View style={[styles.inputContainer, styles.halfWidth]}>
-              <Text style={styles.label}>Last Name *</Text>
+              <Text style={styles.label}>{t('auth.lastName')} *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Last name"
+                placeholder={t('auth.lastName')}
                 value={formData.lastName}
                 onChangeText={(text) => updateFormData('lastName', text)}
               />
@@ -231,10 +233,10 @@ const RegisterScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email *</Text>
+            <Text style={styles.label}>{t('auth.email')} *</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter your email"
+              placeholder={t('auth.enterEmail')}
               value={formData.email}
               onChangeText={(text) => updateFormData('email', text)}
               keyboardType="email-address"
@@ -244,10 +246,10 @@ const RegisterScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Phone</Text>
+            <Text style={styles.label}>{t('profile.phone')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter your phone number"
+              placeholder={t('profile.enterPhone')}
               value={formData.phone}
               onChangeText={(text) => updateFormData('phone', text)}
               keyboardType="phone-pad"
@@ -255,10 +257,10 @@ const RegisterScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password *</Text>
+            <Text style={styles.label}>{t('auth.password')} *</Text>
             <TextInput
               style={styles.input}
-              placeholder="Create a strong password"
+              placeholder={t('auth.enterPassword')}
               value={formData.password}
               onChangeText={(text) => updateFormData('password', text)}
               secureTextEntry
@@ -267,36 +269,36 @@ const RegisterScreen = ({ navigation }) => {
             {/* Password Criteria Checklist */}
             {password.length > 0 && (
               <View style={styles.criteriaBox}>
-                <Text style={styles.criteriaTitle}>Password Requirements:</Text>
+                <Text style={styles.criteriaTitle}>{t('auth.passwordMustHave')}</Text>
                 <View style={styles.criteriaRow}>
                   <Text style={styles.criteriaIcon}>{hasMinLength ? '✅' : '⬜'}</Text>
-                  <Text style={[styles.criteriaText, hasMinLength && styles.criteriaMet]}>At least 8 characters</Text>
+                  <Text style={[styles.criteriaText, hasMinLength && styles.criteriaMet]}>{t('auth.minLength')}</Text>
                 </View>
                 <View style={styles.criteriaRow}>
                   <Text style={styles.criteriaIcon}>{hasUppercase ? '✅' : '⬜'}</Text>
-                  <Text style={[styles.criteriaText, hasUppercase && styles.criteriaMet]}>One uppercase letter (A-Z)</Text>
+                  <Text style={[styles.criteriaText, hasUppercase && styles.criteriaMet]}>{t('auth.uppercaseLetter')}</Text>
                 </View>
                 <View style={styles.criteriaRow}>
                   <Text style={styles.criteriaIcon}>{hasLowercase ? '✅' : '⬜'}</Text>
-                  <Text style={[styles.criteriaText, hasLowercase && styles.criteriaMet]}>One lowercase letter (a-z)</Text>
+                  <Text style={[styles.criteriaText, hasLowercase && styles.criteriaMet]}>{t('auth.lowercaseLetter')}</Text>
                 </View>
                 <View style={styles.criteriaRow}>
                   <Text style={styles.criteriaIcon}>{hasNumber ? '✅' : '⬜'}</Text>
-                  <Text style={[styles.criteriaText, hasNumber && styles.criteriaMet]}>One number (0-9)</Text>
+                  <Text style={[styles.criteriaText, hasNumber && styles.criteriaMet]}>{t('auth.number')}</Text>
                 </View>
                 <View style={styles.criteriaRow}>
                   <Text style={styles.criteriaIcon}>{hasSpecial ? '✅' : '⬜'}</Text>
-                  <Text style={[styles.criteriaText, hasSpecial && styles.criteriaMet]}>One special character (!@#$%...)</Text>
+                  <Text style={[styles.criteriaText, hasSpecial && styles.criteriaMet]}>{t('auth.specialCharacter')}</Text>
                 </View>
               </View>
             )}
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Confirm Password *</Text>
+            <Text style={styles.label}>{t('auth.confirmPassword')} *</Text>
             <TextInput
               style={styles.input}
-              placeholder="Re-enter your password"
+              placeholder={t('auth.reenterYourPassword')}
               value={formData.confirmPassword}
               onChangeText={(text) => updateFormData('confirmPassword', text)}
               secureTextEntry
@@ -307,30 +309,30 @@ const RegisterScreen = ({ navigation }) => {
                 styles.matchText,
                 formData.password === formData.confirmPassword ? styles.matchSuccess : styles.matchError
               ]}>
-                {formData.password === formData.confirmPassword ? '✅ Passwords match' : '❌ Passwords do not match'}
+                {formData.password === formData.confirmPassword ? `✅ ${t('auth.passwordsMatch')}` : `❌ ${t('auth.passwordsNoMatch')}`}
               </Text>
             )}
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Preferred Language</Text>
+            <Text style={styles.label}>{t('auth.preferredLanguage')}</Text>
             <CustomPicker
-              label="Select Language"
+              label={t('auth.selectLanguage')}
               selectedValue={formData.language}
               onValueChange={(value) => updateFormData('language', value)}
               options={LANGUAGE_OPTIONS}
-              placeholder="Select language"
+              placeholder={t('auth.selectLanguagePlaceholder')}
             />
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Region</Text>
+            <Text style={styles.label}>{t('auth.region')}</Text>
             <CustomPicker
-              label="Select Region"
+              label={t('auth.selectRegion')}
               selectedValue={formData.region}
               onValueChange={(value) => updateFormData('region', value)}
               options={REGION_OPTIONS}
-              placeholder="Select your region"
+              placeholder={t('auth.selectRegionPlaceholder')}
             />
           </View>
 
@@ -351,14 +353,14 @@ const RegisterScreen = ({ navigation }) => {
             disabled={isLoading}
           >
             <Text style={styles.buttonText}>
-              {isLoading ? 'Creating Account...' : 'Sign Up'}
+              {isLoading ? `${t('auth.createAccount')}...` : t('auth.signUp')}
             </Text>
           </Pressable>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
+            <Text style={styles.footerText}>{t('auth.hasAccount')} </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.linkText}>Login</Text>
+              <Text style={styles.linkText}>{t('auth.login')}</Text>
             </TouchableOpacity>
           </View>
         </View>

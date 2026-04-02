@@ -1,0 +1,40 @@
+# Production profile - Cloud deployment
+server:
+  port: ${PORT:8088}
+
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:mysql://localhost:3306/fitnessapp_payments?useSSL=true&requireSSL=true&serverTimezone=UTC}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+
+jwt:
+  secret: ${JWT_SECRET}
+
+eureka:
+  client:
+    enabled: false
+
+merchant:
+  upi:
+    id: ${MERCHANT_UPI_ID:fitnessapp@upi}
+  name: ${MERCHANT_NAME:FitnessApp}
+
+subscription:
+  service:
+    url: ${SUBSCRIPTION_SERVICE_URL:http://localhost:8087}
+
+razorpay:
+  key-id: ${RAZORPAY_KEY_ID:rzp_test_placeholder}
+  key-secret: ${RAZORPAY_KEY_SECRET:placeholder_secret}
+  webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}
+
+logging:
+  level:
+    root: INFO
+    com.fitnessapp: INFO
+

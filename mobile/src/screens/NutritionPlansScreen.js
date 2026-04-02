@@ -14,8 +14,10 @@ import {
 import { useSelector } from 'react-redux';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import nutritionService from '../services/nutritionService';
+import { useTranslation } from '../i18n';
 
 const NutritionPlansScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const { user } = useSelector((state) => state.auth);
   const [plans, setPlans] = useState([]);
   const [activePlan, setActivePlan] = useState(null);
@@ -422,9 +424,9 @@ const NutritionPlansScreen = ({ navigation }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Text style={styles.backButtonText}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>🥗 Nutrition Plans</Text>
+        <Text style={styles.headerTitle}>🥗 {t('nutrition.title')}</Text>
         <View style={{ width: 60 }} />
       </View>
 

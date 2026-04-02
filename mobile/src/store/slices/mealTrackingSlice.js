@@ -38,6 +38,8 @@ const initialState = {
   consumedProtein: 0,
   consumedCarbs: 0,
   consumedFat: 0,
+  waterGlasses: 0,
+  waterGoal: 8,
   loaded: false,
 };
 
@@ -54,6 +56,8 @@ const mealTrackingSlice = createSlice({
         state.consumedProtein = data.consumedProtein || 0;
         state.consumedCarbs = data.consumedCarbs || 0;
         state.consumedFat = data.consumedFat || 0;
+        state.waterGlasses = data.waterGlasses || 0;
+        state.waterGoal = data.waterGoal || 8;
       } else {
         // No data — reset everything
         state.trackingDate = null;
@@ -62,6 +66,8 @@ const mealTrackingSlice = createSlice({
         state.consumedProtein = 0;
         state.consumedCarbs = 0;
         state.consumedFat = 0;
+        state.waterGlasses = 0;
+        state.waterGoal = 8;
       }
       state.loaded = true;
     },
@@ -97,6 +103,7 @@ const mealTrackingSlice = createSlice({
         state.consumedProtein = 0;
         state.consumedCarbs = 0;
         state.consumedFat = 0;
+        state.waterGlasses = 0; // Reset glasses on new day, keep waterGoal
       } else {
         // Same day — merge new meals but keep completed state; also preserve extra meals
         const existingMap = {};
@@ -339,7 +346,26 @@ const mealTrackingSlice = createSlice({
       state.consumedProtein = 0;
       state.consumedCarbs = 0;
       state.consumedFat = 0;
+      state.waterGlasses = 0;
+      state.waterGoal = 8;
       state.loaded = false;
+    },
+
+    addWaterGlass: (state) => {
+      // Security: cap at 20 glasses max
+      if (state.waterGlasses < 20) {
+        state.waterGlasses += 1;
+      }
+    },
+    removeWaterGlass: (state) => {
+      if (state.waterGlasses > 0) {
+        state.waterGlasses -= 1;
+      }
+    },
+    setWaterGoal: (state, action) => {
+      // Validate: 1-20 range
+      const goal = Math.min(20, Math.max(1, Math.round(Number(action.payload) || 8)));
+      state.waterGoal = goal;
     },
 
     addExtraMeal: (state, action) => {
@@ -401,7 +427,7 @@ const mealTrackingSlice = createSlice({
   },
 });
 
-export const { loadTracking, initMealsForToday, completeMeal, uncompleteMeal, completeFoodItem, uncompleteFoodItem, replaceMeal, clearTracking, addExtraMeal, removeExtraMeal } = mealTrackingSlice.actions;
+export const { loadTracking, initMealsForToday, completeMeal, uncompleteMeal, completeFoodItem, uncompleteFoodItem, replaceMeal, clearTracking, addExtraMeal, removeExtraMeal, addWaterGlass, removeWaterGlass, setWaterGoal } = mealTrackingSlice.actions;
 
 // Export the helper so screens can use the same local date logic
 export { getLocalDateString };
@@ -421,6 +447,8 @@ export const persistTracking = () => async (dispatch, getState) => {
     consumedProtein: mealTracking.consumedProtein,
     consumedCarbs: mealTracking.consumedCarbs,
     consumedFat: mealTracking.consumedFat,
+    waterGlasses: mealTracking.waterGlasses,
+    waterGoal: mealTracking.waterGoal,
   };
 
   // 1. Always save to AsyncStorage (instant)

@@ -2,10 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, Platform, Modal, TextInput } from 'react-native';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import wellnessService from '../services/wellnessService';
+import { useTranslation } from '../i18n';
 
 const formatLabel = (s) => s ? s.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : '';
 
 const WellnessHomeScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activePlan, setActivePlan] = useState(null);
@@ -61,7 +63,7 @@ const WellnessHomeScreen = ({ navigation }) => {
     try {
       const plan = await wellnessService.generatePlan({ type: planType, level: planLevel, durationWeeks: planWeeks, sessionsPerWeek, sessionDurationMinutes: sessionDuration });
       setGeneratedPlan(plan); setShowSetup(false);
-    } catch (e) { Platform.OS === 'web' ? window.alert('Failed to generate plan') : Alert.alert('Error', 'Failed to generate plan'); }
+    } catch (e) { Platform.OS === 'web' ? window.alert(t('wellness.failedGenerate')) : Alert.alert(t('common.error'), t('wellness.failedGenerate')); }
     setGenerating(false);
   };
 
@@ -71,10 +73,10 @@ const WellnessHomeScreen = ({ navigation }) => {
     try {
       const result = await wellnessService.assignPlan(generatedPlan.id);
       setActivePlan(result); setGeneratedPlan(null);
-      const msg = result?.scheduledForTomorrow ? 'Your new wellness plan starts tomorrow! Your current plan stays active until midnight. 🌅' : 'Your wellness plan has been assigned! Namaste! 🧘';
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert(result?.scheduledForTomorrow ? 'Plan Scheduled! 📅' : 'Plan Assigned! 🎉', msg);
+      const msg = result?.scheduledForTomorrow ? t('wellness.planScheduledMsg') : t('wellness.planAssignedMsg');
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert(result?.scheduledForTomorrow ? t('wellness.planScheduled') : t('wellness.planAssigned'), msg);
       loadData();
-    } catch (e) { Platform.OS === 'web' ? window.alert('Failed') : Alert.alert('Error', 'Failed to assign plan'); }
+    } catch (e) { Platform.OS === 'web' ? window.alert(t('common.failed')) : Alert.alert(t('common.error'), t('wellness.failedAssign')); }
     setAssigning(false);
   };
 
@@ -82,24 +84,24 @@ const WellnessHomeScreen = ({ navigation }) => {
     const key = `${sessionType}_${sessionId}`;
     if (isCompleted(sessionType, sessionId)) {
       // Already completed — do nothing or show message
-      Platform.OS === 'web' ? window.alert('Already completed today! 🎉') : Alert.alert('Already Done', 'You already completed this session today!');
+      Platform.OS === 'web' ? window.alert(t('wellness.alreadyCompletedToday')) : Alert.alert(t('wellness.alreadyDone'), t('wellness.alreadyDoneMsg'));
       return;
     }
     try {
       await wellnessService.completeSession({ sessionType, sessionId, durationMinutes: duration || 15 });
       setCompletedToday(prev => new Set([...prev, key]));
-      Platform.OS === 'web' ? window.alert('Session completed! 🎉') : Alert.alert('Well done! 🎉', 'Session completed!');
+      Platform.OS === 'web' ? window.alert(t('wellness.sessionCompleted')) : Alert.alert(t('wellness.wellDone'), t('wellness.sessionCompleted'));
       loadData();
-    } catch (e) { Platform.OS === 'web' ? window.alert('Failed') : Alert.alert('Error', 'Failed to mark complete'); }
+    } catch (e) { Platform.OS === 'web' ? window.alert(t('common.failed')) : Alert.alert(t('common.error'), t('wellness.failedComplete')); }
   };
 
-  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /><Text style={styles.loadingText}>Loading wellness...</Text></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /><Text style={styles.loadingText}>{t('wellness.loadingWellness')}</Text></View>;
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.backText}>← Back</Text></TouchableOpacity>
-        <Text style={styles.headerTitle}>🧘 Yoga & Wellness</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.backText}>{t('common.back')}</Text></TouchableOpacity>
+        <Text style={styles.headerTitle}>🧘 {t('wellness.title')}</Text>
         <View style={{ width: 60 }} />
       </View>
 
@@ -107,7 +109,7 @@ const WellnessHomeScreen = ({ navigation }) => {
         {/* Daily Tip */}
         {dailyTip && (
           <View style={styles.tipCard}>
-            <Text style={styles.tipLabel}>🕊️ Daily Wellness Tip</Text>
+            <Text style={styles.tipLabel}>🕊️ {t('wellness.dailyTip')}</Text>
             <Text style={styles.tipContent}>{dailyTip.content}</Text>
           </View>
         )}
@@ -115,9 +117,9 @@ const WellnessHomeScreen = ({ navigation }) => {
         {/* Streak */}
         {streak && (
           <View style={styles.streakRow}>
-            <View style={styles.streakItem}><Text style={styles.streakVal}>🔥 {streak.currentStreak}</Text><Text style={styles.streakLabel}>Day Streak</Text></View>
-            <View style={styles.streakItem}><Text style={styles.streakVal}>✅ {streak.totalSessionsCompleted}</Text><Text style={styles.streakLabel}>Sessions</Text></View>
-            <View style={styles.streakItem}><Text style={styles.streakVal}>⏱️ {streak.totalMinutes}</Text><Text style={styles.streakLabel}>Minutes</Text></View>
+            <View style={styles.streakItem}><Text style={styles.streakVal}>🔥 {streak.currentStreak}</Text><Text style={styles.streakLabel}>{t('wellness.dayStreak')}</Text></View>
+            <View style={styles.streakItem}><Text style={styles.streakVal}>✅ {streak.totalSessionsCompleted}</Text><Text style={styles.streakLabel}>{t('wellness.sessions')}</Text></View>
+            <View style={styles.streakItem}><Text style={styles.streakVal}>⏱️ {streak.totalMinutes}</Text><Text style={styles.streakLabel}>{t('wellness.minutes')}</Text></View>
           </View>
         )}
 
@@ -132,14 +134,14 @@ const WellnessHomeScreen = ({ navigation }) => {
               <Text style={styles.planStat}>{formatLabel(activePlan.wellnessPlan?.level)}</Text>
             </View>
             <View style={styles.progressBar}><View style={[styles.progressFill, { width: `${activePlan.totalSessions ? (activePlan.completedSessions / activePlan.totalSessions) * 100 : 0}%` }]} /></View>
-            <TouchableOpacity style={styles.newPlanBtn} onPress={() => { if (Platform.OS === 'web') { if (window.confirm('Create new plan? Current plan stays until midnight, new starts tomorrow.')) setShowSetup(true); } else Alert.alert('New Plan', 'Current plan stays until midnight, new starts tomorrow.', [{ text: 'Cancel' }, { text: 'Continue', onPress: () => setShowSetup(true) }]); }}>
-              <Text style={styles.newPlanText}>+ Create New Plan</Text>
+            <TouchableOpacity style={styles.newPlanBtn} onPress={() => { if (Platform.OS === 'web') { if (window.confirm(t('wellness.newPlanConfirm'))) setShowSetup(true); } else Alert.alert(t('wellness.newPlan'), t('wellness.newPlanConfirm'), [{ text: t('common.cancel') }, { text: t('common.continue'), onPress: () => setShowSetup(true) }]); }}>
+              <Text style={styles.newPlanText}>+ {t('wellness.newPlan')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <TouchableOpacity style={styles.createPlanCard} onPress={() => setShowSetup(true)}>
             <Text style={styles.createIcon}>🪄</Text>
-            <View style={{ flex: 1 }}><Text style={styles.createTitle}>Create Wellness Plan</Text><Text style={styles.createDesc}>Generate a personalized yoga, meditation & breathing plan</Text></View>
+            <View style={{ flex: 1 }}><Text style={styles.createTitle}>{t('wellness.createPlan')}</Text><Text style={styles.createDesc}>{t('wellness.createPlanDesc')}</Text></View>
             <Text style={styles.createArrow}>→</Text>
           </TouchableOpacity>
         )}
@@ -147,44 +149,44 @@ const WellnessHomeScreen = ({ navigation }) => {
         {/* Plan Setup Modal */}
         {showSetup && (
           <View style={styles.setupCard}>
-            <Text style={styles.sectionTitle}>⚙️ Plan Setup</Text>
-            <Text style={styles.label}>Type</Text>
+            <Text style={styles.sectionTitle}>⚙️ {t('wellness.planSetup')}</Text>
+            <Text style={styles.label}>{t('wellness.type')}</Text>
             <View style={styles.chipRow}>
-              {['YOGA', 'MEDITATION', 'MIXED'].map(t => <TouchableOpacity key={t} style={[styles.chip, planType === t && styles.chipActive]} onPress={() => setPlanType(t)}><Text style={[styles.chipText, planType === t && styles.chipTextActive]}>{t === 'YOGA' ? '🧘 Yoga' : t === 'MEDITATION' ? '🧠 Meditation' : '🌿 Mixed'}</Text></TouchableOpacity>)}
+              {['YOGA', 'MEDITATION', 'MIXED'].map(tp => <TouchableOpacity key={tp} style={[styles.chip, planType === tp && styles.chipActive]} onPress={() => setPlanType(tp)}><Text style={[styles.chipText, planType === tp && styles.chipTextActive]}>{tp === 'YOGA' ? `🧘 ${t('wellness.yoga')}` : tp === 'MEDITATION' ? `🧠 ${t('wellness.meditation')}` : `🌿 ${t('wellness.mixed')}`}</Text></TouchableOpacity>)}
             </View>
-            <Text style={styles.label}>Level</Text>
+            <Text style={styles.label}>{t('wellness.level')}</Text>
             <View style={styles.chipRow}>
               {['BEGINNER', 'INTERMEDIATE', 'ADVANCED'].map(l => <TouchableOpacity key={l} style={[styles.chip, planLevel === l && styles.chipActive]} onPress={() => setPlanLevel(l)}><Text style={[styles.chipText, planLevel === l && styles.chipTextActive]}>{formatLabel(l)}</Text></TouchableOpacity>)}
             </View>
-            <Text style={styles.label}>Duration: {planWeeks} weeks</Text>
+            <Text style={styles.label}>{t('wellness.duration')}: {planWeeks} {t('wellness.weeks')}</Text>
             <View style={styles.numPicker}>
               <TouchableOpacity onPress={() => setPlanWeeks(Math.max(1, planWeeks - 1))}><Text style={styles.numBtn}>−</Text></TouchableOpacity>
               <Text style={styles.numVal}>{planWeeks}</Text>
               <TouchableOpacity onPress={() => setPlanWeeks(Math.min(12, planWeeks + 1))}><Text style={styles.numBtn}>+</Text></TouchableOpacity>
             </View>
-            <Text style={styles.label}>Sessions/Week: {sessionsPerWeek}</Text>
+            <Text style={styles.label}>{t('wellness.sessionsPerWeek')}: {sessionsPerWeek}</Text>
             <View style={styles.numPicker}>
               <TouchableOpacity onPress={() => setSessionsPerWeek(Math.max(1, sessionsPerWeek - 1))}><Text style={styles.numBtn}>−</Text></TouchableOpacity>
               <Text style={styles.numVal}>{sessionsPerWeek}</Text>
               <TouchableOpacity onPress={() => setSessionsPerWeek(Math.min(7, sessionsPerWeek + 1))}><Text style={styles.numBtn}>+</Text></TouchableOpacity>
             </View>
             <TouchableOpacity style={styles.generateBtn} onPress={handleGenerate} disabled={generating}>
-              {generating ? <ActivityIndicator color="#fff" /> : <Text style={styles.generateBtnText}>Generate Plan ✨</Text>}
+              {generating ? <ActivityIndicator color="#fff" /> : <Text style={styles.generateBtnText}>{t('wellness.generatePlan')} ✨</Text>}
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setShowSetup(false)}><Text style={[styles.cancelText, { textAlign: 'center', marginTop: spacing.sm }]}>Cancel</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowSetup(false)}><Text style={[styles.cancelText, { textAlign: 'center', marginTop: spacing.sm }]}>{t('common.cancel')}</Text></TouchableOpacity>
           </View>
         )}
 
         {/* Generated Plan Preview */}
         {generatedPlan && (
           <View style={styles.planPreview}>
-            <Text style={styles.sectionTitle}>✨ Generated Plan</Text>
+            <Text style={styles.sectionTitle}>✨ {t('wellness.generatedPlan')}</Text>
             <Text style={styles.planName}>{generatedPlan.planName}</Text>
             <Text style={styles.planDesc}>{generatedPlan.description}</Text>
             <View style={styles.planStats}>
-              <Text style={styles.planStat}>{generatedPlan.durationWeeks} weeks</Text>
-              <Text style={styles.planStat}>{generatedPlan.sessionsPerWeek} sessions/week</Text>
-              <Text style={styles.planStat}>~{generatedPlan.totalCaloriesBurned} cal total</Text>
+              <Text style={styles.planStat}>{generatedPlan.durationWeeks} {t('wellness.weeks')}</Text>
+              <Text style={styles.planStat}>{generatedPlan.sessionsPerWeek} {t('wellness.sessionsPerWeek')}</Text>
+              <Text style={styles.planStat}>~{generatedPlan.totalCaloriesBurned} {t('wellness.calTotal')}</Text>
             </View>
             {generatedPlan.sessions?.map((s, i) => (
               <View key={i} style={styles.sessionItem}>
@@ -193,14 +195,14 @@ const WellnessHomeScreen = ({ navigation }) => {
               </View>
             ))}
             <TouchableOpacity style={styles.assignBtn} onPress={handleAssign} disabled={assigning}>
-              {assigning ? <ActivityIndicator color="#fff" /> : <Text style={styles.assignBtnText}>Assign This Plan 🎯</Text>}
+              {assigning ? <ActivityIndicator color="#fff" /> : <Text style={styles.assignBtnText}>{t('wellness.assignPlan')} 🎯</Text>}
             </TouchableOpacity>
           </View>
         )}
 
         {/* Yoga Poses */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🧘 Yoga Poses ({yogaPoses.length})</Text>
+          <Text style={styles.sectionTitle}>🧘 {t('wellness.yogaPoses')} ({yogaPoses.length})</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {yogaPoses.slice(0, 8).map(p => {
               const done = isCompleted('YOGA', p.id);
@@ -211,7 +213,7 @@ const WellnessHomeScreen = ({ navigation }) => {
                 <Text style={styles.poseSanskrit} numberOfLines={1}>{p.sanskritName}</Text>
                 <Text style={styles.poseDuration}>{p.durationSeconds}s</Text>
                 <TouchableOpacity style={[styles.completeSmBtn, done && styles.completeSmBtnDone]} onPress={(e) => { e.stopPropagation && e.stopPropagation(); handleComplete('YOGA', p.id, Math.ceil(p.durationSeconds / 60)); }}>
-                  <Text style={[styles.completeSmText, done && styles.completeSmTextDone]}>{done ? '✅ Done' : '○ Mark Done'}</Text>
+                  <Text style={[styles.completeSmText, done && styles.completeSmTextDone]}>{done ? `✅ ${t('common.done')}` : `○ ${t('wellness.markDone')}`}</Text>
                 </TouchableOpacity>
               </TouchableOpacity>
               );
@@ -221,7 +223,7 @@ const WellnessHomeScreen = ({ navigation }) => {
 
         {/* Meditation */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🧠 Meditation ({meditations.length})</Text>
+          <Text style={styles.sectionTitle}>🧠 {t('wellness.meditationSessions')} ({meditations.length})</Text>
           {meditations.slice(0, 4).map(m => {
             const done = isCompleted('MEDITATION', m.id);
             return (
@@ -235,7 +237,7 @@ const WellnessHomeScreen = ({ navigation }) => {
 
         {/* Breathing */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🌬️ Breathing Exercises ({breathings.length})</Text>
+          <Text style={styles.sectionTitle}>🌬️ {t('wellness.breathingExercises')} ({breathings.length})</Text>
           {breathings.map(b => {
             const done = isCompleted('BREATHING', b.id);
             return (
@@ -258,10 +260,10 @@ const WellnessHomeScreen = ({ navigation }) => {
               <View style={styles.modalHeader}><Text style={styles.modalTitle}>{poseModal.name}</Text><TouchableOpacity onPress={() => setPoseModal(null)}><Text style={styles.closeBtn}>✕</Text></TouchableOpacity></View>
               <Text style={styles.modalSanskrit}>{poseModal.sanskritName}</Text>
               <Text style={styles.modalDesc}>{poseModal.description}</Text>
-              <Text style={styles.modalLabel}>Benefits</Text><Text style={styles.modalText}>{poseModal.benefits}</Text>
-              <Text style={styles.modalLabel}>Instructions</Text><Text style={styles.modalText}>{poseModal.instructions}</Text>
+              <Text style={styles.modalLabel}>{t('wellness.benefits')}</Text><Text style={styles.modalText}>{poseModal.benefits}</Text>
+              <Text style={styles.modalLabel}>{t('wellness.instructions')}</Text><Text style={styles.modalText}>{poseModal.instructions}</Text>
               <View style={styles.modalMeta}><Text style={styles.modalTag}>{formatLabel(poseModal.difficulty)}</Text><Text style={styles.modalTag}>{poseModal.durationSeconds}s</Text><Text style={styles.modalTag}>{formatLabel(poseModal.category)}</Text></View>
-              <TouchableOpacity style={[styles.assignBtn, isCompleted('YOGA', poseModal.id) && styles.assignBtnDone]} onPress={() => { handleComplete('YOGA', poseModal.id, Math.ceil(poseModal.durationSeconds / 60)); setPoseModal(null); }}><Text style={styles.assignBtnText}>{isCompleted('YOGA', poseModal.id) ? 'Already Done ✅' : 'Mark as Done ○'}</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.assignBtn, isCompleted('YOGA', poseModal.id) && styles.assignBtnDone]} onPress={() => { handleComplete('YOGA', poseModal.id, Math.ceil(poseModal.durationSeconds / 60)); setPoseModal(null); }}><Text style={styles.assignBtnText}>{isCompleted('YOGA', poseModal.id) ? `${t('wellness.alreadyMarkedDone')} ✅` : `${t('wellness.markAsDone')} ○`}</Text></TouchableOpacity>
             </>)}
           </View>
         </View>

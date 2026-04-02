@@ -285,7 +285,17 @@ export const loadWorkoutTrackingFromStorage = () => async (dispatch, getState) =
       
     }
 
-    // 3. Merge step history from backend (one-time on mount)
+    // 3. Fetch total workout count from backend (always accurate)
+    try {
+      const countData = await workoutService.getWorkoutCount();
+      if (countData && typeof countData.count === 'number') {
+        dispatch(setWorkoutCount(countData.count));
+      }
+    } catch (e) {
+      // On error, keep cached count
+    }
+
+    // 4. Merge step history from backend (one-time on mount)
     try {
       const [todayData, historyData] = await Promise.all([
         workoutService.getTodaySteps(),
@@ -309,6 +319,9 @@ export const loadWorkoutTrackingFromStorage = () => async (dispatch, getState) =
     } catch (e) {
       
     }
+
+    // 5. Persist updated state to AsyncStorage immediately so focus reloads get correct data
+    dispatch(persistWorkoutTracking());
   } catch (e) {
     
     dispatch(loadWorkoutTracking(null));

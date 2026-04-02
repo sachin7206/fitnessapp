@@ -8,8 +8,10 @@ import {
 import { useDispatch } from 'react-redux';
 import { fetchActiveSubscription } from '../store/slices/subscriptionSlice';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
+import { useTranslation } from '../i18n';
 
 const PaymentSuccessScreen = ({ navigation, route }) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const { payment, plan, subscription } = route.params;
 
@@ -25,30 +27,30 @@ const PaymentSuccessScreen = ({ navigation, route }) => {
           <Text style={styles.successEmoji}>🎉</Text>
         </View>
 
-        <Text style={styles.title}>Payment Successful!</Text>
-        <Text style={styles.subtitle}>Your subscription has been activated</Text>
+        <Text style={styles.title}>{t('payment.paymentSuccessfulTitle')}</Text>
+        <Text style={styles.subtitle}>{t('payment.subscriptionActivatedMsg')}</Text>
 
         <View style={styles.detailsCard}>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Plan</Text>
+            <Text style={styles.detailLabel}>{t('payment.plan')}</Text>
             <Text style={styles.detailValue}>{plan?.name}</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Duration</Text>
+            <Text style={styles.detailLabel}>{t('payment.durationLabel')}</Text>
             <Text style={styles.detailValue}>
-              {plan?.durationMonths} month{plan?.durationMonths > 1 ? 's' : ''}
+              {plan?.durationMonths} {t('payment.months')}
             </Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Amount Paid</Text>
+            <Text style={styles.detailLabel}>{t('payment.amountPaid')}</Text>
             <Text style={styles.detailValue}>₹{payment?.amount}</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Transaction ID</Text>
+            <Text style={styles.detailLabel}>{t('subscription.transactionId')}</Text>
             <Text style={[styles.detailValue, { fontSize: 12 }]}>{payment?.transactionRef}</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Status</Text>
+            <Text style={styles.detailLabel}>{t('subscription.status')}</Text>
             <View style={styles.successBadge}>
               <Text style={styles.successBadgeText}>✓ {payment?.status}</Text>
             </View>
@@ -65,7 +67,7 @@ const PaymentSuccessScreen = ({ navigation, route }) => {
             setTimeout(() => navigation.navigate('WorkoutChoice'), 100);
           }}
         >
-          <Text style={styles.workoutButtonText}>Start Working Out 💪</Text>
+          <Text style={styles.workoutButtonText}>{t('payment.startWorkingOut')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -77,7 +79,7 @@ const PaymentSuccessScreen = ({ navigation, route }) => {
             });
           }}
         >
-          <Text style={styles.homeButtonText}>Go to Home</Text>
+          <Text style={styles.homeButtonText}>{t('payment.goHome')}</Text>
         </TouchableOpacity>
       </View>
     </View>

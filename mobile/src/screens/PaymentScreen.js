@@ -14,8 +14,10 @@ import {
 } from 'react-native';
 import paymentService from '../services/paymentService';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
+import { useTranslation } from '../i18n';
 
 const PaymentScreen = ({ navigation, route }) => {
+  const { t } = useTranslation();
   const { subscription, plan } = route.params;
   const [paymentMethod, setPaymentMethod] = useState('RAZORPAY');
   const [upiId, setUpiId] = useState('');
@@ -25,7 +27,103 @@ const PaymentScreen = ({ navigation, route }) => {
   const [utrNumber, setUtrNumber] = useState('');
   const [showUtrInput, setShowUtrInput] = useState(false);
 
+  // Load Razorpay checkout.js script for web platform
+  const loadRazorpayScript = () => {
+    return new Promise((resolve, reject) => {
+      if (typeof window === 'undefined') return reject('Not a browser');
+      if (window.Razorpay) return resolve(window.Razorpay);
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(window.Razorpay);
+      script.onerror = () => reject('Failed to load Razorpay SDK');
+      document.body.appendChild(script);
+    });
+  };
+
+  // Open Razorpay checkout directly in the browser (web platform)
+  const openRazorpayWeb = async (razorpayOrderId, razorpayKeyId, payment) => {
+    try {
+      const Razorpay = await loadRazorpayScript();
+      const options = {
+        key: razorpayKeyId,
+        amount: (plan?.price || 0) * 100,
+        currency: 'INR',
+        name: 'FitnessApp',
+        description: `${plan?.name || 'Subscription'} - ${plan?.durationMonths || 0} months`,
+        order_id: razorpayOrderId,
+        handler: async function (response) {
+          // Payment successful — verify with backend
+          setLoading(true);
+          try {
+            const verifyRes = await paymentService.verifyRazorpayPayment(
+              response.razorpay_order_id,
+              response.razorpay_payment_id,
+              response.razorpay_signature,
+            );
+            if (verifyRes.data?.status === 'SUCCESS') {
+              navigation.replace('PaymentSuccess', { payment: verifyRes.data, plan, subscription });
+            } else {
+              Alert.alert('Payment Issue', 'Payment verification pending. Please contact support.');
+            }
+          } catch (err) {
+            Alert.alert('Verification Failed', err.response?.data?.message || 'Failed to verify payment. Please contact support.');
+          } finally {
+            setLoading(false);
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            // User closed the popup without paying
+          },
+        },
+        prefill: { name: '', email: '', contact: '' },
+        theme: { color: '#111827' },
+        notes: { subscriptionId: subscription?.id || '' },
+      };
+      const rzp = new Razorpay(options);
+      rzp.on('payment.failed', function (response) {
+        Alert.alert('Payment Failed', response.error?.description || 'Payment was not completed.');
+      });
+      rzp.open();
+    } catch (err) {
+      Alert.alert('Error', typeof err === 'string' ? err : 'Failed to open payment gateway.');
+    }
+  };
+
   const handleInitiatePayment = async () => {
+    // DEMO mode — skip real gateway, confirm payment directly
+    if (paymentMethod === 'DEMO') {
+      setLoading(true);
+      try {
+        // Create a payment record on backend
+        const response = await paymentService.initiatePayment({
+          subscriptionId: subscription.id,
+          amount: plan.price,
+          currency: plan.currency || 'INR',
+          paymentMethod: 'QR_CODE', // use manual method so backend creates a record
+          upiId: null,
+        });
+        const paymentId = response.data?.payment?.id;
+        if (!paymentId) {
+          Alert.alert('Error', 'Failed to create payment record.');
+          return;
+        }
+        // Immediately confirm it with a demo transaction ref
+        const demoRef = 'DEMO-' + Date.now();
+        const confirmRes = await paymentService.confirmPayment(paymentId, demoRef);
+        if (confirmRes.data?.status === 'SUCCESS') {
+          navigation.replace('PaymentSuccess', { payment: confirmRes.data, plan, subscription });
+        } else {
+          Alert.alert('Error', 'Demo payment confirmation failed.');
+        }
+      } catch (error) {
+        Alert.alert('Error', error.response?.data?.message || 'Demo payment failed');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await paymentService.initiatePayment({
@@ -36,15 +134,25 @@ const PaymentScreen = ({ navigation, route }) => {
         upiId: paymentMethod === 'UPI' ? upiId : null,
       });
 
-      // Razorpay: navigate to checkout WebView
+      // Razorpay payment
       if (paymentMethod === 'RAZORPAY' && response.data?.razorpayOrderId) {
-        navigation.navigate('RazorpayCheckout', {
-          razorpayOrderId: response.data.razorpayOrderId,
-          razorpayKeyId: response.data.razorpayKeyId,
-          payment: response.data.payment,
-          plan,
-          subscription,
-        });
+        if (Platform.OS === 'web') {
+          // Web: open Razorpay checkout popup directly in browser
+          await openRazorpayWeb(
+            response.data.razorpayOrderId,
+            response.data.razorpayKeyId,
+            response.data.payment,
+          );
+        } else {
+          // Mobile: navigate to WebView-based checkout
+          navigation.navigate('RazorpayCheckout', {
+            razorpayOrderId: response.data.razorpayOrderId,
+            razorpayKeyId: response.data.razorpayKeyId,
+            payment: response.data.payment,
+            plan,
+            subscription,
+          });
+        }
         return;
       }
 
@@ -74,7 +182,7 @@ const PaymentScreen = ({ navigation, route }) => {
 
     const trimmedUtr = utrNumber.trim();
     if (!trimmedUtr || trimmedUtr.length < 6) {
-      Alert.alert('Transaction ID Required', 'Please enter your UPI Transaction ID / UTR number (at least 6 characters).');
+      Alert.alert(t('payment.transactionIdRequired'), t('payment.transactionIdMsg'));
       return;
     }
 
@@ -84,10 +192,10 @@ const PaymentScreen = ({ navigation, route }) => {
       if (response.data?.status === 'SUCCESS') {
         navigation.replace('PaymentSuccess', { payment: response.data, plan, subscription });
       } else {
-        Alert.alert('Payment Pending', 'Payment has not been confirmed yet. Please try again.');
+        Alert.alert(t('payment.paymentPending'), t('payment.paymentPendingMsg'));
       }
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to confirm payment');
+      Alert.alert(t('common.error'), error.response?.data?.message || 'Failed to confirm payment');
     } finally {
       setConfirming(false);
     }
@@ -99,34 +207,34 @@ const PaymentScreen = ({ navigation, route }) => {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backButtonText}>{'← Back'}</Text>
+            <Text style={styles.backButtonText}>{t('common.back')}</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Payment</Text>
+          <Text style={styles.headerTitle}>{t('payment.title')}</Text>
           <View style={{ width: 60 }} />
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Order Summary */}
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Order Summary</Text>
+            <Text style={styles.summaryTitle}>{t('payment.orderSummary')}</Text>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>{plan?.name}</Text>
               <Text style={styles.summaryValue}>{'₹' + plan?.price}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Duration</Text>
+              <Text style={styles.summaryLabel}>{t('payment.duration')}</Text>
               <Text style={styles.summaryValue}>
                 {plan?.durationMonths + ' month' + (plan?.durationMonths > 1 ? 's' : '')}
               </Text>
             </View>
             <View style={[styles.summaryRow, styles.summaryTotal]}>
-              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalLabel}>{t('payment.total')}</Text>
               <Text style={styles.totalValue}>{'₹' + plan?.price}</Text>
             </View>
           </View>
 
           {/* Payment Method Selection */}
-          <Text style={styles.sectionTitle}>Select Payment Method</Text>
+          <Text style={styles.sectionTitle}>{t('payment.selectPaymentMethod')}</Text>
 
           {/* Razorpay — Recommended */}
           <TouchableOpacity
@@ -135,10 +243,10 @@ const PaymentScreen = ({ navigation, route }) => {
           >
             <Text style={styles.methodIcon}>💳</Text>
             <View style={styles.methodInfo}>
-              <Text style={styles.methodName}>UPI / Cards / Net Banking</Text>
-              <Text style={styles.methodDesc}>Pay securely via UPI, Debit/Credit Card, Net Banking, Wallets</Text>
+              <Text style={styles.methodName}>{t('payment.upiCardsNetBanking')}</Text>
+              <Text style={styles.methodDesc}>{t('payment.upiCardsDesc')}</Text>
               <View style={styles.recommendedTag}>
-                <Text style={styles.recommendedTagText}>RECOMMENDED</Text>
+                <Text style={styles.recommendedTagText}>{t('payment.recommended')}</Text>
               </View>
             </View>
             <View style={[styles.radio, paymentMethod === 'RAZORPAY' && styles.radioSelected]}>
@@ -153,8 +261,8 @@ const PaymentScreen = ({ navigation, route }) => {
           >
             <Text style={styles.methodIcon}>🔲</Text>
             <View style={styles.methodInfo}>
-              <Text style={styles.methodName}>Scan QR Code</Text>
-              <Text style={styles.methodDesc}>Pay using any UPI app by scanning QR code</Text>
+              <Text style={styles.methodName}>{t('payment.scanQrCode')}</Text>
+              <Text style={styles.methodDesc}>{t('payment.scanQrDesc')}</Text>
             </View>
             <View style={[styles.radio, paymentMethod === 'QR_CODE' && styles.radioSelected]}>
               {paymentMethod === 'QR_CODE' && <View style={styles.radioInner} />}
@@ -168,17 +276,35 @@ const PaymentScreen = ({ navigation, route }) => {
           >
             <Text style={styles.methodIcon}>📱</Text>
             <View style={styles.methodInfo}>
-              <Text style={styles.methodName}>UPI Direct Pay</Text>
-              <Text style={styles.methodDesc}>Pay directly using your UPI ID</Text>
+              <Text style={styles.methodName}>{t('payment.upiDirectPay')}</Text>
+              <Text style={styles.methodDesc}>{t('payment.upiDirectDesc')}</Text>
             </View>
             <View style={[styles.radio, paymentMethod === 'UPI' && styles.radioSelected]}>
               {paymentMethod === 'UPI' && <View style={styles.radioInner} />}
             </View>
           </TouchableOpacity>
 
+          {/* Demo Payment — for testing the subscription flow */}
+          <TouchableOpacity
+            style={[styles.methodCard, paymentMethod === 'DEMO' && styles.methodCardSelected, paymentMethod === 'DEMO' && { borderColor: colors.warning }]}
+            onPress={() => setPaymentMethod('DEMO')}
+          >
+            <Text style={styles.methodIcon}>🧪</Text>
+            <View style={styles.methodInfo}>
+              <Text style={styles.methodName}>{t('payment.testPayment')}</Text>
+              <Text style={styles.methodDesc}>{t('payment.testPaymentDesc')}</Text>
+              <View style={[styles.recommendedTag, { backgroundColor: colors.warning }]}>
+                <Text style={styles.recommendedTagText}>{t('payment.forTesting')}</Text>
+              </View>
+            </View>
+            <View style={[styles.radio, paymentMethod === 'DEMO' && styles.radioSelected]}>
+              {paymentMethod === 'DEMO' && <View style={styles.radioInner} />}
+            </View>
+          </TouchableOpacity>
+
           {paymentMethod === 'UPI' && (
             <View style={styles.upiInputContainer}>
-              <Text style={styles.inputLabel}>Your UPI ID</Text>
+              <Text style={styles.inputLabel}>{t('payment.yourUpiId')}</Text>
               <TextInput
                 style={styles.upiInput}
                 placeholder="yourname@upi"
@@ -202,7 +328,9 @@ const PaymentScreen = ({ navigation, route }) => {
             {loading ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.payButtonText}>{'Pay ₹' + plan?.price}</Text>
+              <Text style={styles.payButtonText}>
+                {paymentMethod === 'DEMO' ? t('payment.activateTest') : `${t('payment.completePayment')} ₹${plan?.price}`}
+              </Text>
             )}
           </TouchableOpacity>
         </View>
@@ -215,21 +343,21 @@ const PaymentScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>{'← Back'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Complete Payment</Text>
-        <View style={{ width: 60 }} />
-      </View>
+            <Text style={styles.backButtonText}>{t('common.back')}</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('payment.completePayment')}</Text>
+          <View style={{ width: 60 }} />
+        </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.paymentContent}>
-        <View style={styles.amountBanner}>
-          <Text style={styles.amountLabel}>Amount to Pay</Text>
+        <ScrollView style={styles.content} contentContainerStyle={styles.paymentContent}>
+          <View style={styles.amountBanner}>
+            <Text style={styles.amountLabel}>{t('payment.amountToPay')}</Text>
           <Text style={styles.amountValue}>{'₹' + paymentData.payment?.amount}</Text>
         </View>
 
         {paymentData.qrCodeBase64 && (
           <View style={styles.qrContainer}>
-            <Text style={styles.qrTitle}>Scan with any UPI app</Text>
+            <Text style={styles.qrTitle}>{t('payment.scanWithUpi')}</Text>
             <View style={styles.qrImageWrapper}>
               <Image
                 source={{ uri: 'data:image/png;base64,' + paymentData.qrCodeBase64 }}
@@ -238,7 +366,7 @@ const PaymentScreen = ({ navigation, route }) => {
               />
             </View>
             <Text style={styles.qrHint}>
-              Open Google Pay, PhonePe, Paytm or any UPI app and scan this QR code
+              {t('payment.scanQrHint')}
             </Text>
           </View>
         )}
@@ -248,33 +376,33 @@ const PaymentScreen = ({ navigation, route }) => {
             style={styles.upiAppButton}
             onPress={async () => {
               try { await Linking.openURL(paymentData.upiDeepLink); } catch {
-                Alert.alert('Error', 'Could not open UPI app.');
+                Alert.alert(t('common.error'), 'Could not open UPI app.');
               }
             }}
           >
-            <Text style={styles.upiAppButtonText}>Open UPI App to Pay</Text>
+            <Text style={styles.upiAppButtonText}>{t('payment.openUpiApp')}</Text>
           </TouchableOpacity>
         )}
 
         <View style={styles.merchantInfo}>
-          <Text style={styles.merchantLabel}>{'Pay to: ' + paymentData.merchantName}</Text>
-          <Text style={styles.merchantLabel}>{'UPI ID: ' + paymentData.merchantUpiId}</Text>
-          <Text style={styles.merchantLabel}>{'Ref: ' + paymentData.payment?.transactionRef}</Text>
+          <Text style={styles.merchantLabel}>{`${t('payment.payTo')}: ${paymentData.merchantName}`}</Text>
+          <Text style={styles.merchantLabel}>{`${t('payment.upiId')}: ${paymentData.merchantUpiId}`}</Text>
+          <Text style={styles.merchantLabel}>{`${t('payment.ref')}: ${paymentData.payment?.transactionRef}`}</Text>
         </View>
 
         <View style={styles.stepsContainer}>
-          <Text style={styles.stepsTitle}>How to pay:</Text>
-          <Text style={styles.stepText}>1. Scan the QR code above with any UPI app</Text>
+          <Text style={styles.stepsTitle}>{t('payment.howToPay')}</Text>
+          <Text style={styles.stepText}>{t('payment.step1')}</Text>
           <Text style={styles.stepText}>{'2. Complete the payment of ₹' + paymentData.payment?.amount}</Text>
-          <Text style={styles.stepText}>3. Note down your UPI Transaction ID / UTR number</Text>
-          <Text style={styles.stepText}>4. Enter it below and tap confirm</Text>
+          <Text style={styles.stepText}>{t('payment.step3')}</Text>
+          <Text style={styles.stepText}>{t('payment.step4')}</Text>
         </View>
 
         {showUtrInput && (
           <View style={styles.utrSection}>
-            <Text style={styles.utrLabel}>Enter UPI Transaction ID / UTR Number</Text>
+            <Text style={styles.utrLabel}>{t('payment.enterUtrLabel')}</Text>
             <Text style={styles.utrHint}>
-              {'You can find this in your UPI app → Payment History → Transaction Details'}
+              {t('payment.utrHint')}
             </Text>
             <TextInput
               style={styles.utrInput}
@@ -297,14 +425,14 @@ const PaymentScreen = ({ navigation, route }) => {
             <ActivityIndicator color="#FFF" />
           ) : (
             <Text style={styles.confirmButtonText}>
-              {showUtrInput ? 'Confirm Payment' : "I've Completed the Payment"}
+              {showUtrInput ? t('payment.confirmPayment') : t('payment.completedPayment')}
             </Text>
           )}
         </TouchableOpacity>
 
         {!showUtrInput && (
           <Text style={styles.autoCheckNote}>
-            After payment, tap the button above to enter your transaction ID
+            {t('payment.afterPaymentNote')}
           </Text>
         )}
 

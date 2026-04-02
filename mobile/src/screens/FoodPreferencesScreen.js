@@ -16,8 +16,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSelector } from 'react-redux';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import nutritionService from '../services/nutritionService';
+import { useTranslation } from '../i18n';
 
 const FoodPreferencesScreen = ({ navigation, route }) => {
+  const { t } = useTranslation();
   const { user } = useSelector((state) => state.auth);
   const { region, freeMode } = route.params || {};
 
@@ -1034,9 +1036,9 @@ const FoodPreferencesScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Text style={styles.backButtonText}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{freeMode ? 'Meal Setup' : 'Food Preferences'}</Text>
+        <Text style={styles.headerTitle}>{freeMode ? t('foodPrefs.mealsAndTime') : t('foodPrefs.title')}</Text>
         <View style={{ width: 60 }} />
       </View>
 

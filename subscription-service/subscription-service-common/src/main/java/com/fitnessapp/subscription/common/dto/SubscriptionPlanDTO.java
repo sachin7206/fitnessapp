@@ -18,5 +18,6 @@ public class SubscriptionPlanDTO {
     private String currency;
     private Boolean isActive;
     private String features; // JSON string of features list
+    private Integer maxPlanGenerations;
 }
 

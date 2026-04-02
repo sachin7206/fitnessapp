@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl, Alert, Platform,
+  ActivityIndicator, RefreshControl, Alert, Platform, Modal, Vibration,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/core';
 import { useDispatch, useSelector } from 'react-redux';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import workoutService from '../services/workoutService';
+import { useTranslation } from '../i18n';
 import {
   setActivePlan, completeWorkout, uncompleteWorkout,
   setMotivationalQuote, persistWorkoutTracking, loadWorkoutTrackingLocal,
@@ -25,6 +26,7 @@ const MUSCLE_ICONS = {
 const DAY_NAMES = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
 
 const MyWorkoutScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const workout = useSelector(state => state.workoutTracking);
   const [userPlan, setUserPlan] = useState(null);
@@ -33,6 +35,38 @@ const MyWorkoutScreen = ({ navigation }) => {
   const [now, setNow] = useState(new Date());
   const [expandedDays, setExpandedDays] = useState({});
   const isInitialMount = useRef(true);
+
+  // Rest timer state
+  const [restTimer, setRestTimer] = useState({ active: false, seconds: 0, total: 0, exerciseName: '' });
+  const restTimerRef = useRef(null);
+
+  const startRestTimer = (seconds, exerciseName) => {
+    // Validate: 1-600 seconds
+    const safe = Math.min(600, Math.max(1, Math.round(seconds)));
+    if (restTimerRef.current) clearInterval(restTimerRef.current);
+    setRestTimer({ active: true, seconds: safe, total: safe, exerciseName });
+    restTimerRef.current = setInterval(() => {
+      setRestTimer(prev => {
+        if (prev.seconds <= 1) {
+          clearInterval(restTimerRef.current);
+          restTimerRef.current = null;
+          try { Vibration.vibrate([0, 500, 200, 500]); } catch (e) {}
+          return { ...prev, seconds: 0, active: false };
+        }
+        return { ...prev, seconds: prev.seconds - 1 };
+      });
+    }, 1000);
+  };
+
+  const cancelRestTimer = () => {
+    if (restTimerRef.current) clearInterval(restTimerRef.current);
+    restTimerRef.current = null;
+    setRestTimer({ active: false, seconds: 0, total: 0, exerciseName: '' });
+  };
+
+  useEffect(() => {
+    return () => { if (restTimerRef.current) clearInterval(restTimerRef.current); };
+  }, []);
 
   useEffect(() => {
     dispatch(loadWorkoutTrackingLocal());
@@ -159,8 +193,8 @@ const MyWorkoutScreen = ({ navigation }) => {
       await workoutService.markWorkoutComplete();
       dispatch(completeWorkout());
       dispatch(persistWorkoutTracking());
-      const msg = 'Great job completing your workout today! Keep it up! 🎉';
-      Platform.OS === 'web' ? window.alert('Awesome! 💪\n' + msg) : Alert.alert('Awesome! 💪', msg);
+      const msg = t('workout.greatJobMsg');
+      Platform.OS === 'web' ? window.alert(t('workout.awesome') + '\n' + msg) : Alert.alert(t('workout.awesome'), msg);
     } catch (error) {
       
     }
@@ -172,11 +206,11 @@ const MyWorkoutScreen = ({ navigation }) => {
       dispatch(persistWorkoutTracking());
     };
     if (Platform.OS === 'web') {
-      if (window.confirm('Undo today\'s workout completion?')) doUndo();
+      if (window.confirm(t('workout.undoWorkoutConfirm'))) doUndo();
     } else {
-      Alert.alert('Undo Workout', 'Undo today\'s workout completion?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Undo', style: 'destructive', onPress: doUndo },
+      Alert.alert(t('workout.undoWorkout'), t('workout.undoWorkoutConfirm'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.undo'), style: 'destructive', onPress: doUndo },
       ]);
     }
   };
@@ -184,11 +218,11 @@ const MyWorkoutScreen = ({ navigation }) => {
   const handleNewPlan = () => {
     const doNav = () => navigation.navigate('WorkoutChoice');
     if (Platform.OS === 'web') {
-      if (window.confirm('Create a new workout plan? Your current plan will be replaced immediately.')) doNav();
+      if (window.confirm(t('workout.createNewPlanConfirm'))) doNav();
     } else {
-      Alert.alert('Create New Plan', 'Your current plan will be replaced immediately. Continue?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Continue', onPress: doNav },
+      Alert.alert(t('nutrition.newPlan'), t('workout.createNewPlanConfirm'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.continue'), onPress: doNav },
       ]);
     }
   };
@@ -197,7 +231,7 @@ const MyWorkoutScreen = ({ navigation }) => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading your workout...</Text>
+        <Text style={styles.loadingText}>{t('workout.loadingWorkout')}</Text>
       </View>
     );
   }
@@ -206,11 +240,11 @@ const MyWorkoutScreen = ({ navigation }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Workout</Text>
+        <Text style={styles.headerTitle}>{t('workout.title')}</Text>
         <TouchableOpacity onPress={handleNewPlan} style={styles.newPlanBtn}>
-          <Text style={styles.newPlanText}>New Plan</Text>
+          <Text style={styles.newPlanText}>{t('workout.newPlan')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -224,10 +258,10 @@ const MyWorkoutScreen = ({ navigation }) => {
           <Text style={styles.planName}>{userPlan?.workoutPlan?.planName}</Text>
           <View style={styles.badges}>
             <View style={[styles.badge, { backgroundColor: colors.primary + '20' }]}>
-              <Text style={styles.badgeText}>Week {userPlan?.currentWeek || 1}</Text>
+              <Text style={styles.badgeText}>{t('workout.week')} {userPlan?.currentWeek || 1}</Text>
             </View>
             <View style={[styles.badge, { backgroundColor: colors.success + '20' }]}>
-              <Text style={styles.badgeText}>{userPlan?.completedWorkouts || 0}/{userPlan?.totalWorkouts || 0} done</Text>
+              <Text style={styles.badgeText}>{userPlan?.completedWorkouts || 0}/{userPlan?.totalWorkouts || 0} {t('workout.done')}</Text>
             </View>
           </View>
         </View>
@@ -235,7 +269,7 @@ const MyWorkoutScreen = ({ navigation }) => {
         {/* Progress */}
         <View style={styles.progressCard}>
           <View style={styles.progressHeader}>
-            <Text style={styles.progressTitle}>Overall Progress</Text>
+            <Text style={styles.progressTitle}>{t('workout.overallProgress')}</Text>
             <Text style={styles.progressPercent}>
               {userPlan?.totalWorkouts > 0 ? Math.round(((userPlan?.completedWorkouts || 0) / userPlan.totalWorkouts) * 100) : 0}%
             </Text>
@@ -251,17 +285,10 @@ const MyWorkoutScreen = ({ navigation }) => {
         <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: spacing.lg }}>
           <TouchableOpacity
             style={{ alignItems: 'center', backgroundColor: colors.surface, borderRadius: borderRadius.lg, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 }}
-            onPress={() => navigation.navigate('WorkoutFeedback')}
-          >
-            <Text style={{ fontSize: 24, marginBottom: 4 }}>⚡</Text>
-            <Text style={{ fontSize: 11, color: colors.text.secondary, fontWeight: '600' }}>Feedback</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={{ alignItems: 'center', backgroundColor: colors.surface, borderRadius: borderRadius.lg, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 }}
             onPress={() => navigation.navigate('ReportGenerator')}
           >
             <Text style={{ fontSize: 24, marginBottom: 4 }}>📊</Text>
-            <Text style={{ fontSize: 11, color: colors.text.secondary, fontWeight: '600' }}>Report</Text>
+            <Text style={{ fontSize: 11, color: colors.text.secondary, fontWeight: '600' }}>{t('common.report')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -270,29 +297,28 @@ const MyWorkoutScreen = ({ navigation }) => {
           <View style={styles.quoteCard}>
             <Text style={styles.quoteEmoji}>🔥</Text>
             <Text style={styles.quoteText}>{workout.motivationalQuote}</Text>
-            <Text style={styles.quoteLabel}>Let's go for a workout!</Text>
+            <Text style={styles.quoteLabel}>{t('home.workoutTime')}</Text>
           </View>
         )}
 
-y
         {/* Workout Completion */}
         {!isRestDay && showCompletionPrompt && (
           <TouchableOpacity style={styles.completeBtn} onPress={handleCompleteWorkout}>
             <View style={styles.checkbox}><Text> </Text></View>
-            <Text style={styles.completeBtnText}>Have you completed your workout? 💪</Text>
+            <Text style={styles.completeBtnText}>{t('workout.haveYouCompleted')}</Text>
           </TouchableOpacity>
         )}
 
         {!isRestDay && workout.todayCompleted && (
           <TouchableOpacity style={styles.completedRow} onPress={handleUncomplete}>
             <View style={styles.checkboxChecked}><Text style={styles.checkMark}>✓</Text></View>
-            <Text style={styles.completedText}>Workout completed! Great job! 🎉</Text>
-            <Text style={styles.undoHint}>Tap to undo</Text>
+            <Text style={styles.completedText}>{t('workout.workoutCompletedMsg')}</Text>
+            <Text style={styles.undoHint}>{t('workout.tapToUndo')}</Text>
           </TouchableOpacity>
         )}
 
         {/* Weekly Overview — Expandable */}
-        <Text style={styles.sectionTitle}>Weekly Overview</Text>
+        <Text style={styles.sectionTitle}>{t('workout.weeklyOverview')}</Text>
         {ORDERED_DAYS.map(day => {
           const dayData = getExercisesForDay(day);
           const dayExercises = dayData.exercises;
@@ -319,17 +345,17 @@ y
                     <Text style={styles.expandIcon}>{isExpanded ? '▼' : '▶'}</Text>
                   )}
                   <Text style={[styles.weekDayName, isToday && styles.weekDayNameToday]}>
-                    {formatLabel(day)} {isToday ? '(Today)' : ''}
+                    {formatLabel(day)} {isToday ? `(${t('days.today')})` : ''}
                   </Text>
                 </View>
                 <Text style={styles.weekDayExercises}>
                   {isRest
-                    ? 'Rest Day 😴'
+                    ? t('workout.restDay')
                     : hasExercises
                       ? isCycled
-                        ? `${dayExercises.length} exercises (${formatLabel(dayData.sourceDay)}'s plan) • ~${dayCals} cal`
-                        : `${dayExercises.length} exercises • ~${dayCals} cal`
-                      : 'Rest Day 😴'}
+                        ? `${dayExercises.length} ${t('workout.exercises')} (${formatLabel(dayData.sourceDay)}${t('workout.plan')}) • ~${dayCals} ${t('workout.cal')}`
+                        : `${dayExercises.length} ${t('workout.exercises')} • ~${dayCals} ${t('workout.cal')}`
+                      : t('workout.restDay')}
                 </Text>
               </TouchableOpacity>
 
@@ -339,14 +365,14 @@ y
                   {isCycled && (
                     <View style={styles.cycleNotice}>
                       <Text style={styles.cycleNoticeText}>
-                        🔄 Following {formatLabel(dayData.sourceDay)}'s workout
+                        🔄 {t('workout.following')} {formatLabel(dayData.sourceDay)}{t('workout.plan')}
                       </Text>
                     </View>
                   )}
                   {dayExercises
                     .sort((a, b) => (a.order || 0) - (b.order || 0))
                     .map((ex, idx) => (
-                      <View key={idx} style={styles.expandedExRow}>
+                       <View key={idx} style={styles.expandedExRow}>
                         <Text style={styles.expandedExIcon}>
                           {ex.isCardio ? '❤️' : (MUSCLE_ICONS[ex.muscleGroup] || '💪')}
                         </Text>
@@ -357,6 +383,14 @@ y
                               ? `${Math.round((ex.durationSeconds || 0) / 60)} min${ex.steps > 0 ? ` • ${ex.steps} steps` : ''}`
                               : `${ex.sets} sets × ${ex.reps} reps • Rest ${ex.restTimeSeconds}s`}
                           </Text>
+                          {!ex.isCardio && ex.restTimeSeconds > 0 && (
+                            <TouchableOpacity
+                              style={styles.restTimerBtn}
+                              onPress={() => startRestTimer(ex.restTimeSeconds, ex.exerciseName)}
+                            >
+                              <Text style={styles.restTimerBtnText}>⏱ {t('workout.startRest')} ({ex.restTimeSeconds}s)</Text>
+                            </TouchableOpacity>
+                          )}
                         </View>
                         <Text style={styles.expandedExCal}>{ex.caloriesBurned || 0} cal</Text>
                       </View>
@@ -369,6 +403,31 @@ y
 
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
+
+      {/* Rest Timer Overlay */}
+      {(restTimer.active || restTimer.seconds === 0 && restTimer.total > 0) && (
+        <Modal transparent animationType="fade" visible={restTimer.active || (restTimer.seconds === 0 && restTimer.total > 0)}>
+          <View style={styles.timerOverlay}>
+            <View style={styles.timerCard}>
+              <Text style={styles.timerEmoji}>{restTimer.seconds === 0 ? '✅' : '⏱'}</Text>
+              <Text style={styles.timerExName}>{restTimer.exerciseName}</Text>
+              <Text style={styles.timerCountdown}>
+                {restTimer.seconds === 0 ? t('workout.timesUp') : `${Math.floor(restTimer.seconds / 60)}:${String(restTimer.seconds % 60).padStart(2, '0')}`}
+              </Text>
+              {/* Progress ring (simple bar) */}
+              <View style={styles.timerProgressBg}>
+                <View style={[styles.timerProgressFill, {
+                  width: restTimer.total > 0 ? `${((restTimer.total - restTimer.seconds) / restTimer.total) * 100}%` : '0%',
+                  backgroundColor: restTimer.seconds === 0 ? colors.success : colors.primary,
+                }]} />
+              </View>
+              <TouchableOpacity style={styles.timerCancelBtn} onPress={cancelRestTimer}>
+                <Text style={styles.timerCancelText}>{restTimer.seconds === 0 ? t('common.done') : t('common.cancel')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 };
@@ -491,6 +550,33 @@ const styles = StyleSheet.create({
   expandedExName: { ...typography.bodySmall, fontWeight: '600', color: colors.text.primary },
   expandedExDetail: { ...typography.caption, color: colors.text.secondary },
   expandedExCal: { ...typography.caption, color: colors.warning, fontWeight: '600' },
+  // Rest Timer Button
+  restTimerBtn: {
+    backgroundColor: colors.primary + '15', paddingVertical: 4, paddingHorizontal: 10,
+    borderRadius: borderRadius.sm, marginTop: 4, alignSelf: 'flex-start',
+    borderWidth: 1, borderColor: colors.primary + '30',
+  },
+  restTimerBtnText: { fontSize: 11, color: colors.primary, fontWeight: '700' },
+  // Rest Timer Overlay
+  timerOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center',
+  },
+  timerCard: {
+    backgroundColor: colors.surface, borderRadius: borderRadius.xl, padding: spacing.xl,
+    alignItems: 'center', width: 280, ...shadows.lg,
+  },
+  timerEmoji: { fontSize: 48, marginBottom: spacing.sm },
+  timerExName: { ...typography.body, color: colors.text.secondary, fontWeight: '600', marginBottom: spacing.sm },
+  timerCountdown: { fontSize: 56, fontWeight: '800', color: colors.primary, marginVertical: spacing.md },
+  timerProgressBg: {
+    width: '100%', height: 8, backgroundColor: colors.border, borderRadius: 4, overflow: 'hidden', marginBottom: spacing.lg,
+  },
+  timerProgressFill: { height: '100%', borderRadius: 4 },
+  timerCancelBtn: {
+    backgroundColor: colors.text.secondary + '20', paddingVertical: spacing.sm, paddingHorizontal: spacing.xl,
+    borderRadius: borderRadius.lg,
+  },
+  timerCancelText: { ...typography.body, color: colors.text.secondary, fontWeight: '600' },
 });
 
 export default MyWorkoutScreen;

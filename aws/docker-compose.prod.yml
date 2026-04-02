@@ -1,0 +1,193 @@
+version: '3.8'
+
+# ============================================================
+# FitnessApp - AWS Production Docker Compose
+# All services run on a single EC2 instance (t2.micro / t3.micro)
+# Database: AWS RDS MySQL (external)
+# ============================================================
+
+services:
+
+  # ========== API Gateway (public-facing, port 8080) ==========
+  api-gateway:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/fitnessapp/api-gateway:latest
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xmx96m -Xms64m -XX:+UseSerialGC -XX:MaxMetaspaceSize=64m
+      - JWT_SECRET=${JWT_SECRET}
+      - FRONTEND_URL=${FRONTEND_URL:-*}
+      - USER_SERVICE_URL=http://user-service:8081
+      - NUTRITION_SERVICE_URL=http://nutrition-service:8082
+      - EXERCISE_SERVICE_URL=http://exercise-service:8083
+      - PROGRESS_SERVICE_URL=http://progress-service:8084
+      - WELLNESS_SERVICE_URL=http://wellness-service:8085
+      - AI_SERVICE_URL=http://ai-service:8086
+      - SUBSCRIPTION_SERVICE_URL=http://subscription-service:8087
+      - PAYMENT_SERVICE_URL=http://payment-service:8088
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - fitnessapp-net
+    depends_on:
+      - user-service
+      - nutrition-service
+      - exercise-service
+      - progress-service
+      - wellness-service
+      - ai-service
+      - subscription-service
+      - payment-service
+
+  # ========== User Service ==========
+  user-service:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/fitnessapp/user-service:latest
+    container_name: user-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xmx96m -Xms64m -XX:+UseSerialGC -XX:MaxMetaspaceSize=64m
+      - DATABASE_URL=jdbc:mysql://${RDS_HOST}:3306/fitnessapp_users?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - MAIL_USERNAME=${MAIL_USERNAME:-}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-}
+    restart: unless-stopped
+    networks:
+      - fitnessapp-net
+
+  # ========== Nutrition Service ==========
+  nutrition-service:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/fitnessapp/nutrition-service:latest
+    container_name: nutrition-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xmx96m -Xms64m -XX:+UseSerialGC -XX:MaxMetaspaceSize=64m
+      - DATABASE_URL=jdbc:mysql://${RDS_HOST}:3306/fitnessapp_nutrition?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - USER_SERVICE_URL=http://user-service:8081
+      - AI_SERVICE_URL=http://ai-service:8086
+    restart: unless-stopped
+    networks:
+      - fitnessapp-net
+
+  # ========== Exercise Service ==========
+  exercise-service:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/fitnessapp/exercise-service:latest
+    container_name: exercise-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xmx96m -Xms64m -XX:+UseSerialGC -XX:MaxMetaspaceSize=64m
+      - DATABASE_URL=jdbc:mysql://${RDS_HOST}:3306/fitnessapp_exercises?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - USER_SERVICE_URL=http://user-service:8081
+      - AI_SERVICE_URL=http://ai-service:8086
+    restart: unless-stopped
+    networks:
+      - fitnessapp-net
+
+  # ========== Progress Service ==========
+  progress-service:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/fitnessapp/progress-service:latest
+    container_name: progress-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xmx96m -Xms64m -XX:+UseSerialGC -XX:MaxMetaspaceSize=64m
+      - DATABASE_URL=jdbc:mysql://${RDS_HOST}:3306/fitnessapp_progress?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - AI_SERVICE_URL=http://ai-service:8086
+    restart: unless-stopped
+    networks:
+      - fitnessapp-net
+
+  # ========== Wellness Service ==========
+  wellness-service:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/fitnessapp/wellness-service:latest
+    container_name: wellness-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xmx96m -Xms64m -XX:+UseSerialGC -XX:MaxMetaspaceSize=64m
+      - DATABASE_URL=jdbc:mysql://${RDS_HOST}:3306/fitnessapp_wellness?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - USER_SERVICE_URL=http://user-service:8081
+      - AI_SERVICE_URL=http://ai-service:8086
+    restart: unless-stopped
+    networks:
+      - fitnessapp-net
+
+  # ========== AI Service ==========
+  ai-service:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/fitnessapp/ai-service:latest
+    container_name: ai-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xmx96m -Xms64m -XX:+UseSerialGC -XX:MaxMetaspaceSize=64m
+      - JWT_SECRET=${JWT_SECRET}
+      - GEMINI_API_KEYS=${GEMINI_API_KEYS}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemma-3-27b-it}
+    restart: unless-stopped
+    networks:
+      - fitnessapp-net
+
+  # ========== Subscription Service ==========
+  subscription-service:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/fitnessapp/subscription-service:latest
+    container_name: subscription-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xmx96m -Xms64m -XX:+UseSerialGC -XX:MaxMetaspaceSize=64m
+      - DATABASE_URL=jdbc:mysql://${RDS_HOST}:3306/fitnessapp_subscriptions?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://${RDS_HOST}:3306/fitnessapp_subscriptions?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - EUREKA_CLIENT_ENABLED=false
+    restart: unless-stopped
+    networks:
+      - fitnessapp-net
+
+  # ========== Payment Service ==========
+  payment-service:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/fitnessapp/payment-service:latest
+    container_name: payment-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xmx96m -Xms64m -XX:+UseSerialGC -XX:MaxMetaspaceSize=64m
+      - DATABASE_URL=jdbc:mysql://${RDS_HOST}:3306/fitnessapp_payments?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - MERCHANT_UPI_ID=${MERCHANT_UPI_ID:-fitnessapp@upi}
+      - MERCHANT_NAME=${MERCHANT_NAME:-FitnessApp}
+      - SUBSCRIPTION_SERVICE_URL=http://subscription-service:8087
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID:-rzp_test_placeholder}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET:-placeholder_secret}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://${RDS_HOST}:3306/fitnessapp_payments?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - EUREKA_CLIENT_ENABLED=false
+    restart: unless-stopped
+    networks:
+      - fitnessapp-net
+
+networks:
+  fitnessapp-net:
+    driver: bridge
+

@@ -9,6 +9,7 @@ import { fetchExerciseReport, fetchDietReport, clearReports } from '../store/sli
 import ExerciseReportTable from './components/ExerciseReportTable';
 import DietReportTable from './components/DietReportTable';
 import { generateReportPDF } from '../utils/reportPdfGenerator';
+import { useTranslation } from '../i18n';
 
 const formatDate = (d) => {
   const year = d.getFullYear();
@@ -30,15 +31,16 @@ const sanitizeDateInput = (val) => val.replace(/[^0-9-]/g, '').substring(0, 10);
 
 const MAX_RANGE_DAYS = 365;
 
-const TIMEFRAMES = [
-  { label: 'Last Week', days: 7 },
-  { label: 'Last 1 Month', days: 30 },
-  { label: 'Last 3 Months', days: 90 },
-];
-
 const ReportGeneratorScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const { exerciseReport, dietReport, loading, error } = useSelector((state) => state.report);
+
+  const TIMEFRAMES = [
+    { label: t('reports.lastWeekShort'), days: 7 },
+    { label: t('reports.last1Month'), days: 30 },
+    { label: t('reports.last3MonthsShort'), days: 90 },
+  ];
 
   const [includeExercise, setIncludeExercise] = useState(true);
   const [includeDiet, setIncludeDiet] = useState(true);
@@ -67,31 +69,31 @@ const ReportGeneratorScreen = ({ navigation }) => {
     const showError = (title, msg) => Platform.OS === 'web' ? window.alert(`${title}\n${msg}`) : Alert.alert(title, msg);
 
     if (!includeExercise && !includeDiet) {
-      showError('Select Report', 'Please select at least one report type.');
+      showError(t('reports.selectReport'), t('reports.selectReportMsg'));
       return;
     }
     const range = getDateRange();
     if (!range) {
-      showError('Select Timeframe', 'Please select a timeframe or enter a custom date range.');
+      showError(t('reports.selectTimeframe'), t('reports.selectTimeframeMsg'));
       return;
     }
 
     // Validate date format and real calendar dates
     if (!isValidDate(range.startDate) || !isValidDate(range.endDate)) {
-      showError('Invalid Date', 'Please enter valid dates in YYYY-MM-DD format (e.g. 2026-01-15).');
+      showError(t('reports.invalidDate'), t('reports.invalidDateMsg'));
       return;
     }
 
     // Start must be before or equal to end
     if (range.startDate > range.endDate) {
-      showError('Invalid Range', 'Start date must be before or equal to end date.');
+      showError(t('reports.invalidRange'), t('reports.invalidRangeMsg'));
       return;
     }
 
     // No future dates allowed — end date can be at most today
     const today = formatDate(new Date());
     if (range.endDate > today) {
-      showError('Invalid Date', 'End date cannot be in the future.');
+      showError(t('reports.invalidDate'), t('reports.futureDateMsg'));
       return;
     }
 
@@ -100,7 +102,7 @@ const ReportGeneratorScreen = ({ navigation }) => {
     const endMs = new Date(range.endDate + 'T00:00:00').getTime();
     const diffDays = Math.round((endMs - startMs) / (1000 * 60 * 60 * 24));
     if (diffDays > MAX_RANGE_DAYS) {
-      showError('Range Too Large', `Date range cannot exceed ${MAX_RANGE_DAYS} days. You selected ${diffDays} days.`);
+      showError(t('reports.rangeTooLarge'), `${MAX_RANGE_DAYS} days max. You selected ${diffDays} days.`);
       return;
     }
 
@@ -117,16 +119,16 @@ const ReportGeneratorScreen = ({ navigation }) => {
 
   const handleDownloadPDF = async () => {
     if (!exerciseReport && !dietReport) {
-      const msg = 'No report data available. Please generate a report first.';
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('No Data', msg);
+      const msg = t('reports.noDataMsg');
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('reports.noData'), msg);
       return;
     }
     setPdfLoading(true);
     try {
       await generateReportPDF(exerciseReport, dietReport);
     } catch (e) {
-      const msg = 'Could not generate PDF. ' + (e.message || '');
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('PDF Error', msg);
+      const msg = t('reports.pdfError') + ': ' + (e.message || '');
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('reports.pdfError'), msg);
     } finally {
       setPdfLoading(false);
     }
@@ -144,15 +146,15 @@ const ReportGeneratorScreen = ({ navigation }) => {
       {/* ─── Header ─── */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>📊 Report Generator</Text>
-        <Text style={styles.subtitle}>Create custom fitness & diet reports</Text>
+        <Text style={styles.title}>📊 {t('reports.title')}</Text>
+        <Text style={styles.subtitle}>{t('reports.createCustomReports')}</Text>
       </View>
 
       {/* ─── Report Type Selection ─── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Select Report Types</Text>
+        <Text style={styles.sectionTitle}>{t('reports.selectReportTypes')}</Text>
         <View style={styles.checkboxRow}>
           <TouchableOpacity
             style={[styles.checkbox, includeExercise && styles.checkboxActive]}
@@ -160,7 +162,7 @@ const ReportGeneratorScreen = ({ navigation }) => {
           >
             <Text style={styles.checkIcon}>{includeExercise ? '☑' : '☐'}</Text>
             <Text style={[styles.checkLabel, includeExercise && styles.checkLabelActive]}>
-              🏋️ Exercise Report
+              🏋️ {t('reports.exerciseReport')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -169,7 +171,7 @@ const ReportGeneratorScreen = ({ navigation }) => {
           >
             <Text style={styles.checkIcon}>{includeDiet ? '☑' : '☐'}</Text>
             <Text style={[styles.checkLabel, includeDiet && styles.checkLabelActive]}>
-              🥗 Diet Report
+              🥗 {t('reports.dietReport')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -177,7 +179,7 @@ const ReportGeneratorScreen = ({ navigation }) => {
 
       {/* ─── Timeframe Selection ─── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Select Timeframe</Text>
+        <Text style={styles.sectionTitle}>{t('reports.selectTimeframe')}</Text>
         <View style={styles.timeframeRow}>
           {TIMEFRAMES.map((tf, idx) => (
             <TouchableOpacity
@@ -208,14 +210,14 @@ const ReportGeneratorScreen = ({ navigation }) => {
           onPress={() => setShowCustomRange(!showCustomRange)}
         >
           <Text style={[styles.customRangeToggleText, showCustomRange && { color: '#fff' }]}>
-            📅 Custom Date Range
+            📅 {t('reports.customRange')}
           </Text>
         </TouchableOpacity>
 
         {showCustomRange && (
           <View style={styles.dateInputRow}>
             <View style={styles.dateInputGroup}>
-              <Text style={styles.dateLabel}>Start Date</Text>
+              <Text style={styles.dateLabel}>{t('reports.startDate')}</Text>
               <TextInput
                 style={styles.dateInput}
                 value={customStart}
@@ -227,7 +229,7 @@ const ReportGeneratorScreen = ({ navigation }) => {
             </View>
             <Text style={styles.dateArrow}>→</Text>
             <View style={styles.dateInputGroup}>
-              <Text style={styles.dateLabel}>End Date</Text>
+              <Text style={styles.dateLabel}>{t('reports.endDate')}</Text>
               <TextInput
                 style={styles.dateInput}
                 value={customEnd}
@@ -255,7 +257,7 @@ const ReportGeneratorScreen = ({ navigation }) => {
           {loading ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Text style={styles.generateBtnText}>📄 Generate Report</Text>
+            <Text style={styles.generateBtnText}>📄 {t('reports.generateReport')}</Text>
           )}
         </View>
       </TouchableOpacity>
@@ -271,9 +273,9 @@ const ReportGeneratorScreen = ({ navigation }) => {
       {generated && !loading && (exerciseReport || dietReport) && (
         <View style={styles.resultsSection}>
           <View style={styles.resultsTitleRow}>
-            <Text style={styles.resultsTitle}>📋 Report Results</Text>
+            <Text style={styles.resultsTitle}>📋 {t('reports.reportReady')}</Text>
             <TouchableOpacity style={[styles.pdfBtn, pdfLoading && { opacity: 0.6 }]} onPress={handleDownloadPDF} disabled={pdfLoading}>
-              <Text style={styles.pdfBtnText}>{pdfLoading ? '⏳ Preparing...' : '📥 Download PDF'}</Text>
+              <Text style={styles.pdfBtnText}>{pdfLoading ? '⏳ ...' : `📥 ${t('reports.downloadPdf')}`}</Text>
             </TouchableOpacity>
           </View>
 
@@ -284,7 +286,7 @@ const ReportGeneratorScreen = ({ navigation }) => {
 
       {generated && !loading && !exerciseReport && !dietReport && !error && (
         <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>No data found for the selected period.</Text>
+          <Text style={styles.emptyText}>{t('reports.noDataMsg')}</Text>
         </View>
       )}
 

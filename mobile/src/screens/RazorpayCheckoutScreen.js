@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { WebView } from 'react-native-webview';
 import paymentService from '../services/paymentService';
 import { colors } from '../config/theme';
+import { useTranslation } from '../i18n';
 
 const RazorpayCheckoutScreen = ({ navigation, route }) => {
+  const { t } = useTranslation();
   const { razorpayOrderId, razorpayKeyId, payment, plan, subscription } = route.params;
   const [verifying, setVerifying] = useState(false);
 
@@ -100,26 +102,26 @@ const RazorpayCheckoutScreen = ({ navigation, route }) => {
               subscription,
             });
           } else {
-            Alert.alert('Payment Issue', 'Payment verification pending. Please contact support.', [
+            Alert.alert(t('payment.paymentIssue'), t('payment.verificationPending'), [
               { text: 'OK', onPress: () => navigation.goBack() },
             ]);
           }
         } catch (error) {
-          Alert.alert('Verification Failed', error.response?.data?.message || 'Failed to verify payment. Please contact support.', [
+          Alert.alert(t('payment.verificationFailed'), error.response?.data?.message || t('payment.verificationPending'), [
             { text: 'OK', onPress: () => navigation.goBack() },
           ]);
         } finally {
           setVerifying(false);
         }
       } else if (data.type === 'FAILED') {
-        Alert.alert('Payment Failed', data.error || 'Payment was not completed.', [
-          { text: 'Try Again', onPress: () => navigation.goBack() },
+        Alert.alert(t('payment.paymentFailed'), data.error || t('payment.paymentNotCompleted'), [
+          { text: t('common.retry'), onPress: () => navigation.goBack() },
         ]);
       } else if (data.type === 'DISMISSED') {
         navigation.goBack();
       } else if (data.type === 'ERROR') {
-        Alert.alert('Error', data.error || 'Something went wrong.', [
-          { text: 'Go Back', onPress: () => navigation.goBack() },
+        Alert.alert(t('common.error'), data.error || t('common.error'), [
+          { text: t('common.back'), onPress: () => navigation.goBack() },
         ]);
       }
     } catch (e) {
@@ -131,8 +133,8 @@ const RazorpayCheckoutScreen = ({ navigation, route }) => {
     return (
       <View style={styles.verifyingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.verifyingText}>Verifying payment...</Text>
-        <Text style={styles.verifyingSubtext}>Please do not close this screen</Text>
+        <Text style={styles.verifyingText}>{t('payment.verifyingPayment')}</Text>
+        <Text style={styles.verifyingSubtext}>{t('payment.doNotClose')}</Text>
       </View>
     );
   }
@@ -148,7 +150,7 @@ const RazorpayCheckoutScreen = ({ navigation, route }) => {
         renderLoading={() => (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Loading payment gateway...</Text>
+            <Text style={styles.loadingText}>{t('payment.loadingGateway')}</Text>
           </View>
         )}
         style={styles.webview}

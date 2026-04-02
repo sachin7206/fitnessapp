@@ -43,6 +43,10 @@ public class GenerateNutritionPlanRequest {
     @Valid
     private FoodPreferences foodPreferences;
 
+    // Plan generation limit (from subscription)
+    private Integer maxPlanGenerations;
+    private String subscriptionStartDate; // YYYY-MM-DD format
+
     @Data @NoArgsConstructor @AllArgsConstructor
     public static class CustomMeal {
         private Long id;

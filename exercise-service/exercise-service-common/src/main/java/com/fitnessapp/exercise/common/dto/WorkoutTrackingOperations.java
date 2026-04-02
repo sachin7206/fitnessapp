@@ -1,6 +1,7 @@
 package com.fitnessapp.exercise.common.dto;
 
 import java.util.List;
+import java.util.Map;
 
 public interface WorkoutTrackingOperations {
     UserWorkoutPlanDTO getActiveWorkoutPlan(Long userId);
@@ -8,6 +9,7 @@ public interface WorkoutTrackingOperations {
     UserWorkoutPlanDTO markWorkoutComplete(Long userId);
     UserWorkoutPlanDTO markWorkoutUncomplete(Long userId);
     Integer getWorkoutCount(Long userId);
+    List<Map<String, Object>> getCompletionHistory(Long userId);
     void cancelPlan(Long userId);
 
     // Step tracking

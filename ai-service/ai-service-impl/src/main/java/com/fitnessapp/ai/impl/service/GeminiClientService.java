@@ -49,40 +49,58 @@ public class GeminiClientService {
         List<String> apiKeys = geminiConfig.getApiKeys();
         aiValidator.validateApiKeysConfigured(!apiKeys.isEmpty());
 
-        for (String apiKey : apiKeys) {
-            try {
-                Client client = Client.builder().apiKey(apiKey).build();
-
-                GenerateContentConfig.Builder configBuilder = GenerateContentConfig.builder()
-                        .temperature(0.7f)
-                        .maxOutputTokens(8192);
-
-                if (jsonMode) {
-                    configBuilder.responseMimeType("application/json");
-                }
-
-                GenerateContentResponse response = client.models.generateContent(
-                        geminiConfig.getModel(),
-                        prompt,
-                        configBuilder.build()
-                );
-
-                String text = response.text();
-                if (text != null && !text.isBlank()) {
-                    log.debug("Gemini response received, length: {}", text.length());
-                    return text;
-                }
-            } catch (Exception e) {
-                String msg = e.getMessage() != null ? e.getMessage() : "";
-                if (msg.contains("429") || msg.contains("quota") || msg.contains("RESOURCE_EXHAUSTED")) {
-                    log.warn("Gemini API key rate limited, trying next key...");
-                    continue;
-                }
-                log.error("Gemini API error with key: {}", msg);
-                throw new RuntimeException("Gemini API error: " + msg, e);
+        int maxRetries = 3;
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            if (attempt > 0) {
+                long waitSeconds = 15L * attempt; // 15s, 30s, 45s
+                log.info("All keys rate limited, waiting {}s before retry {}/{}...", waitSeconds, attempt + 1, maxRetries);
+                try { Thread.sleep(waitSeconds * 1000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
             }
+
+            boolean allRateLimited = true;
+            for (String apiKey : apiKeys) {
+                try {
+                    Client client = Client.builder().apiKey(apiKey).build();
+
+                    GenerateContentConfig.Builder configBuilder = GenerateContentConfig.builder()
+                            .temperature(0.7f)
+                            .maxOutputTokens(8192);
+
+                    if (jsonMode) {
+                        configBuilder.responseMimeType("application/json");
+                    }
+
+                    GenerateContentResponse response = client.models.generateContent(
+                            geminiConfig.getModel(),
+                            prompt,
+                            configBuilder.build()
+                    );
+
+                    String text = response.text();
+                    if (text != null && !text.isBlank()) {
+                        log.info("Gemini AI response received (attempt {}), length: {}", attempt + 1, text.length());
+                        return text;
+                    }
+                } catch (Exception e) {
+                    String msg = e.getMessage() != null ? e.getMessage() : "";
+                    if (msg.contains("429") || msg.contains("quota") || msg.contains("RESOURCE_EXHAUSTED")) {
+                        log.warn("Gemini API key rate limited (attempt {}), trying next key...", attempt + 1);
+                        continue;
+                    }
+                    // If JSON mode is not supported by this model, retry without JSON mode
+                    if (jsonMode && (msg.contains("400") || msg.contains("JSON mode is not enabled"))) {
+                        log.warn("JSON mode not supported by model {}, retrying without JSON mode", geminiConfig.getModel());
+                        return generateContent(prompt, false);
+                    }
+                    allRateLimited = false;
+                    log.error("Gemini API error with key: {}", msg);
+                    throw new RuntimeException("Gemini API error: " + msg, e);
+                }
+            }
+            // If not all were rate limited (some other error), don't retry
+            if (!allRateLimited) break;
         }
-        throw new RuntimeException("All Gemini API keys exhausted");
+        throw new RuntimeException("All Gemini API keys exhausted after " + maxRetries + " retries");
     }
 
     /**

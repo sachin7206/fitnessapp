@@ -6,6 +6,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { mergeStepHistory, persistWorkoutTracking } from '../store/slices/workoutTrackingSlice';
 import workoutService from '../services/workoutService';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
+import { useTranslation } from '../i18n';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CHART_HEIGHT = 200;
@@ -18,6 +19,7 @@ const getDateString = (d) => {
 };
 
 const StepHistoryScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const { todaySteps: rawSteps, stepGoal: rawGoal, stepHistory: rawHistory } = useSelector(state => state.workoutTracking);
   // Sanitize values — guard against non-numeric data
@@ -93,8 +95,8 @@ const StepHistoryScreen = ({ navigation }) => {
   const weekAvgSteps = Math.round(weekTotalSteps / 7);
 
   const weekLabel = useMemo(() => {
-    if (weekOffset === 0) return 'This Week';
-    if (weekOffset === -1) return 'Last Week';
+    if (weekOffset === 0) return t('common.thisWeek');
+    if (weekOffset === -1) return t('common.lastWeek');
     const d0 = weekData[0];
     const d6 = weekData[6];
     return `${d0.dayNum} ${d0.month} – ${d6.dayNum} ${d6.month}`;
@@ -106,9 +108,9 @@ const StepHistoryScreen = ({ navigation }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Step Tracker</Text>
+        <Text style={styles.headerTitle}>{t('steps.stepTracker')}</Text>
         <View style={{ width: 60 }} />
       </View>
 
@@ -117,20 +119,20 @@ const StepHistoryScreen = ({ navigation }) => {
         <View style={styles.todayCard}>
           <Text style={styles.todayIcon}>👟</Text>
           <Text style={styles.todaySteps}>{(todaySteps || 0).toLocaleString()}</Text>
-          <Text style={styles.todayLabel}>Steps Today</Text>
+          <Text style={styles.todayLabel}>{t('steps.stepsToday')}</Text>
           <View style={styles.todayMeta}>
             <View style={styles.todayMetaItem}>
               <Text style={styles.metaValue}>🔥 {todayCal}</Text>
-              <Text style={styles.metaLabel}>Calories</Text>
+              <Text style={styles.metaLabel}>{t('steps.caloriesBurned')}</Text>
             </View>
             <View style={styles.todayMetaItem}>
               <Text style={styles.metaValue}>📏 {((todaySteps || 0) * 0.0008).toFixed(1)}</Text>
-              <Text style={styles.metaLabel}>km</Text>
+              <Text style={styles.metaLabel}>{t('home.km')}</Text>
             </View>
             {stepGoal > 0 && (
               <View style={styles.todayMetaItem}>
                 <Text style={styles.metaValue}>🎯 {Math.min(100, Math.round(((todaySteps || 0) / stepGoal) * 100))}%</Text>
-                <Text style={styles.metaLabel}>Goal</Text>
+                <Text style={styles.metaLabel}>{t('steps.goalProgress')}</Text>
               </View>
             )}
           </View>
@@ -145,7 +147,7 @@ const StepHistoryScreen = ({ navigation }) => {
                 }]} />
               </View>
               <Text style={styles.goalText}>
-                {(todaySteps || 0).toLocaleString()} / {stepGoal.toLocaleString()} steps
+                {t('steps.stepGoalProgress', { current: (todaySteps || 0).toLocaleString(), goal: stepGoal.toLocaleString() })}
               </Text>
             </View>
           )}
@@ -199,8 +201,8 @@ const StepHistoryScreen = ({ navigation }) => {
                   {/* Tooltip */}
                   {isSelected && day.steps > 0 && (
                     <View style={styles.tooltip}>
-                      <Text style={styles.tooltipSteps}>{day.steps.toLocaleString()} steps</Text>
-                      <Text style={styles.tooltipCal}>🔥 {day.caloriesBurned} cal</Text>
+                      <Text style={styles.tooltipSteps}>{day.steps.toLocaleString()} {t('steps.stepsUnit')}</Text>
+                      <Text style={styles.tooltipCal}>🔥 {day.caloriesBurned} {t('steps.calUnit')}</Text>
                     </View>
                   )}
 
@@ -225,36 +227,36 @@ const StepHistoryScreen = ({ navigation }) => {
 
         {/* Week summary */}
         <View style={styles.weekSummary}>
-          <Text style={styles.summaryTitle}>Week Summary</Text>
+          <Text style={styles.summaryTitle}>{t('steps.weekSummary')}</Text>
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryValue}>{weekTotalSteps.toLocaleString()}</Text>
-              <Text style={styles.summaryLabel}>Total Steps</Text>
+              <Text style={styles.summaryLabel}>{t('steps.totalSteps')}</Text>
             </View>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryValue}>{weekAvgSteps.toLocaleString()}</Text>
-              <Text style={styles.summaryLabel}>Daily Average</Text>
+              <Text style={styles.summaryLabel}>{t('steps.dailyAverage')}</Text>
             </View>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryValue}>{weekTotalCal.toLocaleString()}</Text>
-              <Text style={styles.summaryLabel}>Calories Burned</Text>
+              <Text style={styles.summaryLabel}>{t('steps.caloriesBurned')}</Text>
             </View>
           </View>
         </View>
 
         {/* Daily breakdown */}
-        <Text style={styles.sectionTitle}>Daily Breakdown</Text>
+        <Text style={styles.sectionTitle}>{t('steps.dailyBreakdown')}</Text>
         {weekData.slice().reverse().map((day, idx) => (
           <View key={idx} style={[styles.dayRow, day.isToday && styles.dayRowToday]}>
             <View style={styles.dayRowLeft}>
               <Text style={[styles.dayRowDay, day.isToday && styles.dayRowDayToday]}>
                 {day.dayLabel} {day.dayNum}
               </Text>
-              {day.isToday && <Text style={styles.todayBadge}>Today</Text>}
+              {day.isToday && <Text style={styles.todayBadge}>{t('days.today')}</Text>}
             </View>
             <View style={styles.dayRowRight}>
-              <Text style={styles.dayRowSteps}>{day.steps.toLocaleString()} steps</Text>
-              <Text style={styles.dayRowCal}>🔥 {day.caloriesBurned} cal</Text>
+              <Text style={styles.dayRowSteps}>{day.steps.toLocaleString()} {t('steps.stepsUnit')}</Text>
+              <Text style={styles.dayRowCal}>🔥 {day.caloriesBurned} {t('steps.calUnit')}</Text>
             </View>
           </View>
         ))}

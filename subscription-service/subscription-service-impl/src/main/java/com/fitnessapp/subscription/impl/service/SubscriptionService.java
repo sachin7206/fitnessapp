@@ -133,6 +133,7 @@ public class SubscriptionService implements SubscriptionOperations {
             dto.setPlanName(s.getPlan().getName());
             dto.setPlanPrice(s.getPlan().getPrice());
             dto.setDurationMonths(s.getPlan().getDurationMonths());
+            dto.setMaxPlanGenerations(s.getPlan().getMaxPlanGenerations());
         }
         return dto;
     }
@@ -147,6 +148,7 @@ public class SubscriptionService implements SubscriptionOperations {
         dto.setCurrency(p.getCurrency());
         dto.setIsActive(p.getIsActive());
         dto.setFeatures(p.getFeatures());
+        dto.setMaxPlanGenerations(p.getMaxPlanGenerations());
         return dto;
     }
 }

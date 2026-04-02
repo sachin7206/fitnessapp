@@ -28,10 +28,8 @@ import FreeWorkoutViewScreen from '../screens/FreeWorkoutViewScreen';
 import StepHistoryScreen from '../screens/StepHistoryScreen';
 import ProgressDashboardScreen from '../screens/ProgressDashboardScreen';
 import WellnessHomeScreen from '../screens/WellnessHomeScreen';
-import FoodPhotoLogScreen from '../screens/FoodPhotoLogScreen';
 import GroceryListScreen from '../screens/GroceryListScreen';
 import WeeklyReportScreen from '../screens/WeeklyReportScreen';
-import WorkoutFeedbackScreen from '../screens/WorkoutFeedbackScreen';
 import ExerciseProgressScreen from '../screens/ExerciseProgressScreen';
 import SubscriptionPlansScreen from '../screens/SubscriptionPlansScreen';
 import PaymentScreen from '../screens/PaymentScreen';
@@ -41,6 +39,7 @@ import RazorpayCheckoutScreen from '../screens/RazorpayCheckoutScreen';
 import NutritionChoiceScreen from '../screens/NutritionChoiceScreen';
 import FreeNutritionBuilderScreen from '../screens/FreeNutritionBuilderScreen';
 import ReportGeneratorScreen from '../screens/ReportGeneratorScreen';
+import PhotoLogScreen from '../screens/PhotoLogScreen';
 
 import { colors, spacing } from '../config/theme';
 
@@ -124,12 +123,11 @@ const MainStack = () => (
     <Stack.Screen name="StepHistory" component={StepHistoryScreen} />
     <Stack.Screen name="ProgressDashboard" component={ProgressDashboardScreen} />
     <Stack.Screen name="WellnessHome" component={WellnessHomeScreen} />
-    <Stack.Screen name="FoodPhotoLog" component={FoodPhotoLogScreen} />
     <Stack.Screen name="GroceryList" component={GroceryListScreen} />
     <Stack.Screen name="WeeklyReport" component={WeeklyReportScreen} />
     <Stack.Screen name="ReportGenerator" component={ReportGeneratorScreen} />
-    <Stack.Screen name="WorkoutFeedback" component={WorkoutFeedbackScreen} />
     <Stack.Screen name="ExerciseProgress" component={ExerciseProgressScreen} />
+    <Stack.Screen name="PhotoLog" component={PhotoLogScreen} />
     <Stack.Screen name="SubscriptionPlans" component={SubscriptionPlansScreen} />
     <Stack.Screen name="Payment" component={PaymentScreen} />
     <Stack.Screen name="RazorpayCheckout" component={RazorpayCheckoutScreen} />

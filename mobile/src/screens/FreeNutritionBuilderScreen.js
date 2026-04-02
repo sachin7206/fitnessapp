@@ -5,8 +5,10 @@ import {
 } from 'react-native';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import nutritionService from '../services/nutritionService';
+import { useTranslation } from '../i18n';
 
 const FreeNutritionBuilderScreen = ({ navigation, route }) => {
+  const { t } = useTranslation();
   const { customMeals: mealSlots = [] } = route.params || {};
 
   const [planName, setPlanName] = useState('My Custom Diet Plan');
@@ -229,7 +231,7 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
     const emptyMeals = meals.filter(m => m.foodItems.length === 0);
     if (emptyMeals.length > 0) {
       const names = emptyMeals.map(m => m.name).join(', ');
-      showAlert('Add Food Items', `Please add at least one food item to each meal.\n\nMissing: ${names}`);
+      showAlert(t('freeNutritionBuilder.addFoodItems'), `${t('freeNutritionBuilder.addFoodItemsMsg')}\n\n${t('freeNutritionBuilder.missing')}: ${names}`);
       return;
     }
 
@@ -258,7 +260,7 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
       };
 
       await nutritionService.saveFreePlan(request);
-      showAlert('Plan Activated! 🎉', 'Your custom nutrition plan is now active!');
+      showAlert(t('freeNutritionBuilder.planActivated'), t('freeNutritionBuilder.planActivatedMsg'));
       navigation.reset({
         index: 0,
         routes: [
@@ -268,7 +270,7 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
       });
     } catch (err) {
       
-      showAlert('Error', err.response?.data?.message || 'Failed to save your plan. Please try again.');
+      showAlert(t('common.error'), err.response?.data?.message || t('common.failed'));
     } finally {
       setSaving(false);
     }
@@ -389,16 +391,16 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Text style={styles.backButtonText}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Your Plan</Text>
+        <Text style={styles.headerTitle}>{t('freeNutritionBuilder.title')}</Text>
         <View style={{ width: 60 }} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Plan Name */}
         <View style={styles.planNameContainer}>
-          <Text style={styles.planNameLabel}>Plan Name</Text>
+          <Text style={styles.planNameLabel}>{t('freeNutritionBuilder.planName')}</Text>
           <TextInput
             style={styles.planNameInput}
             value={planName}
@@ -440,7 +442,7 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
           {saving ? (
             <ActivityIndicator color="#FFF" />
           ) : (
-            <Text style={styles.startButtonText}>🚀 Start This Plan</Text>
+            <Text style={styles.startButtonText}>🚀 {t('freeNutritionBuilder.startPlan')}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -458,7 +460,7 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
         >
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              {editingFoodIndex !== null ? '✏️ Edit Food Item' : '➕ Add Food Item'}
+              {editingFoodIndex !== null ? `✏️ ${t('freeNutritionBuilder.editFoodItem')}` : `➕ ${t('freeNutritionBuilder.addFoodItem')}`}
             </Text>
             {editingMealIndex !== null && (
               <Text style={styles.modalSubtitle}>
@@ -467,7 +469,7 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
             )}
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Food Name *</Text>
+              <Text style={styles.formLabel}>{t('freeNutritionBuilder.foodName')} *</Text>
               <TextInput
                 style={[styles.formInput, foodErrors.name && styles.formInputError]}
                 value={foodForm.name}
@@ -483,7 +485,7 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Quantity</Text>
+              <Text style={styles.formLabel}>{t('freeNutritionBuilder.quantity')}</Text>
               <TextInput
                 style={[styles.formInput, foodErrors.quantity && styles.formInputError]}
                 value={foodForm.quantity}
@@ -573,11 +575,11 @@ const FreeNutritionBuilderScreen = ({ navigation, route }) => {
                 style={styles.modalCancelBtn}
                 onPress={() => setAddModalVisible(false)}
               >
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalSaveBtn} onPress={handleSaveFood}>
                 <Text style={styles.modalSaveText}>
-                  {editingFoodIndex !== null ? 'Update' : 'Add'}
+                  {editingFoodIndex !== null ? t('common.update') : t('common.add')}
                 </Text>
               </TouchableOpacity>
             </View>

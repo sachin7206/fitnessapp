@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service @RequiredArgsConstructor @Slf4j
@@ -25,6 +26,16 @@ public class AIBasedNutritionService implements AIBasedNutritionOperations {
 
     @Transactional
     public NutritionPlanDTO generatePersonalizedPlan(Long userId, GenerateNutritionPlanRequest request) {
+        // Validate plan generation limit
+        if (request.getMaxPlanGenerations() != null && request.getSubscriptionStartDate() != null) {
+            LocalDateTime since = LocalDate.parse(request.getSubscriptionStartDate()).atStartOfDay();
+            long generated = userPlanRepo.countByUserIdAndEnrolledAtAfter(userId, since);
+            if (generated >= request.getMaxPlanGenerations()) {
+                throw new IllegalStateException("Plan generation limit reached. You have used all "
+                    + request.getMaxPlanGenerations() + " nutrition plan generations for your subscription.");
+            }
+        }
+
         UserDto user = userServiceSalClient.getUserById(userId);
         String dietType = determineDietType(user, request);
         String goal = determineGoal(user, request);
@@ -82,6 +93,11 @@ public class AIBasedNutritionService implements AIBasedNutritionOperations {
         userPlanRepo.save(userPlan);
 
         return nutritionService.convertToDTOWithMeals(plan);
+    }
+
+    @Override
+    public long getAiPlanCount(Long userId, LocalDateTime since) {
+        return userPlanRepo.countByUserIdAndEnrolledAtAfter(userId, since);
     }
 
     /**

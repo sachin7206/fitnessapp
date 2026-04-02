@@ -11,8 +11,11 @@ import {
 } from 'react-native';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import nutritionService from '../services/nutritionService';
+import subscriptionService from '../services/subscriptionService';
+import { useTranslation } from '../i18n';
 
 const GeneratedPlanViewScreen = ({ navigation, route }) => {
+  const { t } = useTranslation();
   const {
     plan: existingPlan,
     region,
@@ -70,11 +73,21 @@ const GeneratedPlanViewScreen = ({ navigation, route }) => {
         } : null,
       };
 
+      // Add plan generation limit info from subscription
+      try {
+        const subResp = await subscriptionService.getActiveSubscription();
+        const sub = subResp?.data || subResp;
+        if (sub && sub.startDate) {
+          request.maxPlanGenerations = sub.maxPlanGenerations || sub.durationMonths || 3;
+          request.subscriptionStartDate = sub.startDate;
+        }
+      } catch (e) { /* ignore - backend will still work without limit info */ }
+
       const generatedPlan = await nutritionService.generatePersonalizedPlan(request);
       setPlan(generatedPlan);
     } catch (err) {
       
-      setError(err.response?.data?.message || 'Failed to generate nutrition plan');
+      setError(err.response?.data?.message || t('generatedNutritionPlan.failedGenerate'));
     } finally {
       setLoading(false);
     }
@@ -105,7 +118,7 @@ const GeneratedPlanViewScreen = ({ navigation, route }) => {
   };
 
   const handleStartPlan = () => {
-    showAlert('Plan Activated! 🎉', 'Your personalized nutrition plan is now active!');
+    showAlert(t('generatedNutritionPlan.planActivated'), t('generatedNutritionPlan.planActivatedMsg'));
     navigation.reset({
       index: 0,
       routes: [
@@ -191,31 +204,31 @@ const GeneratedPlanViewScreen = ({ navigation, route }) => {
 
         {/* Meal Total Macros */}
         <View style={styles.mealTotalsContainer}>
-          <Text style={styles.mealTotalsTitle}>Meal Total</Text>
+          <Text style={styles.mealTotalsTitle}>{t('nutrition.mealTotal')}</Text>
           <View style={styles.mealTotalsRow}>
             <View style={styles.mealTotalItem}>
               <Text style={[styles.mealTotalValue, { color: '#374151' }]}>
                 {Math.round(mealTotals.protein)}g
               </Text>
-              <Text style={styles.mealTotalLabel}>Protein</Text>
+              <Text style={styles.mealTotalLabel}>{t('nutrition.protein')}</Text>
             </View>
             <View style={styles.mealTotalItem}>
               <Text style={[styles.mealTotalValue, { color: '#6B7280' }]}>
                 {Math.round(mealTotals.carbs)}g
               </Text>
-              <Text style={styles.mealTotalLabel}>Carbs</Text>
+              <Text style={styles.mealTotalLabel}>{t('nutrition.carbs')}</Text>
             </View>
             <View style={styles.mealTotalItem}>
               <Text style={[styles.mealTotalValue, { color: '#9CA3AF' }]}>
                 {Math.round(mealTotals.fat)}g
               </Text>
-              <Text style={styles.mealTotalLabel}>Fat</Text>
+              <Text style={styles.mealTotalLabel}>{t('nutrition.fat')}</Text>
             </View>
             <View style={styles.mealTotalItem}>
               <Text style={[styles.mealTotalValue, { color: colors.primary }]}>
                 {Math.round(mealTotals.calories)}
               </Text>
-              <Text style={styles.mealTotalLabel}>Cal</Text>
+              <Text style={styles.mealTotalLabel}>{t('nutrition.calories')}</Text>
             </View>
           </View>
         </View>
@@ -236,15 +249,15 @@ const GeneratedPlanViewScreen = ({ navigation, route }) => {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backButtonText}>← Back</Text>
+            <Text style={styles.backButtonText}>{t('common.back')}</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Generating Plan</Text>
+          <Text style={styles.headerTitle}>{t('common.loading')}</Text>
           <View style={{ width: 60 }} />
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>🪄 Crafting your personalized plan...</Text>
-          <Text style={styles.loadingSubtext}>Analyzing your profile, preferences & goals</Text>
+          <Text style={styles.loadingText}>🪄 {t('nutrition.loading')}</Text>
+          <Text style={styles.loadingSubtext}>{t('nutrition.completeProfile')}</Text>
         </View>
       </View>
     );
@@ -256,23 +269,23 @@ const GeneratedPlanViewScreen = ({ navigation, route }) => {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backButtonText}>← Back</Text>
+            <Text style={styles.backButtonText}>{t('common.back')}</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Oops!</Text>
+          <Text style={styles.headerTitle}>{t('common.error')}</Text>
           <View style={{ width: 60 }} />
         </View>
         <View style={styles.errorContainer}>
           <Text style={styles.errorIcon}>😕</Text>
-          <Text style={styles.errorTitle}>Couldn't generate your plan</Text>
+          <Text style={styles.errorTitle}>{t('generatedNutritionPlan.failedGenerate')}</Text>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={generatePlan}>
-            <Text style={styles.retryButtonText}>🔄 Retry</Text>
+            <Text style={styles.retryButtonText}>🔄 {t('common.retry')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.retryButton, { backgroundColor: colors.border, marginTop: 12 }]}
             onPress={() => navigation.goBack()}
           >
-            <Text style={[styles.retryButtonText, { color: colors.text.primary }]}>Go Back</Text>
+            <Text style={[styles.retryButtonText, { color: colors.text.primary }]}>{t('common.back')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -285,13 +298,13 @@ const GeneratedPlanViewScreen = ({ navigation, route }) => {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backButtonText}>← Back</Text>
+            <Text style={styles.backButtonText}>{t('common.back')}</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>No Plan</Text>
+          <Text style={styles.headerTitle}>{t('common.noData')}</Text>
           <View style={{ width: 60 }} />
         </View>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>No plan data available</Text>
+          <Text style={styles.errorText}>{t('common.noData')}</Text>
         </View>
       </View>
     );
@@ -301,9 +314,9 @@ const GeneratedPlanViewScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Text style={styles.backButtonText}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Your Plan</Text>
+        <Text style={styles.headerTitle}>{t('generatedNutritionPlan.title')}</Text>
         <View style={{ width: 60 }} />
       </View>
 
@@ -329,31 +342,31 @@ const GeneratedPlanViewScreen = ({ navigation, route }) => {
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{plan.totalCalories}</Text>
-              <Text style={styles.statLabel}>Calories/Day</Text>
+              <Text style={styles.statLabel}>{t('generatedNutritionPlan.dailyCalories')}</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{plan.durationDays}</Text>
-              <Text style={styles.statLabel}>Days</Text>
+              <Text style={styles.statLabel}>{t('progress.days')}</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{plan.meals?.length || 0}</Text>
-              <Text style={styles.statLabel}>Meals/Day</Text>
+              <Text style={styles.statLabel}>{t('nutrition.mealPlan')}</Text>
             </View>
           </View>
 
           {/* Daily Macros */}
           <View style={styles.macrosContainer}>
-            <Text style={styles.macrosTitle}>Daily Macros Target</Text>
+            <Text style={styles.macrosTitle}>{t('nutrition.protein')} / {t('nutrition.carbs')} / {t('nutrition.fat')}</Text>
             <View style={styles.macrosRow}>
-              {renderMacroCircle(plan.proteinGrams, 'Protein', '#374151')}
-              {renderMacroCircle(plan.carbsGrams, 'Carbs', '#6B7280')}
-              {renderMacroCircle(plan.fatGrams, 'Fat', '#9CA3AF')}
+              {renderMacroCircle(plan.proteinGrams, t('nutrition.protein'), '#374151')}
+              {renderMacroCircle(plan.carbsGrams, t('nutrition.carbs'), '#6B7280')}
+              {renderMacroCircle(plan.fatGrams, t('nutrition.fat'), '#9CA3AF')}
             </View>
           </View>
         </View>
 
         {/* Meals */}
-        <Text style={styles.sectionTitle}>Today's Meals</Text>
+        <Text style={styles.sectionTitle}>{t('nutrition.mealPlan')}</Text>
 
         {plan.meals && plan.meals.length > 0 ? (
           [...plan.meals]
@@ -371,7 +384,7 @@ const GeneratedPlanViewScreen = ({ navigation, route }) => {
             })
             .map((meal, index) => renderMeal(meal, index))
         ) : (
-          <Text style={styles.noMeals}>No meals available</Text>
+          <Text style={styles.noMeals}>{t('common.noData')}</Text>
         )}
 
         <View style={{ height: 100 }} />
@@ -379,7 +392,7 @@ const GeneratedPlanViewScreen = ({ navigation, route }) => {
 
       <View style={styles.footer}>
         <TouchableOpacity style={styles.startButton} onPress={handleStartPlan}>
-          <Text style={styles.startButtonText}>🚀 Start This Plan</Text>
+          <Text style={styles.startButtonText}>🚀 {t('generatedNutritionPlan.startPlan')}</Text>
         </TouchableOpacity>
       </View>
     </View>

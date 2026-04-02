@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import progressService from '../services/progressService';
+import { useTranslation } from '../i18n';
 
 const WeeklyReportScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [report, setReport] = useState(null);
   const [plateauData, setPlateauData] = useState(null);
@@ -40,7 +42,7 @@ const WeeklyReportScreen = ({ navigation }) => {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Generating your weekly report...</Text>
+        <Text style={styles.loadingText}>{t('reports.generatingWeekly')}</Text>
       </View>
     );
   }
@@ -49,9 +51,9 @@ const WeeklyReportScreen = ({ navigation }) => {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>📊 Weekly Report</Text>
+        <Text style={styles.title}>📊 {t('reports.weeklyReport')}</Text>
         {report?.weekStartDate && (
           <Text style={styles.subtitle}>Week of {report.weekStartDate}</Text>
         )}
@@ -65,14 +67,14 @@ const WeeklyReportScreen = ({ navigation }) => {
             <Text style={styles.scoreLabel}>/ 100</Text>
           </View>
           <Text style={styles.scoreSummary}>{report.summary}</Text>
-          {report.fromAi && <Text style={styles.aiTag}>🤖 AI Generated</Text>}
+          {report.fromAi && <Text style={styles.aiTag}>🤖 {t('reports.aiGenerated')}</Text>}
         </View>
       )}
 
       {/* Highlights */}
       {report?.highlights?.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>✨ Highlights</Text>
+          <Text style={styles.sectionTitle}>✨ {t('reports.highlights')}</Text>
           {report.highlights.map((item, idx) => (
             <View key={idx} style={styles.listItem}>
               <Text style={styles.listIcon}>💪</Text>
@@ -85,7 +87,7 @@ const WeeklyReportScreen = ({ navigation }) => {
       {/* Concerns */}
       {report?.concerns?.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>⚠️ Areas to Improve</Text>
+          <Text style={styles.sectionTitle}>⚠️ {t('reports.areasToImprove')}</Text>
           {report.concerns.map((item, idx) => (
             <View key={idx} style={styles.listItem}>
               <Text style={styles.listIcon}>🔸</Text>
@@ -98,7 +100,7 @@ const WeeklyReportScreen = ({ navigation }) => {
       {/* Recommendations */}
       {report?.recommendations?.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💡 Recommendations</Text>
+          <Text style={styles.sectionTitle}>💡 {t('reports.recommendations')}</Text>
           {report.recommendations.map((item, idx) => (
             <View key={idx} style={styles.listItem}>
               <Text style={styles.listIcon}>✅</Text>
@@ -111,10 +113,10 @@ const WeeklyReportScreen = ({ navigation }) => {
       {/* Plateau Detection */}
       {plateauData && (
         <View style={[styles.section, styles.plateauSection]}>
-          <Text style={styles.sectionTitle}>📈 Plateau Analysis</Text>
+          <Text style={styles.sectionTitle}>📈 {t('reports.plateauAnalysis')}</Text>
           <View style={[styles.plateauBadge, { backgroundColor: plateauData.isPlateauDetected ? '#FEF3C7' : '#F0FDF4' }]}>
             <Text style={styles.plateauStatus}>
-              {plateauData.isPlateauDetected ? '⚠️ Plateau Detected' : '✅ No Plateau Detected'}
+              {plateauData.isPlateauDetected ? `⚠️ ${t('reports.plateauDetected')}` : `✅ ${t('reports.noPlateauDetected')}`}
             </Text>
           </View>
           <Text style={styles.plateauAnalysis}>{plateauData.analysis}</Text>
@@ -127,7 +129,7 @@ const WeeklyReportScreen = ({ navigation }) => {
       {/* Achievements */}
       {achievements?.achievements?.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🏆 Achievements</Text>
+          <Text style={styles.sectionTitle}>🏆 {t('reports.achievements')}</Text>
           {achievements.achievements.map((ach, idx) => (
             <View key={idx} style={[styles.achievementCard, !ach.earned && styles.achievementLocked]}>
               <Text style={styles.achievementIcon}>{ach.icon}</Text>
@@ -149,12 +151,12 @@ const WeeklyReportScreen = ({ navigation }) => {
       {/* Streaks */}
       {achievements?.streaks?.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🔥 Streaks</Text>
+          <Text style={styles.sectionTitle}>🔥 {t('reports.streaks')}</Text>
           {achievements.streaks.map((streak, idx) => (
             <View key={idx} style={styles.streakCard}>
               <Text style={styles.streakType}>{streak.type}</Text>
-              <Text style={styles.streakCount}>{streak.currentCount} days</Text>
-              <Text style={styles.streakBest}>Best: {streak.longestCount} days</Text>
+              <Text style={styles.streakCount}>{streak.currentCount} {t('progress.days')}</Text>
+              <Text style={styles.streakBest}>Best: {streak.longestCount} {t('progress.days')}</Text>
             </View>
           ))}
         </View>

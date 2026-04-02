@@ -8,4 +8,14 @@
 **/mobile/
 **/.git/
 **/docs/
+**/.vscode/
+**/.env
+**/*.md
+**/aws/
+docker-compose.yml
+docker-compose*.yml
+render.yaml
+*.sh
+!**/gradlew
+!**/gradlew.bat
 

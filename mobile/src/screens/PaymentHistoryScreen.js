@@ -9,8 +9,10 @@ import {
 } from 'react-native';
 import paymentService from '../services/paymentService';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
+import { useTranslation } from '../i18n';
 
 const PaymentHistoryScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -62,7 +64,7 @@ const PaymentHistoryScreen = ({ navigation }) => {
     <View style={styles.paymentCard}>
       <View style={styles.paymentHeader}>
         <View style={styles.paymentLeft}>
-          <Text style={styles.paymentDescription}>{item.description || 'Subscription Payment'}</Text>
+          <Text style={styles.paymentDescription}>{item.description || t('payment.subscriptionPayment')}</Text>
           <Text style={styles.paymentDate}>{formatDate(item.createdAt)}</Text>
         </View>
         <View style={styles.paymentRight}>
@@ -75,8 +77,8 @@ const PaymentHistoryScreen = ({ navigation }) => {
         </View>
       </View>
       <View style={styles.paymentDetails}>
-        <Text style={styles.detailText}>Method: {item.paymentMethod}</Text>
-        <Text style={styles.detailText}>Ref: {item.transactionRef}</Text>
+        <Text style={styles.detailText}>{t('payment.method')}: {item.paymentMethod}</Text>
+        <Text style={styles.detailText}>{t('payment.ref')}: {item.transactionRef}</Text>
       </View>
     </View>
   );
@@ -85,9 +87,9 @@ const PaymentHistoryScreen = ({ navigation }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Text style={styles.backButtonText}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Payment History</Text>
+        <Text style={styles.headerTitle}>{t('payment.title')}</Text>
         <View style={{ width: 60 }} />
       </View>
 
@@ -98,8 +100,8 @@ const PaymentHistoryScreen = ({ navigation }) => {
       ) : payments.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyIcon}>📋</Text>
-          <Text style={styles.emptyText}>No payment history yet</Text>
-          <Text style={styles.emptySubtext}>Your payments will appear here</Text>
+          <Text style={styles.emptyText}>{t('payment.noPaymentHistory')}</Text>
+          <Text style={styles.emptySubtext}>{t('payment.paymentsAppearHere')}</Text>
         </View>
       ) : (
         <FlatList

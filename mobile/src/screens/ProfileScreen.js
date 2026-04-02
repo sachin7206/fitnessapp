@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { clearWorkoutTracking } from '../store/slices/workoutTrackingSlice';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import { Picker } from '@react-native-picker/picker';
 import { useTranslation, LANGUAGES } from '../i18n';
+import BMIGauge from './components/BMIGauge';
 
 const ProfileScreen = () => {
   const dispatch = useDispatch();
@@ -370,6 +371,28 @@ const ProfileScreen = () => {
             >
               <Text style={styles.buttonText}>Save Health Metrics</Text>
             </TouchableOpacity>
+
+            {/* BMI Calculator */}
+            {(() => {
+              const h = parseFloat(healthData.height);
+              const w = parseFloat(healthData.currentWeight);
+              if (h > 0 && w > 0 && h >= 50 && h <= 300 && w >= 10 && w <= 500) {
+                const heightM = h / 100;
+                const bmi = w / (heightM * heightM);
+                if (bmi >= 5 && bmi <= 80) {
+                  return (
+                    <View style={styles.bmiSection}>
+                      <Text style={styles.sectionTitle}>📊 BMI Calculator</Text>
+                      <BMIGauge bmi={bmi} />
+                      <Text style={styles.bmiNote}>
+                        BMI = {w}kg ÷ ({(h/100).toFixed(2)}m)² = {bmi.toFixed(1)}
+                      </Text>
+                    </View>
+                  );
+                }
+              }
+              return null;
+            })()}
           </View>
         )}
 
@@ -416,7 +439,7 @@ const ProfileScreen = () => {
             style={styles.logoutButton}
             onPress={handleLogout}
           >
-            <Text style={styles.logoutButtonText}>Logout</Text>
+            <Text style={styles.logoutButtonText}>{t('profile.logoutButton')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -560,6 +583,19 @@ const styles = StyleSheet.create({
     ...typography.button,
     color: colors.text.inverse,
     fontWeight: '600',
+  },
+  bmiSection: {
+    marginTop: spacing.xl,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  bmiNote: {
+    ...typography.caption,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    fontStyle: 'italic',
   },
 });
 

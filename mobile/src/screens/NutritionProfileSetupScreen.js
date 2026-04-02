@@ -16,8 +16,10 @@ import { colors, spacing, typography, borderRadius, shadows } from '../config/th
 import { userService } from '../services/userService';
 import { authService } from '../services/authService';
 import { updateUser } from '../store/slices/authSlice';
+import { useTranslation } from '../i18n';
 
 const NutritionProfileSetupScreen = ({ navigation, route }) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const { missingFields = [] } = route.params || {};
@@ -637,9 +639,9 @@ const NutritionProfileSetupScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Text style={styles.backButtonText}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Setup Profile</Text>
+        <Text style={styles.headerTitle}>{t('nutritionProfileSetup.title')}</Text>
         <View style={{ width: 60 }} />
       </View>
 

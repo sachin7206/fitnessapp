@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import authService from '../services/authService';
+import { useTranslation } from '../i18n';
 
 const PasswordCriteria = ({ met, text }) => (
   <View style={styles.criteriaRow}>
@@ -26,6 +27,7 @@ const PasswordCriteria = ({ met, text }) => (
 );
 
 const ResetPasswordScreen = ({ navigation, route }) => {
+  const { t } = useTranslation();
   const email = route.params?.email || '';
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -44,17 +46,17 @@ const ResetPasswordScreen = ({ navigation, route }) => {
 
   const handleResetPassword = async () => {
     if (!otp || otp.length !== 6) {
-      Alert.alert('Error', 'Please enter the 6-digit OTP from your email');
+      Alert.alert(t('common.error'), t('auth.enterOtpError'));
       return;
     }
 
     if (!allCriteriaMet) {
-      Alert.alert('Error', 'Please ensure your password meets all the criteria');
+      Alert.alert(t('common.error'), t('auth.passwordCriteriaError'));
       return;
     }
 
     if (!passwordsMatch) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert(t('common.error'), t('auth.passwordsDontMatch'));
       return;
     }
 
@@ -62,18 +64,18 @@ const ResetPasswordScreen = ({ navigation, route }) => {
     try {
       await authService.resetPassword(otp, newPassword);
       Alert.alert(
-        'Password Reset Successful! 🎉',
-        'Your password has been updated. Please login with your new password.',
+        t('auth.resetSuccessTitle') + ' 🎉',
+        t('auth.resetSuccessMsg'),
         [
           {
-            text: 'Go to Login',
+            text: t('auth.goToLogin'),
             onPress: () => navigation.navigate('Login'),
           },
         ]
       );
     } catch (error) {
-      const message = error.response?.data?.message || 'Failed to reset password. Please try again.';
-      Alert.alert('Error', message);
+      const message = error.response?.data?.message || t('auth.failedResetPassword');
+      Alert.alert(t('common.error'), message);
     } finally {
       setIsLoading(false);
     }
@@ -81,15 +83,15 @@ const ResetPasswordScreen = ({ navigation, route }) => {
 
   const handleResendOTP = async () => {
     if (!email) {
-      Alert.alert('Error', 'Email not found. Please go back and try again.');
+      Alert.alert(t('common.error'), t('auth.emailNotFound'));
       return;
     }
     setIsLoading(true);
     try {
       await authService.forgotPassword(email);
-      Alert.alert('OTP Resent! ✉️', 'A new OTP has been sent to your email.');
+      Alert.alert(t('auth.otpResent'), t('auth.otpResentMsg'));
     } catch (error) {
-      Alert.alert('Error', 'Failed to resend OTP. Please try again.');
+      Alert.alert(t('common.error'), t('auth.failedResendOtp'));
     } finally {
       setIsLoading(false);
     }
@@ -103,19 +105,19 @@ const ResetPasswordScreen = ({ navigation, route }) => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Text style={styles.emoji}>🔑</Text>
-          <Text style={styles.title}>Reset Password</Text>
+          <Text style={styles.title}>{t('auth.resetPassword')}</Text>
           <Text style={styles.subtitle}>
-            Enter the OTP sent to {email || 'your email'} and create a new password.
+            {t('auth.enterResetCode')}
           </Text>
         </View>
 
         <View style={styles.form}>
           {/* OTP Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Enter OTP</Text>
+            <Text style={styles.label}>{t('auth.resetCode')}</Text>
             <TextInput
               style={[styles.input, styles.otpInput]}
-              placeholder="Enter 6-digit OTP"
+              placeholder={t('auth.enterOtp')}
               value={otp}
               onChangeText={(text) => setOtp(text.replace(/[^0-9]/g, '').slice(0, 6))}
               keyboardType="number-pad"
@@ -123,17 +125,17 @@ const ResetPasswordScreen = ({ navigation, route }) => {
               editable={!isLoading}
             />
             <TouchableOpacity onPress={handleResendOTP} disabled={isLoading}>
-              <Text style={styles.resendText}>Didn't receive OTP? Resend</Text>
+              <Text style={styles.resendText}>{t('auth.resendCode')}</Text>
             </TouchableOpacity>
           </View>
 
           {/* New Password */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>New Password</Text>
+            <Text style={styles.label}>{t('auth.newPassword')}</Text>
             <View style={styles.passwordRow}>
               <TextInput
                 style={[styles.input, { flex: 1 }]}
-                placeholder="Create new password"
+                placeholder={t('auth.createNewPassword')}
                 value={newPassword}
                 onChangeText={setNewPassword}
                 secureTextEntry={!showPassword}
@@ -152,21 +154,21 @@ const ResetPasswordScreen = ({ navigation, route }) => {
           {/* Password Criteria */}
           {newPassword.length > 0 && (
             <View style={styles.criteriaContainer}>
-              <Text style={styles.criteriaTitle}>Password must have:</Text>
-              <PasswordCriteria met={hasMinLength} text="At least 8 characters" />
-              <PasswordCriteria met={hasUppercase} text="At least one uppercase letter (A-Z)" />
-              <PasswordCriteria met={hasLowercase} text="At least one lowercase letter (a-z)" />
-              <PasswordCriteria met={hasNumber} text="At least one number (0-9)" />
-              <PasswordCriteria met={hasSpecial} text="At least one special character (!@#$%...)" />
+              <Text style={styles.criteriaTitle}>{t('auth.passwordMustHave')}</Text>
+              <PasswordCriteria met={hasMinLength} text={t('auth.minLength')} />
+              <PasswordCriteria met={hasUppercase} text={t('auth.uppercaseLetter')} />
+              <PasswordCriteria met={hasLowercase} text={t('auth.lowercaseLetter')} />
+              <PasswordCriteria met={hasNumber} text={t('auth.number')} />
+              <PasswordCriteria met={hasSpecial} text={t('auth.specialCharacter')} />
             </View>
           )}
 
           {/* Confirm Password */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Confirm New Password</Text>
+            <Text style={styles.label}>{t('auth.confirmNewPassword')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Re-enter new password"
+              placeholder={t('auth.reenterPassword')}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry={!showPassword}
@@ -175,7 +177,7 @@ const ResetPasswordScreen = ({ navigation, route }) => {
             />
             {confirmPassword.length > 0 && (
               <Text style={[styles.matchText, passwordsMatch ? styles.matchSuccess : styles.matchError]}>
-                {passwordsMatch ? '✅ Passwords match' : '❌ Passwords do not match'}
+                {passwordsMatch ? `✅ ${t('auth.passwordsMatch')}` : `❌ ${t('auth.passwordsNoMatch')}`}
               </Text>
             )}
           </View>
@@ -188,13 +190,13 @@ const ResetPasswordScreen = ({ navigation, route }) => {
             {isLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Reset Password</Text>
+              <Text style={styles.buttonText}>{t('auth.resetPassword')}</Text>
             )}
           </TouchableOpacity>
 
           <View style={styles.footer}>
             <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.linkText}>← Back to Login</Text>
+              <Text style={styles.linkText}>{t('auth.backToLogin')}</Text>
             </TouchableOpacity>
           </View>
         </View>

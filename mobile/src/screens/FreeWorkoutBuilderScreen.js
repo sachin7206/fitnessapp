@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import workoutService from '../services/workoutService';
+import { useTranslation } from '../i18n';
 
 const DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
 
@@ -46,6 +47,7 @@ const filterDecimal = (val) => {
 };
 
 const FreeWorkoutBuilderScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const [planName, setPlanName] = useState('My Custom Workout');
   const [selectedDays, setSelectedDays] = useState(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']);
   const [exercises, setExercises] = useState({}); // { MONDAY: [{name, sets, reps, weight, muscleGroup, isCardio, durationMinutes}], ... }
@@ -424,7 +426,7 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
       if (Platform.OS === 'web') {
         window.alert('Plan Created! 💪\n' + msg);
       } else {
-        Alert.alert('Plan Created! 💪', msg);
+        Alert.alert(t('freeWorkoutBuilder.planSaved'), msg);
       }
 
       navigation.navigate('FreeWorkoutView');
@@ -442,9 +444,9 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Custom Workout</Text>
+        <Text style={styles.headerTitle}>{t('freeWorkoutBuilder.title')}</Text>
         <View style={{ width: 60 }} />
       </View>
 

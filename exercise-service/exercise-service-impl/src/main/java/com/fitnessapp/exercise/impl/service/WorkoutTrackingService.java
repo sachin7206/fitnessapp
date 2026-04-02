@@ -231,6 +231,19 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
     }
 
     @Override
+    public List<Map<String, Object>> getCompletionHistory(Long userId) {
+        return completionRepo.findByUserIdAndCompletedTrueOrderByCompletionDateDesc(userId)
+                .stream()
+                .map(c -> {
+                    Map<String, Object> entry = new LinkedHashMap<>();
+                    entry.put("date", c.getCompletionDate().toString());
+                    entry.put("completedAt", c.getCompletedAt() != null ? c.getCompletedAt().toString() : null);
+                    return entry;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
     @Transactional
     public void cancelPlan(Long userId) {
         userPlanRepo.findByUserIdAndStatus(userId, "ACTIVE").ifPresent(plan -> {

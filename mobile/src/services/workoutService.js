@@ -37,6 +37,12 @@ const workoutService = {
     return response.data;
   },
 
+  // Get workout completion history (all completed dates)
+  getCompletionHistory: async () => {
+    const response = await apiClient.get('/workouts/completion-history');
+    return response.data;
+  },
+
   // Cancel active plan
   cancelPlan: async () => {
     const response = await apiClient.delete('/workouts/my-plan');
@@ -87,23 +93,6 @@ const workoutService = {
     return response.data;
   },
 
-  // Submit workout feedback
-  submitWorkoutFeedback: async (request) => {
-    const response = await apiClient.post('/workouts/my-plan/feedback', request);
-    return response.data;
-  },
-
-  // Get AI-adjusted workout progression
-  adjustWorkoutProgression: async () => {
-    const response = await apiClient.post('/workouts/my-plan/adjust');
-    return response.data;
-  },
-
-  // Get workout feedback history
-  getWorkoutFeedbackHistory: async () => {
-    const response = await apiClient.get('/workouts/my-plan/feedback/history');
-    return response.data;
-  },
 
   // ========== FREE/CUSTOM WORKOUT ==========
 
@@ -155,6 +144,12 @@ const workoutService = {
   },
 
   // ========== REPORT ==========
+
+  // Get AI plan generation count since a date
+  getAiPlanCount: async (since) => {
+    const response = await apiClient.get(`/workouts/ai-plan-count?since=${encodeURIComponent(since)}`);
+    return response.data;
+  },
 
   // Get exercise report for a date range
   getExerciseReport: async (startDate, endDate) => {

@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import nutritionService from '../services/nutritionService';
+import { useTranslation } from '../i18n';
 
 const GroceryListScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [groceryList, setGroceryList] = useState(null);
   const [checkedItems, setCheckedItems] = useState({});
@@ -18,7 +20,7 @@ const GroceryListScreen = ({ navigation }) => {
       const data = await nutritionService.getGroceryList(1);
       setGroceryList(data);
     } catch (error) {
-      Alert.alert('Info', 'Generate a nutrition plan first to get a grocery list');
+      Alert.alert(t('common.error'), t('grocery.generateFirst'));
     }
     setLoading(false);
   };
@@ -36,7 +38,7 @@ const GroceryListScreen = ({ navigation }) => {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Generating grocery list...</Text>
+        <Text style={styles.loadingText}>{t('grocery.generatingList')}</Text>
       </View>
     );
   }
@@ -45,18 +47,18 @@ const GroceryListScreen = ({ navigation }) => {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>🛒 Grocery List</Text>
+        <Text style={styles.title}>🛒 {t('grocery.title')}</Text>
         {groceryList?.planName && (
-          <Text style={styles.subtitle}>For: {groceryList.planName.replace(/_/g, ' ')}</Text>
+          <Text style={styles.subtitle}>{t('grocery.forPlan')}: {groceryList.planName.replace(/_/g, ' ')}</Text>
         )}
       </View>
 
       {/* Progress */}
       <View style={styles.progressCard}>
         <Text style={styles.progressText}>
-          ✅ {checkedCount} / {totalItems} items
+          ✅ {checkedCount} / {totalItems} {t('grocery.items')}
         </Text>
         <View style={styles.progressBar}>
           <View style={[styles.progressFill, { width: `${totalItems > 0 ? (checkedCount / totalItems) * 100 : 0}%` }]} />
@@ -84,7 +86,7 @@ const GroceryListScreen = ({ navigation }) => {
                   </Text>
                   <Text style={styles.itemQuantity}>
                     {item.quantity} {item.unit}
-                    {item.isOptional && ' (optional)'}
+                    {item.isOptional && ` (${t('grocery.optional')})`}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -96,13 +98,13 @@ const GroceryListScreen = ({ navigation }) => {
       {(!groceryList || !groceryList.categories || groceryList.categories.length === 0) && (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>🛒</Text>
-          <Text style={styles.emptyTitle}>No Grocery List</Text>
-          <Text style={styles.emptySubtitle}>Generate a nutrition plan first, then your grocery list will appear here</Text>
+          <Text style={styles.emptyTitle}>{t('grocery.noGroceryList')}</Text>
+          <Text style={styles.emptySubtitle}>{t('grocery.noGroceryListDesc')}</Text>
         </View>
       )}
 
       {groceryList?.fromAi === false && (
-        <Text style={styles.aiNote}>📝 Basic list generated. AI-powered list available when Gemini is active.</Text>
+        <Text style={styles.aiNote}>📝 {t('grocery.aiNote')}</Text>
       )}
 
       <View style={{ height: 40 }} />

@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl, Alert, Platform, TextInput, Modal,
+  ActivityIndicator, RefreshControl, Alert, Platform, TextInput, Modal, Vibration,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/core';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import workoutService from '../services/workoutService';
+import subscriptionService from '../services/subscriptionService';
+import { useTranslation } from '../i18n';
 
 const formatLabel = (str) => {
   if (!str) return '';
@@ -29,11 +31,15 @@ const filterDecimal = (val) => {
 };
 
 const FreeWorkoutViewScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const [userPlan, setUserPlan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedDays, setExpandedDays] = useState({});
   const [now, setNow] = useState(new Date());
+  const [hasSubscription, setHasSubscription] = useState(false);
+  const [remainingPlans, setRemainingPlans] = useState(null);
+  const [maxPlans, setMaxPlans] = useState(null);
 
   // Exercise logging state
   const [exerciseLogs, setExerciseLogs] = useState({}); // { "2026-03-06": { "MONDAY": { 0: { sets: [{reps:12, weight:50},...] } } } }
@@ -56,6 +62,37 @@ const FreeWorkoutViewScreen = ({ navigation }) => {
   const [editDurationMinutes, setEditDurationMinutes] = useState('20');
   const [editIsCardio, setEditIsCardio] = useState(false);
 
+  // Rest timer state
+  const [restTimer, setRestTimer] = useState({ active: false, seconds: 0, total: 0, exerciseName: '' });
+  const restTimerRef = useRef(null);
+
+  const startRestTimer = (seconds, exerciseName) => {
+    const safe = Math.min(600, Math.max(1, Math.round(seconds)));
+    if (restTimerRef.current) clearInterval(restTimerRef.current);
+    setRestTimer({ active: true, seconds: safe, total: safe, exerciseName });
+    restTimerRef.current = setInterval(() => {
+      setRestTimer(prev => {
+        if (prev.seconds <= 1) {
+          clearInterval(restTimerRef.current);
+          restTimerRef.current = null;
+          try { Vibration.vibrate([0, 500, 200, 500]); } catch (e) {}
+          return { ...prev, seconds: 0, active: false };
+        }
+        return { ...prev, seconds: prev.seconds - 1 };
+      });
+    }, 1000);
+  };
+
+  const cancelRestTimer = () => {
+    if (restTimerRef.current) clearInterval(restTimerRef.current);
+    restTimerRef.current = null;
+    setRestTimer({ active: false, seconds: 0, total: 0, exerciseName: '' });
+  };
+
+  useEffect(() => {
+    return () => { if (restTimerRef.current) clearInterval(restTimerRef.current); };
+  }, []);
+
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 30000);
     return () => clearInterval(timer);
@@ -64,6 +101,7 @@ const FreeWorkoutViewScreen = ({ navigation }) => {
   useEffect(() => {
     loadExerciseLogs();
     fetchPlan();
+    checkSubscription();
   }, []);
 
   useFocusEffect(useCallback(() => {
@@ -72,7 +110,35 @@ const FreeWorkoutViewScreen = ({ navigation }) => {
       return;
     }
     fetchPlan();
+    checkSubscription();
   }, []));
+
+  const checkSubscription = async () => {
+    try {
+      const response = await subscriptionService.getActiveSubscription();
+      const sub = response?.data || response;
+      const isActive = !!(sub && (sub.status === 'ACTIVE' || sub.planName));
+      setHasSubscription(isActive);
+
+      if (isActive && sub) {
+        const maxGen = sub.maxPlanGenerations || sub.durationMonths || 3;
+        setMaxPlans(maxGen);
+        if (sub.startDate) {
+          try {
+            const countResp = await workoutService.getAiPlanCount(sub.startDate);
+            const count = countResp?.count ?? 0;
+            setRemainingPlans(Math.max(0, maxGen - count));
+          } catch (err) {
+            setRemainingPlans(maxGen);
+          }
+        } else {
+          setRemainingPlans(maxGen);
+        }
+      }
+    } catch (e) {
+      setHasSubscription(false);
+    }
+  };
 
   const loadExerciseLogs = async () => {
     // Load from backend DB only
@@ -273,7 +339,7 @@ const FreeWorkoutViewScreen = ({ navigation }) => {
     if (Platform.OS === 'web') {
       if (window.confirm('Create a new workout plan? Your current plan will be replaced immediately.')) doNav();
     } else {
-      Alert.alert('Create New Plan', 'Your current plan will be replaced immediately. Continue?', [
+      Alert.alert(t('nutrition.newPlan'), t('workout.createNewPlanConfirm'), [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Continue', onPress: doNav },
       ]);
@@ -443,7 +509,7 @@ const FreeWorkoutViewScreen = ({ navigation }) => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading your workout...</Text>
+        <Text style={styles.loadingText}>{t('workout.loadingWorkout')}</Text>
       </View>
     );
   }
@@ -453,16 +519,16 @@ const FreeWorkoutViewScreen = ({ navigation }) => {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>{t('common.back')}</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Workout</Text>
+          <Text style={styles.headerTitle}>{t('workout.title')}</Text>
           <View style={{ width: 60 }} />
         </View>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyIcon}>🏋️</Text>
-          <Text style={styles.emptyText}>No workout plan found</Text>
+          <Text style={styles.emptyText}>{t('workout.noWorkout')}</Text>
           <TouchableOpacity style={styles.createBtn} onPress={() => navigation.navigate('WorkoutChoice')}>
-            <Text style={styles.createBtnText}>Create Workout Plan</Text>
+            <Text style={styles.createBtnText}>{t('workout.createFirst')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -551,6 +617,16 @@ const FreeWorkoutViewScreen = ({ navigation }) => {
               return null;
             })()}
 
+            {/* Rest Timer Button */}
+            {!ex.isCardio && ex.restTimeSeconds > 0 && (
+              <TouchableOpacity
+                style={styles.restTimerBtn}
+                onPress={() => startRestTimer(ex.restTimeSeconds, ex.exerciseName)}
+              >
+                <Text style={styles.restTimerBtnText}>⏱ Start Rest ({ex.restTimeSeconds}s)</Text>
+              </TouchableOpacity>
+            )}
+
           </View>
 
           <TouchableOpacity
@@ -568,11 +644,11 @@ const FreeWorkoutViewScreen = ({ navigation }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Workout</Text>
+        <Text style={styles.headerTitle}>{t('workout.title')}</Text>
         <TouchableOpacity onPress={handleNewPlan} style={styles.newPlanBtn}>
-          <Text style={styles.newPlanText}>New Plan</Text>
+          <Text style={styles.newPlanText}>{t('workout.newPlan')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -596,21 +672,51 @@ const FreeWorkoutViewScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Subscribe Now Banner */}
-        <TouchableOpacity
-          style={styles.upgradeBanner}
-          onPress={() => navigation.navigate('SubscriptionPlans')}
-          activeOpacity={0.85}
-        >
-          <View style={styles.upgradeBannerLeft}>
-            <Text style={styles.upgradeBannerIcon}>🚀</Text>
+        {/* Subscribe Now Banner / Generate AI Plan */}
+        {hasSubscription && remainingPlans !== null && remainingPlans > 0 ? (
+          <TouchableOpacity
+            style={[styles.upgradeBanner, { borderColor: colors.success, backgroundColor: colors.success + '08' }]}
+            onPress={() => navigation.navigate('WorkoutSetup')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.upgradeBannerLeft}>
+              <Text style={styles.upgradeBannerIcon}>🚀</Text>
+            </View>
+            <View style={styles.upgradeBannerContent}>
+              <Text style={[styles.upgradeBannerTitle, { color: colors.success }]}>Create Your AI Plan</Text>
+              <Text style={styles.upgradeBannerDesc}>Generate a personalized AI workout plan based on your goals</Text>
+              <Text style={[styles.upgradeBannerDesc, { color: '#2563EB', fontWeight: '700', marginTop: 4 }]}>
+                {remainingPlans} of {maxPlans} plan{maxPlans !== 1 ? 's' : ''} remaining
+              </Text>
+            </View>
+            <Text style={styles.upgradeBannerArrow}>→</Text>
+          </TouchableOpacity>
+        ) : hasSubscription && remainingPlans !== null && remainingPlans <= 0 ? (
+          <View style={[styles.upgradeBanner, { borderColor: colors.text.secondary + '30', opacity: 0.7 }]}>
+            <View style={styles.upgradeBannerLeft}>
+              <Text style={styles.upgradeBannerIcon}>🔒</Text>
+            </View>
+            <View style={styles.upgradeBannerContent}>
+              <Text style={[styles.upgradeBannerTitle, { color: colors.text.secondary }]}>AI Plan Limit Reached</Text>
+              <Text style={styles.upgradeBannerDesc}>You have used all {maxPlans} workout plan generation{maxPlans !== 1 ? 's' : ''} included in your subscription.</Text>
+            </View>
           </View>
-          <View style={styles.upgradeBannerContent}>
-            <Text style={styles.upgradeBannerTitle}>Upgrade to Premium</Text>
-            <Text style={styles.upgradeBannerDesc}>Get AI-powered personalized plans, smart progression & more</Text>
-          </View>
-          <Text style={styles.upgradeBannerArrow}>→</Text>
-        </TouchableOpacity>
+        ) : !hasSubscription ? (
+          <TouchableOpacity
+            style={styles.upgradeBanner}
+            onPress={() => navigation.navigate('SubscriptionPlans')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.upgradeBannerLeft}>
+              <Text style={styles.upgradeBannerIcon}>🚀</Text>
+            </View>
+            <View style={styles.upgradeBannerContent}>
+              <Text style={styles.upgradeBannerTitle}>Upgrade to Premium</Text>
+              <Text style={styles.upgradeBannerDesc}>Get AI-powered personalized plans, smart progression & more</Text>
+            </View>
+            <Text style={styles.upgradeBannerArrow}>→</Text>
+          </TouchableOpacity>
+        ) : null}
 
 
         {/* Check Your Progress */}
@@ -935,6 +1041,30 @@ const FreeWorkoutViewScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+
+      {/* Rest Timer Overlay */}
+      {(restTimer.active || (restTimer.seconds === 0 && restTimer.total > 0)) && (
+        <Modal transparent animationType="fade" visible={restTimer.active || (restTimer.seconds === 0 && restTimer.total > 0)}>
+          <View style={styles.timerOverlay}>
+            <View style={styles.timerCard}>
+              <Text style={styles.timerEmoji}>{restTimer.seconds === 0 ? '✅' : '⏱'}</Text>
+              <Text style={styles.timerExName}>{restTimer.exerciseName}</Text>
+              <Text style={styles.timerCountdown}>
+                {restTimer.seconds === 0 ? 'Time\'s Up!' : `${Math.floor(restTimer.seconds / 60)}:${String(restTimer.seconds % 60).padStart(2, '0')}`}
+              </Text>
+              <View style={styles.timerProgressBg}>
+                <View style={[styles.timerProgressFill, {
+                  width: restTimer.total > 0 ? `${((restTimer.total - restTimer.seconds) / restTimer.total) * 100}%` : '0%',
+                  backgroundColor: restTimer.seconds === 0 ? colors.success : colors.primary,
+                }]} />
+              </View>
+              <TouchableOpacity style={styles.timerCancelBtn} onPress={cancelRestTimer}>
+                <Text style={styles.timerCancelText}>{restTimer.seconds === 0 ? 'Done' : 'Cancel'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 };
@@ -1117,6 +1247,33 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, alignItems: 'center',
   },
   modalSaveText: { ...typography.body, color: colors.text.inverse, fontWeight: '600' },
+  // Rest Timer Button
+  restTimerBtn: {
+    backgroundColor: colors.primary + '15', paddingVertical: 4, paddingHorizontal: 10,
+    borderRadius: borderRadius.sm, marginTop: 4, alignSelf: 'flex-start',
+    borderWidth: 1, borderColor: colors.primary + '30',
+  },
+  restTimerBtnText: { fontSize: 11, color: colors.primary, fontWeight: '700' },
+  // Rest Timer Overlay
+  timerOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center',
+  },
+  timerCard: {
+    backgroundColor: colors.surface, borderRadius: borderRadius.xl, padding: spacing.xl,
+    alignItems: 'center', width: 280, ...shadows.lg,
+  },
+  timerEmoji: { fontSize: 48, marginBottom: spacing.sm },
+  timerExName: { ...typography.body, color: colors.text.secondary, fontWeight: '600', marginBottom: spacing.sm },
+  timerCountdown: { fontSize: 56, fontWeight: '800', color: colors.primary, marginVertical: spacing.md },
+  timerProgressBg: {
+    width: '100%', height: 8, backgroundColor: colors.border, borderRadius: 4, overflow: 'hidden', marginBottom: spacing.lg,
+  },
+  timerProgressFill: { height: '100%', borderRadius: 4 },
+  timerCancelBtn: {
+    backgroundColor: colors.text.secondary + '20', paddingVertical: spacing.sm, paddingHorizontal: spacing.xl,
+    borderRadius: borderRadius.lg,
+  },
+  timerCancelText: { ...typography.body, color: colors.text.secondary, fontWeight: '600' },
 });
 
 export default FreeWorkoutViewScreen;

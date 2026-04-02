@@ -13,20 +13,22 @@ import {
 } from 'react-native';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import authService from '../services/authService';
+import { useTranslation } from '../i18n';
 
 const ForgotPasswordScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSendOTP = async () => {
     if (!email) {
-      Alert.alert('Error', 'Please enter your email address');
+      Alert.alert(t('common.error'), t('auth.enterEmailError'));
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      Alert.alert(t('common.error'), t('auth.invalidEmailError'));
       return;
     }
 
@@ -34,28 +36,28 @@ const ForgotPasswordScreen = ({ navigation }) => {
     try {
       const response = await authService.forgotPassword(email);
       Alert.alert(
-        'OTP Generated! ✉️',
-        'A password reset OTP has been generated for your account. If email is configured, check your inbox. Otherwise, check the server console logs for the OTP code.',
+        t('auth.otpGenerated'),
+        t('auth.otpGeneratedMsg'),
         [
           {
-            text: 'Enter OTP',
+            text: t('auth.enterOtpButton'),
             onPress: () => navigation.navigate('ResetPassword', { email }),
           },
         ]
       );
     } catch (error) {
-      const message = error.response?.data?.message || error.message || 'Failed to send reset email. Please try again.';
+      const message = error.response?.data?.message || error.message || t('auth.failedSendReset');
       if (message.toLowerCase().includes('no account found')) {
         Alert.alert(
-          'Account Not Found',
-          'No account found with this email. Please check the email or register a new account.',
+          t('auth.accountNotFound'),
+          t('auth.accountNotFoundMsg'),
           [
-            { text: 'Register', onPress: () => navigation.navigate('Register') },
-            { text: 'Try Again', style: 'cancel' },
+            { text: t('auth.register'), onPress: () => navigation.navigate('Register') },
+            { text: t('auth.tryAgain'), style: 'cancel' },
           ]
         );
       } else {
-        Alert.alert('Error', message);
+        Alert.alert(t('common.error'), message);
       }
     } finally {
       setIsLoading(false);
@@ -70,18 +72,18 @@ const ForgotPasswordScreen = ({ navigation }) => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Text style={styles.emoji}>🔒</Text>
-          <Text style={styles.title}>Forgot Password?</Text>
+          <Text style={styles.title}>{t('auth.forgotPasswordTitle')}</Text>
           <Text style={styles.subtitle}>
-            Enter your registered email address and we'll send you an OTP to reset your password.
+            {t('auth.forgotPasswordDesc')}
           </Text>
         </View>
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email Address</Text>
+            <Text style={styles.label}>{t('auth.email')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter your registered email"
+              placeholder={t('auth.enterEmail')}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -99,14 +101,14 @@ const ForgotPasswordScreen = ({ navigation }) => {
             {isLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Send Reset OTP</Text>
+              <Text style={styles.buttonText}>{t('auth.sendResetCode')}</Text>
             )}
           </TouchableOpacity>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Remember your password? </Text>
+            <Text style={styles.footerText}>{t('auth.backToLogin')} </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.linkText}>Login</Text>
+              <Text style={styles.linkText}>{t('auth.login')}</Text>
             </TouchableOpacity>
           </View>
         </View>

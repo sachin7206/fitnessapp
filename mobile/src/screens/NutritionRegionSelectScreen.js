@@ -12,8 +12,10 @@ import {
 } from 'react-native';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import nutritionService from '../services/nutritionService';
+import { useTranslation } from '../i18n';
 
 const NutritionRegionSelectScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const [selectedRegion, setSelectedRegion] = useState(null);
   const [loading, setLoading] = useState(false);
   const [mealFrequency, setMealFrequency] = useState('4_MEALS');
@@ -95,7 +97,7 @@ const NutritionRegionSelectScreen = ({ navigation }) => {
 
   const handleGeneratePlan = async () => {
     if (!selectedRegion) {
-      showAlert('Select Region', 'Please select your preferred regional cuisine');
+      showAlert(t('nutritionRegion.selectRegion'), t('nutritionRegion.selectRegionAlert'));
       return;
     }
 
@@ -107,22 +109,21 @@ const NutritionRegionSelectScreen = ({ navigation }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Text style={styles.backButtonText}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Choose Your Cuisine</Text>
+        <Text style={styles.headerTitle}>{t('nutritionRegion.title')}</Text>
         <View style={{ width: 60 }} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.introSection}>
-          <Text style={styles.introTitle}>🍽️ Select Your Regional Preference</Text>
+          <Text style={styles.introTitle}>🍽️ {t('nutritionRegion.selectRegion')}</Text>
           <Text style={styles.introText}>
-            We'll create a personalized diet plan featuring authentic dishes from your preferred region,
-            customized to your health goals and dietary preferences.
+            {t('nutritionRegion.selectRegionDesc')}
           </Text>
         </View>
 
-        <Text style={styles.sectionTitle}>Regional Cuisine</Text>
+        <Text style={styles.sectionTitle}>{t('nutritionRegion.regionalCuisine')}</Text>
 
         {regions.map((region) => (
           <TouchableOpacity
@@ -156,8 +157,7 @@ const NutritionRegionSelectScreen = ({ navigation }) => {
         <View style={styles.infoBox}>
           <Text style={styles.infoIcon}>💡</Text>
           <Text style={styles.infoText}>
-            After selecting your region, you'll customize your food preferences, meal count,
-            and supplement options for a truly personalized diet plan.
+            {t('nutritionRegion.infoTip')}
           </Text>
         </View>
 
@@ -173,11 +173,11 @@ const NutritionRegionSelectScreen = ({ navigation }) => {
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator color={colors.text.inverse} />
-              <Text style={styles.loadingText}>Loading...</Text>
+              <Text style={styles.loadingText}>{t('common.loading')}</Text>
             </View>
           ) : (
             <Text style={styles.generateButtonText}>
-              Next: Food Preferences →
+              {t('nutritionRegion.nextFoodPrefs')}
             </Text>
           )}
         </TouchableOpacity>

@@ -17,6 +17,8 @@ public interface WorkoutCompletionRepository extends JpaRepository<WorkoutComple
     List<WorkoutCompletion> findByUserIdAndCompletedTrueAndCompletionDateBetween(
             Long userId, LocalDate start, LocalDate end);
 
+    List<WorkoutCompletion> findByUserIdAndCompletedTrueOrderByCompletionDateDesc(Long userId);
+
     @Modifying
     @Query("DELETE FROM WorkoutCompletion w WHERE w.userId = :userId")
     void deleteByUserId(Long userId);

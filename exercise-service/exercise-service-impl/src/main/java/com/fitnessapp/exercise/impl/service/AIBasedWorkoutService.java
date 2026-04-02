@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -22,6 +24,16 @@ public class AIBasedWorkoutService implements AIBasedWorkoutOperations {
     @Override
     @Transactional
     public WorkoutPlanDTO generatePersonalizedWorkoutPlan(Long userId, GenerateWorkoutPlanRequest request) {
+        // Validate plan generation limit
+        if (request.getMaxPlanGenerations() != null && request.getSubscriptionStartDate() != null) {
+            LocalDateTime since = LocalDate.parse(request.getSubscriptionStartDate()).atStartOfDay();
+            long generated = workoutPlanRepo.countByUserIdAndIsTemplateFalseAndCreatedAtAfter(userId, since);
+            if (generated >= request.getMaxPlanGenerations()) {
+                throw new IllegalStateException("Plan generation limit reached. You have used all " 
+                    + request.getMaxPlanGenerations() + " workout plan generations for your subscription.");
+            }
+        }
+
         List<WorkoutPlan.WorkoutExercise> exercises = null;
 
         // Try AI service first
@@ -31,7 +43,8 @@ public class AIBasedWorkoutService implements AIBasedWorkoutOperations {
                     request.getDaysPerWeek(), request.getExerciseType(), request.getExerciseTime(),
                     request.getDurationMinutes(), request.getGoal(), request.getDifficulty(),
                     request.getIncludeCardio(), request.getCardioType(), request.getCardioDurationMinutes(),
-                    request.getCardioSteps(), request.getFocusMuscleGroups()
+                    request.getCardioSteps(), request.getFocusMuscleGroups(),
+                    request.getWorkoutDays(), convertCustomExercises(request.getCustomExercises())
                 );
                 AiWorkoutPlanResponse aiResponse = aiServiceSalClient.generateWorkoutPlan(aiRequest);
                 if (aiResponse != null && aiResponse.getExercises() != null && !aiResponse.getExercises().isEmpty()) {
@@ -118,9 +131,25 @@ public class AIBasedWorkoutService implements AIBasedWorkoutOperations {
     }
 
     private String buildPlanName(GenerateWorkoutPlanRequest request) {
+        if (request.getPlanName() != null && !request.getPlanName().isBlank()) {
+            return request.getPlanName().trim();
+        }
         String goalLabel = request.getGoal() != null ? titleCase(request.getGoal()) : "Fitness";
         String typeLabel = request.getExerciseType() != null ? titleCase(request.getExerciseType()) : "Workout";
         return goalLabel + " " + typeLabel + " Plan";
+    }
+
+    private List<AiWorkoutPlanRequest.CustomExerciseEntry> convertCustomExercises(
+            List<GenerateWorkoutPlanRequest.CustomExerciseInput> inputs) {
+        if (inputs == null || inputs.isEmpty()) return null;
+        List<AiWorkoutPlanRequest.CustomExerciseEntry> entries = new ArrayList<>();
+        for (GenerateWorkoutPlanRequest.CustomExerciseInput in : inputs) {
+            entries.add(new AiWorkoutPlanRequest.CustomExerciseEntry(
+                in.getDayOfWeek(), in.getExerciseName(), in.getMuscleGroup(),
+                in.getSets(), in.getReps(), in.getWeight(), in.getIsCardio(), in.getDurationMinutes()
+            ));
+        }
+        return entries;
     }
 
     private String titleCase(String s) {
@@ -331,6 +360,11 @@ public class AIBasedWorkoutService implements AIBasedWorkoutOperations {
             return edto;
         }).collect(Collectors.toList()));
         return dto;
+    }
+
+    @Override
+    public long getAiPlanCount(Long userId, LocalDateTime since) {
+        return workoutPlanRepo.countByUserIdAndIsTemplateFalseAndCreatedAtAfter(userId, since);
     }
 }
 

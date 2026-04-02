@@ -1,0 +1,242 @@
+version: '3.8'
+
+# ============================================================
+# FitnessApp - Local Docker Compose (for testing before AWS deploy)
+# Usage: docker compose up --build
+# ============================================================
+
+services:
+
+  # ========== MySQL Database ==========
+  mysql:
+    image: mysql:8.0
+    container_name: fitnessapp-mysql
+    ports:
+      - "3307:3306"   # 3307 on host to avoid conflict with local MySQL
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - fitnessapp-net
+
+  # ========== API Gateway (public-facing, port 8080) ==========
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xmx128m -Xms64m
+      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-for-local-docker-testing-minimum-64-chars-long-string}
+      - FRONTEND_URL=*
+      - USER_SERVICE_URL=http://user-service:8081
+      - NUTRITION_SERVICE_URL=http://nutrition-service:8082
+      - EXERCISE_SERVICE_URL=http://exercise-service:8083
+      - PROGRESS_SERVICE_URL=http://progress-service:8084
+      - WELLNESS_SERVICE_URL=http://wellness-service:8085
+      - AI_SERVICE_URL=http://ai-service:8086
+      - SUBSCRIPTION_SERVICE_URL=http://subscription-service:8087
+      - PAYMENT_SERVICE_URL=http://payment-service:8088
+    restart: unless-stopped
+    depends_on:
+      user-service:
+        condition: service_started
+    networks:
+      - fitnessapp-net
+
+  # ========== User Service ==========
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    container_name: user-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xmx128m -Xms64m
+      - DATABASE_URL=jdbc:mysql://mysql:3306/fitnessapp_users?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - DB_USERNAME=root
+      - DB_PASSWORD=root
+      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-for-local-docker-testing-minimum-64-chars-long-string}
+      - MAIL_USERNAME=${MAIL_USERNAME:-}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-}
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - fitnessapp-net
+
+  # ========== Nutrition Service ==========
+  nutrition-service:
+    build:
+      context: .
+      dockerfile: nutrition-service/Dockerfile
+    container_name: nutrition-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xmx128m -Xms64m
+      - DATABASE_URL=jdbc:mysql://mysql:3306/fitnessapp_nutrition?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - DB_USERNAME=root
+      - DB_PASSWORD=root
+      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-for-local-docker-testing-minimum-64-chars-long-string}
+      - USER_SERVICE_URL=http://user-service:8081
+      - AI_SERVICE_URL=http://ai-service:8086
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - fitnessapp-net
+
+  # ========== Exercise Service ==========
+  exercise-service:
+    build:
+      context: .
+      dockerfile: exercise-service/Dockerfile
+    container_name: exercise-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xmx128m -Xms64m
+      - DATABASE_URL=jdbc:mysql://mysql:3306/fitnessapp_exercises?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - DB_USERNAME=root
+      - DB_PASSWORD=root
+      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-for-local-docker-testing-minimum-64-chars-long-string}
+      - USER_SERVICE_URL=http://user-service:8081
+      - AI_SERVICE_URL=http://ai-service:8086
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - fitnessapp-net
+
+  # ========== Progress Service ==========
+  progress-service:
+    build:
+      context: .
+      dockerfile: progress-service/Dockerfile
+    container_name: progress-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xmx128m -Xms64m
+      - DATABASE_URL=jdbc:mysql://mysql:3306/fitnessapp_progress?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - DB_USERNAME=root
+      - DB_PASSWORD=root
+      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-for-local-docker-testing-minimum-64-chars-long-string}
+      - AI_SERVICE_URL=http://ai-service:8086
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - fitnessapp-net
+
+  # ========== Wellness Service ==========
+  wellness-service:
+    build:
+      context: .
+      dockerfile: wellness-service/Dockerfile
+    container_name: wellness-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xmx128m -Xms64m
+      - DATABASE_URL=jdbc:mysql://mysql:3306/fitnessapp_wellness?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - DB_USERNAME=root
+      - DB_PASSWORD=root
+      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-for-local-docker-testing-minimum-64-chars-long-string}
+      - USER_SERVICE_URL=http://user-service:8081
+      - AI_SERVICE_URL=http://ai-service:8086
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - fitnessapp-net
+
+  # ========== AI Service ==========
+  ai-service:
+    build:
+      context: .
+      dockerfile: ai-service/Dockerfile
+    container_name: ai-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xmx128m -Xms64m
+      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-for-local-docker-testing-minimum-64-chars-long-string}
+      - GEMINI_API_KEYS=${GEMINI_API_KEYS:-your-gemini-key}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
+    restart: unless-stopped
+    networks:
+      - fitnessapp-net
+
+  # ========== Subscription Service ==========
+  subscription-service:
+    build:
+      context: .
+      dockerfile: subscription-service/Dockerfile
+    container_name: subscription-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xmx128m -Xms64m
+      - DATABASE_URL=jdbc:mysql://mysql:3306/fitnessapp_subscriptions?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - DB_USERNAME=root
+      - DB_PASSWORD=root
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/fitnessapp_subscriptions?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-for-local-docker-testing-minimum-64-chars-long-string}
+      - EUREKA_CLIENT_ENABLED=false
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - fitnessapp-net
+
+  # ========== Payment Service ==========
+  payment-service:
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+    container_name: payment-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xmx128m -Xms64m
+      - DATABASE_URL=jdbc:mysql://mysql:3306/fitnessapp_payments?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - DB_USERNAME=root
+      - DB_PASSWORD=root
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/fitnessapp_payments?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-for-local-docker-testing-minimum-64-chars-long-string}
+      - MERCHANT_UPI_ID=${MERCHANT_UPI_ID:-fitnessapp@upi}
+      - MERCHANT_NAME=${MERCHANT_NAME:-FitnessApp}
+      - SUBSCRIPTION_SERVICE_URL=http://subscription-service:8087
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID:-rzp_test_placeholder}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET:-placeholder_secret}
+      - EUREKA_CLIENT_ENABLED=false
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - fitnessapp-net
+
+volumes:
+  mysql-data:
+
+networks:
+  fitnessapp-net:
+    driver: bridge
+

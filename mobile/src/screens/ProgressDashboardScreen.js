@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, TextInput, Alert, Platform } from 'react-native';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import progressService from '../services/progressService';
+import { useTranslation } from '../i18n';
 
 const ProgressDashboardScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const [summary, setSummary] = useState(null);
   const [trends, setTrends] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -38,8 +40,8 @@ const ProgressDashboardScreen = ({ navigation }) => {
       await progressService.logWeight({ weight: parseFloat(weight), unit: 'kg', bmi: bmi ? parseFloat(bmi) : null, bodyFatPercentage: bodyFat ? parseFloat(bodyFat) : null, notes });
       setShowWeightForm(false); setWeight(''); setBmi(''); setBodyFat(''); setNotes('');
       loadData();
-      Platform.OS === 'web' ? window.alert('Weight logged! ✅') : Alert.alert('Success', 'Weight logged! ✅');
-    } catch (e) { Platform.OS === 'web' ? window.alert('Failed to log weight') : Alert.alert('Error', 'Failed to log weight'); }
+      Platform.OS === 'web' ? window.alert(t('progress.weightLogged')) : Alert.alert(t('common.success'), t('progress.weightLogged'));
+    } catch (e) { Platform.OS === 'web' ? window.alert(t('progress.failedLogWeight')) : Alert.alert(t('common.error'), t('progress.failedLogWeight')); }
     setSaving(false);
   };
 
@@ -67,8 +69,8 @@ const ProgressDashboardScreen = ({ navigation }) => {
       await progressService.setGoal({ goalType, targetValue: parseFloat(goalTarget), currentValue, targetDate: targetDate.toISOString().split('T')[0], unit });
       setShowGoalForm(false); setGoalTarget(''); setGoalType('WEIGHT');
       await loadData();
-      Platform.OS === 'web' ? window.alert('Goal set! 🎯') : Alert.alert('Success', 'Goal set! 🎯');
-    } catch (e) { Platform.OS === 'web' ? window.alert('Failed to set goal') : Alert.alert('Error', 'Failed to set goal'); }
+      Platform.OS === 'web' ? window.alert(t('progress.goalSet')) : Alert.alert(t('common.success'), t('progress.goalSet'));
+    } catch (e) { Platform.OS === 'web' ? window.alert(t('progress.failedSetGoal')) : Alert.alert(t('common.error'), t('progress.failedSetGoal')); }
     setSaving(false);
   };
 
@@ -81,57 +83,57 @@ const ProgressDashboardScreen = ({ navigation }) => {
       await progressService.logMeasurements(data);
       setShowMeasForm(false); setMeasurements({ chest: '', waist: '', hips: '', leftArm: '', rightArm: '', leftThigh: '', rightThigh: '' });
       loadData();
-      Platform.OS === 'web' ? window.alert('Measurements logged! 📏') : Alert.alert('Success', 'Measurements logged! 📏');
-    } catch (e) { Platform.OS === 'web' ? window.alert('Failed to log measurements') : Alert.alert('Error', 'Failed'); }
+      Platform.OS === 'web' ? window.alert(t('progress.measurementsLogged')) : Alert.alert(t('common.success'), t('progress.measurementsLogged'));
+    } catch (e) { Platform.OS === 'web' ? window.alert(t('progress.failedLogMeasurements')) : Alert.alert(t('common.error'), t('common.failed')); }
     setSaving(false);
   };
 
-  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /><Text style={styles.loadingText}>Loading progress...</Text></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /><Text style={styles.loadingText}>{t('progress.loadingProgress')}</Text></View>;
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.backText}>← Back</Text></TouchableOpacity>
-        <Text style={styles.headerTitle}>📊 Progress Tracking</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.backText}>{t('common.back')}</Text></TouchableOpacity>
+        <Text style={styles.headerTitle}>📊 {t('progress.title')}</Text>
         <View style={{ width: 60 }} />
       </View>
 
       <ScrollView style={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} />}>
         {/* Current Stats */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Current Stats</Text>
+          <Text style={styles.cardTitle}>{t('progress.currentStats')}</Text>
           <View style={styles.statsRow}>
-            <View style={styles.stat}><Text style={styles.statValue}>{summary?.currentWeight ? `${summary.currentWeight} kg` : '—'}</Text><Text style={styles.statLabel}>Weight</Text></View>
-            <View style={styles.stat}><Text style={styles.statValue}>{summary?.bmi ? summary.bmi.toFixed(1) : '—'}</Text><Text style={styles.statLabel}>BMI</Text></View>
-            <View style={styles.stat}><Text style={[styles.statValue, { color: summary?.weightChange > 0 ? colors.error : colors.success }]}>{summary?.weightChange ? `${summary.weightChange > 0 ? '+' : ''}${summary.weightChange.toFixed(1)} kg` : '—'}</Text><Text style={styles.statLabel}>Change (30d)</Text></View>
-            <View style={styles.stat}><Text style={styles.statValue}>🔥 {summary?.streakDays || 0}</Text><Text style={styles.statLabel}>Day Streak</Text></View>
+            <View style={styles.stat}><Text style={styles.statValue}>{summary?.currentWeight ? `${summary.currentWeight} kg` : '—'}</Text><Text style={styles.statLabel}>{t('progress.weightGoal')}</Text></View>
+            <View style={styles.stat}><Text style={styles.statValue}>{summary?.bmi ? summary.bmi.toFixed(1) : '—'}</Text><Text style={styles.statLabel}>{t('progress.bmi')}</Text></View>
+            <View style={styles.stat}><Text style={[styles.statValue, { color: summary?.weightChange > 0 ? colors.error : colors.success }]}>{summary?.weightChange ? `${summary.weightChange > 0 ? '+' : ''}${summary.weightChange.toFixed(1)} kg` : '—'}</Text><Text style={styles.statLabel}>{t('progress.change30d')}</Text></View>
+            <View style={styles.stat}><Text style={styles.statValue}>🔥 {summary?.streakDays || 0}</Text><Text style={styles.statLabel}>{t('progress.dayStreak')}</Text></View>
           </View>
         </View>
 
         {/* Action Buttons */}
         <View style={styles.actionsRow}>
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.primary }]} onPress={() => setShowWeightForm(true)}><Text style={styles.actionBtnText}>⚖️ Log Weight</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.success }]} onPress={() => setShowMeasForm(true)}><Text style={styles.actionBtnText}>📏 Measurements</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.info || '#374151' }]} onPress={() => setShowGoalForm(true)}><Text style={styles.actionBtnText}>🎯 Set Goal</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.primary }]} onPress={() => setShowWeightForm(true)}><Text style={styles.actionBtnText}>⚖️ {t('progress.logWeight')}</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.success }]} onPress={() => setShowMeasForm(true)}><Text style={styles.actionBtnText}>📏 {t('common.measurements')}</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.info || '#374151' }]} onPress={() => setShowGoalForm(true)}><Text style={styles.actionBtnText}>🎯 {t('progress.setGoal')}</Text></TouchableOpacity>
         </View>
         <TouchableOpacity
           style={[styles.actionBtn, { backgroundColor: '#111827', marginBottom: spacing.md, paddingVertical: spacing.md }]}
           onPress={() => navigation.navigate('ReportGenerator')}
         >
-          <Text style={styles.actionBtnText}>📄 Generate Report</Text>
+          <Text style={styles.actionBtnText}>📄 {t('common.generateReport')}</Text>
         </TouchableOpacity>
 
         {/* Weight Form */}
         {showWeightForm && (
           <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Log Today's Weight</Text>
-            <TextInput style={styles.input} placeholder="Weight (kg)" keyboardType="numeric" value={weight} onChangeText={setWeight} placeholderTextColor={colors.text.secondary} />
-            <TextInput style={styles.input} placeholder="BMI (optional)" keyboardType="numeric" value={bmi} onChangeText={setBmi} placeholderTextColor={colors.text.secondary} />
-            <TextInput style={styles.input} placeholder="Body Fat % (optional)" keyboardType="numeric" value={bodyFat} onChangeText={setBodyFat} placeholderTextColor={colors.text.secondary} />
-            <TextInput style={styles.input} placeholder="Notes (optional)" value={notes} onChangeText={setNotes} placeholderTextColor={colors.text.secondary} />
+            <Text style={styles.formTitle}>{t('progress.logTodaysWeight')}</Text>
+            <TextInput style={styles.input} placeholder={t('progress.weightKg')} keyboardType="numeric" value={weight} onChangeText={setWeight} placeholderTextColor={colors.text.secondary} />
+            <TextInput style={styles.input} placeholder={t('progress.bmiOptional')} keyboardType="numeric" value={bmi} onChangeText={setBmi} placeholderTextColor={colors.text.secondary} />
+            <TextInput style={styles.input} placeholder={t('progress.bodyFatOptional')} keyboardType="numeric" value={bodyFat} onChangeText={setBodyFat} placeholderTextColor={colors.text.secondary} />
+            <TextInput style={styles.input} placeholder={t('progress.notesOptional')} value={notes} onChangeText={setNotes} placeholderTextColor={colors.text.secondary} />
             <View style={styles.formActions}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowWeightForm(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={handleLogWeight} disabled={saving}>{saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Save</Text>}</TouchableOpacity>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowWeightForm(false)}><Text style={styles.cancelText}>{t('common.cancel')}</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.saveBtn} onPress={handleLogWeight} disabled={saving}>{saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>{t('common.save')}</Text>}</TouchableOpacity>
             </View>
           </View>
         )}
@@ -139,13 +141,13 @@ const ProgressDashboardScreen = ({ navigation }) => {
         {/* Measurements Form */}
         {showMeasForm && (
           <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Log Body Measurements (cm)</Text>
+            <Text style={styles.formTitle}>{t('progress.logBodyMeasurements')}</Text>
             {['chest', 'waist', 'hips', 'leftArm', 'rightArm', 'leftThigh', 'rightThigh'].map(k => (
               <TextInput key={k} style={styles.input} placeholder={k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())} keyboardType="numeric" value={measurements[k]} onChangeText={v => setMeasurements({ ...measurements, [k]: v })} placeholderTextColor={colors.text.secondary} />
             ))}
             <View style={styles.formActions}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowMeasForm(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={handleLogMeasurements} disabled={saving}>{saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Save</Text>}</TouchableOpacity>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowMeasForm(false)}><Text style={styles.cancelText}>{t('common.cancel')}</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.saveBtn} onPress={handleLogMeasurements} disabled={saving}>{saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>{t('common.save')}</Text>}</TouchableOpacity>
             </View>
           </View>
         )}
@@ -153,14 +155,14 @@ const ProgressDashboardScreen = ({ navigation }) => {
         {/* Goal Form */}
         {showGoalForm && (
           <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Set a Goal</Text>
+            <Text style={styles.formTitle}>{t('progress.setAGoal')}</Text>
             <View style={styles.goalTypes}>
-              {['WEIGHT', 'BODY_FAT', 'WAIST'].map(t => {
-                const hasExisting = summary?.activeGoals?.some(g => g.goalType === t);
+              {['WEIGHT', 'BODY_FAT', 'WAIST'].map(tp => {
+                const hasExisting = summary?.activeGoals?.some(g => g.goalType === tp);
                 return (
-                  <TouchableOpacity key={t} style={[styles.goalTypeBtn, goalType === t && styles.goalTypeBtnActive]} onPress={() => { setGoalType(t); setGoalTarget(''); }}>
-                    <Text style={[styles.goalTypeText, goalType === t && styles.goalTypeTextActive]}>
-                      {t === 'WEIGHT' ? '⚖️ Weight' : t === 'BODY_FAT' ? '📊 Body Fat' : '📏 Waist'}
+                  <TouchableOpacity key={tp} style={[styles.goalTypeBtn, goalType === tp && styles.goalTypeBtnActive]} onPress={() => { setGoalType(tp); setGoalTarget(''); }}>
+                    <Text style={[styles.goalTypeText, goalType === tp && styles.goalTypeTextActive]}>
+                      {tp === 'WEIGHT' ? `⚖️ ${t('progress.weightGoal')}` : tp === 'BODY_FAT' ? `📊 ${t('progress.bodyFatGoal')}` : `📏 ${t('progress.waistGoal')}`}
                       {hasExisting ? ' ✓' : ''}
                     </Text>
                   </TouchableOpacity>
@@ -179,8 +181,8 @@ const ProgressDashboardScreen = ({ navigation }) => {
             )}
             <TextInput style={styles.input} placeholder={`Target ${goalType === 'WEIGHT' ? 'weight' : goalType === 'BODY_FAT' ? 'body fat' : 'waist'} (${getUnitForGoalType(goalType)})`} keyboardType="numeric" value={goalTarget} onChangeText={setGoalTarget} placeholderTextColor={colors.text.secondary} />
             <View style={styles.formActions}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowGoalForm(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={handleSetGoal} disabled={saving}>{saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Set Goal</Text>}</TouchableOpacity>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowGoalForm(false)}><Text style={styles.cancelText}>{t('common.cancel')}</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.saveBtn} onPress={handleSetGoal} disabled={saving}>{saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>{t('progress.setGoal')}</Text>}</TouchableOpacity>
             </View>
           </View>
         )}
@@ -188,12 +190,12 @@ const ProgressDashboardScreen = ({ navigation }) => {
         {/* Goals */}
         {summary?.activeGoals?.length > 0 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>🎯 Active Goals</Text>
+            <Text style={styles.cardTitle}>🎯 {t('progress.activeGoals')}</Text>
             {summary.activeGoals.map((g, i) => (
               <View key={i} style={styles.goalItem}>
                 <View style={styles.goalHeader}><Text style={styles.goalType}>{g.goalType?.replace(/_/g, ' ')}</Text><Text style={styles.goalProgress}>{(g.progressPercentage || 0).toFixed(0)}%</Text></View>
                 <View style={styles.progressBar}><View style={[styles.progressFill, { width: `${Math.min(g.progressPercentage || 0, 100)}%` }]} /></View>
-                <Text style={styles.goalDetail}>Current: {g.currentValue} → Target: {g.targetValue} {g.unit}</Text>
+                <Text style={styles.goalDetail}>{t('progress.current')}: {g.currentValue} → {t('progress.target')}: {g.targetValue} {g.unit}</Text>
               </View>
             ))}
           </View>
@@ -202,7 +204,7 @@ const ProgressDashboardScreen = ({ navigation }) => {
         {/* Weight Trend */}
         {trends?.weightTrend?.length > 0 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>📈 Weight Trend (30 days)</Text>
+            <Text style={styles.cardTitle}>📈 {t('progress.weightTrend30')}</Text>
             <View style={styles.trendContainer}>
               {trends.weightTrend.slice(-7).map((p, i) => (
                 <View key={i} style={styles.trendPoint}>
@@ -218,7 +220,7 @@ const ProgressDashboardScreen = ({ navigation }) => {
         {/* Latest Measurements */}
         {summary?.latestMeasurements && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>📏 Latest Measurements</Text>
+            <Text style={styles.cardTitle}>📏 {t('progress.latestMeasurements')}</Text>
             <View style={styles.measGrid}>
               {[['Chest', summary.latestMeasurements.chest], ['Waist', summary.latestMeasurements.waist], ['Hips', summary.latestMeasurements.hips], ['Left Arm', summary.latestMeasurements.leftArm], ['Right Arm', summary.latestMeasurements.rightArm]].map(([label, val]) => val ? (
                 <View key={label} style={styles.measItem}><Text style={styles.measValue}>{val} cm</Text><Text style={styles.measLabel}>{label}</Text></View>
@@ -226,6 +228,23 @@ const ProgressDashboardScreen = ({ navigation }) => {
             </View>
           </View>
         )}
+
+        {/* Before/After Photos */}
+        <TouchableOpacity
+          style={[styles.card, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+          onPress={() => navigation.navigate('PhotoLog')}
+          activeOpacity={0.7}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <Text style={{ fontSize: 32 }}>📸</Text>
+            <View>
+              <Text style={styles.cardTitle}>{t('progress.beforeAfterPhotos')}</Text>
+              <Text style={{ ...typography.caption, color: colors.text.secondary }}>{t('progress.trackVisualProgress')}</Text>
+            </View>
+          </View>
+          <Text style={{ fontSize: 18, color: colors.text.secondary }}>›</Text>
+        </TouchableOpacity>
+
         <View style={{ height: 30 }} />
       </ScrollView>
     </View>

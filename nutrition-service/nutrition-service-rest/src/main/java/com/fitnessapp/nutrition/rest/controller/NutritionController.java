@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -20,7 +21,6 @@ public class NutritionController implements NutritionApi {
     private final FoodPreferenceOperations userFoodPreferenceService;
     private final NutritionProfileOperations nutritionProfileService;
     private final MealTrackingOperations mealTrackingService;
-    private final FoodLoggingOperations foodLoggingService;
     private final MealSwapOperations mealSwapService;
     private final GroceryListOperations groceryListService;
     private final HttpServletRequest httpServletRequest;
@@ -146,24 +146,6 @@ public class NutritionController implements NutritionApi {
         return ResponseEntity.ok(mealTrackingService.getTodayTracking(getCurrentUserId()));
     }
 
-    @Override
-    public ResponseEntity<FoodLogDTO> logFoodPhoto(FoodPhotoLogRequest request) {
-        return ResponseEntity.ok(foodLoggingService.logFoodPhoto(getCurrentUserId(), request));
-    }
-
-    @Override
-    public ResponseEntity<List<FoodLogDTO>> getTodayFoodLogs() {
-        return ResponseEntity.ok(foodLoggingService.getTodayFoodLogs(getCurrentUserId()));
-    }
-
-    @Override
-    public ResponseEntity<List<FoodLogDTO>> getFoodLogHistory(Integer days) {
-        int d = days != null ? days : 7;
-        if (d < 1 || d > 365) {
-            throw new IllegalArgumentException("Days must be between 1 and 365");
-        }
-        return ResponseEntity.ok(foodLoggingService.getFoodLogHistory(getCurrentUserId(), d));
-    }
 
     @Override
     public ResponseEntity<MealSwapResponseDTO> suggestMealSwap(MealSwapRequestDTO request) {
@@ -219,5 +201,12 @@ public class NutritionController implements NutritionApi {
             throw new IllegalArgumentException("Date range cannot exceed 1 year");
         }
         return ResponseEntity.ok(mealTrackingService.getDietReport(getCurrentUserId(), start, end));
+    }
+
+    @GetMapping("/nutrition/ai-plan-count")
+    public ResponseEntity<Map<String, Object>> getAiPlanCount(@RequestParam String since) {
+        LocalDateTime sinceDate = LocalDate.parse(since).atStartOfDay();
+        long count = aiBasedNutritionService.getAiPlanCount(getCurrentUserId(), sinceDate);
+        return ResponseEntity.ok(Map.of("count", count));
     }
 }
