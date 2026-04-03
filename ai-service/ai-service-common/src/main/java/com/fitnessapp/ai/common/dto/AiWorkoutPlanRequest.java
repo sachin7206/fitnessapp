@@ -23,5 +23,22 @@ public class AiWorkoutPlanRequest {
     private Integer cardioDurationMinutes;
     private Integer cardioSteps;
     private List<String> focusMuscleGroups;
+    private List<String> workoutDays;
+    private String splitType;         // SINGLE_MUSCLE, DOUBLE_MUSCLE, PUSH_PULL_LEGS, UPPER_LOWER, FULL_BODY
+    private List<CustomExerciseEntry> customExercises;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CustomExerciseEntry {
+        private String dayOfWeek;
+        private String exerciseName;
+        private String muscleGroup;
+        private Integer sets;
+        private Integer reps;
+        private Double weight;
+        private Boolean isCardio;
+        private Integer durationMinutes;
+    }
 }
 

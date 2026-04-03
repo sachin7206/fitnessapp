@@ -15,24 +15,19 @@ public class GenerateWorkoutPlanRequest {
     @Max(value = 7, message = "Days per week must be at most 7")
     private Integer daysPerWeek;
 
-    @NotBlank(message = "Exercise type is required")
     @Pattern(regexp = "GYM|OUTDOOR|RUNNING|YOGA|HOME", message = "Invalid exercise type")
     private String exerciseType;
 
-    @NotBlank(message = "Exercise time is required")
     @Size(max = 20, message = "Exercise time must be ≤ 20 characters")
     private String exerciseTime;
 
-    @NotNull(message = "Duration is required")
     @Min(value = 10, message = "Duration must be at least 10 minutes")
     @Max(value = 180, message = "Duration must be at most 180 minutes")
     private Integer durationMinutes;
 
-    @NotBlank(message = "Goal is required")
     @Pattern(regexp = "MUSCLE_BUILDING|SLIMMING|SLIMMING_PLUS_MUSCLE", message = "Invalid goal")
     private String goal;
 
-    @NotBlank(message = "Difficulty is required")
     @Pattern(regexp = "BEGINNER|INTERMEDIATE|ADVANCED", message = "Invalid difficulty")
     private String difficulty;
 
@@ -54,9 +49,15 @@ public class GenerateWorkoutPlanRequest {
     // Custom exercises provided by user for AI plan generation
     private List<CustomExerciseInput> customExercises;
 
+    // Workout split type: SINGLE_MUSCLE, DOUBLE_MUSCLE, PUSH_PULL_LEGS, UPPER_LOWER, FULL_BODY
+    @Pattern(regexp = "SINGLE_MUSCLE|DOUBLE_MUSCLE|PUSH_PULL_LEGS|UPPER_LOWER|FULL_BODY",
+             message = "Invalid split type")
+    private String splitType;
+
     // Plan name and workout days
     private String planName;
     private List<String> workoutDays;
+    private String restDay;
 
     // Plan generation limit (from subscription)
     private Integer maxPlanGenerations;

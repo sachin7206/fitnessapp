@@ -70,17 +70,16 @@ public class AIBasedNutritionService implements AIBasedNutritionOperations {
                     log.info("AI-generated nutrition plan created for user: {}", userId);
                 }
             } catch (Exception e) {
-                log.warn("AI plan generation failed, falling back to pre-built plans: {}", e.getMessage());
-                plan = null;
+                log.warn("AI plan generation failed: {}", e.getMessage());
+                throw new RuntimeException("AI service is temporarily unavailable. Please try again in a few moments. Your plan generation count has not been affected.", e);
             }
         } else {
-            log.info("AI service not available, using pre-built plans for user: {}", userId);
+            throw new RuntimeException("AI service is currently unavailable. Please try again later. Your plan generation count has not been affected.");
         }
 
-        // Fallback: build a personalized plan from pre-built data using food preferences
+        // If AI returned empty response, don't count it
         if (plan == null) {
-            plan = buildFallbackPlan(request, user, region, dietType, goal, targetCalories);
-            log.info("Using fallback plan '{}' for user: {}", plan.getName(), userId);
+            throw new RuntimeException("AI service returned an empty plan. Please try again. Your plan generation count has not been affected.");
         }
 
         // Auto-enroll user

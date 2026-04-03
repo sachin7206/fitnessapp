@@ -4,6 +4,7 @@ import com.fitnessapp.exercise.impl.model.WorkoutCompletion;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.List;
@@ -22,4 +23,12 @@ public interface WorkoutCompletionRepository extends JpaRepository<WorkoutComple
     @Modifying
     @Query("DELETE FROM WorkoutCompletion w WHERE w.userId = :userId")
     void deleteByUserId(Long userId);
+
+    /**
+     * Detach completion records from old user workout plans (set FK to null)
+     * so old plans can be safely deleted without losing history.
+     */
+    @Modifying
+    @Query("UPDATE WorkoutCompletion w SET w.userWorkoutPlan = null WHERE w.userId = :userId AND w.userWorkoutPlan.id IN :planIds")
+    void detachFromPlans(@Param("userId") Long userId, @Param("planIds") List<Long> planIds);
 }

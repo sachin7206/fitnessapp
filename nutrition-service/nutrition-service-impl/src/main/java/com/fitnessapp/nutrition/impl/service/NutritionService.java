@@ -246,46 +246,17 @@ public class NutritionService implements NutritionOperations {
     }
 
     /**
-     * Fully deletes all old nutrition plan data for a user:
-     * 1. daily_meal_tracking (by email)
-     * 2. daily_nutrition_summary (by email)
-     * 3. food_logs (by email)
-     * 4. user_nutrition_plans (by userId)
-     * 5. nutrition_plans + meals + food_items (cascade) — only user-specific plans, not shared prebuilt ones
+     * Deactivates old nutrition plans for the user.
+     * NOTE: Tracking data (daily_meal_tracking, daily_nutrition_summary, food_logs) is PRESERVED
+     * across plan changes so that diet history, reports, and meal tracking history remain available.
+     * Only old active/scheduled plans are cancelled, not deleted — this preserves plan history.
      */
     private void deleteOldUserPlanData(Long userId) {
-        // 1. Delete tracking data
-        dailyMealTrackingRepository.deleteByUserId(userId);
-        dailyNutritionSummaryRepository.deleteByUserId(userId);
-        foodLogRepository.deleteByUserId(userId);
+        // Cancel active and scheduled plans (preserve history — don't delete)
+        userNutritionPlanRepository.deactivateAllActiveForUser(userId);
+        userNutritionPlanRepository.cancelScheduledForUser(userId);
 
-        // 2. Collect nutrition plan IDs before deleting user_nutrition_plans
-        List<UserNutritionPlan> oldUserPlans = userNutritionPlanRepository.findByUserId(userId);
-        List<Long> planIdsToDelete = new java.util.ArrayList<>();
-        for (UserNutritionPlan up : oldUserPlans) {
-            if (up.getNutritionPlan() != null) {
-                NutritionPlan np = up.getNutritionPlan();
-                // Only delete user-specific plans (CUSTOM or AI-generated for the user), not shared prebuilt seed data
-                // Prebuilt plans are shared across users; user-created plans have difficulty = CUSTOM or MODERATE (AI-generated)
-                // Safe check: if any OTHER user also references this plan, don't delete it
-                List<UserNutritionPlan> allReferences = userNutritionPlanRepository.findAll().stream()
-                    .filter(ref -> ref.getNutritionPlan() != null && ref.getNutritionPlan().getId().equals(np.getId()))
-                    .filter(ref -> !ref.getUserId().equals(userId))
-                    .toList();
-                if (allReferences.isEmpty()) {
-                    // No other user references this plan — safe to delete
-                    planIdsToDelete.add(np.getId());
-                }
-            }
-        }
-
-        // 3. Delete user_nutrition_plans
-        userNutritionPlanRepository.deleteAllByUserId(userId);
-
-        // 4. Delete orphaned nutrition_plans (cascade deletes meals + food_items)
-        for (Long planId : planIdsToDelete) {
-            nutritionPlanRepository.deleteById(planId);
-        }
+        log.info("Deactivated old nutrition plans for user {}. Tracking history preserved.", userId);
     }
 
     // ========== Conversion Methods ==========

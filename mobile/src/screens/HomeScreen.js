@@ -35,6 +35,7 @@ import {
 } from '../store/slices/workoutTrackingSlice';
 import workoutService from '../services/workoutService';
 import { Pedometer } from 'expo-sensors';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import { useTranslation } from '../i18n';
 import Svg, { Circle } from 'react-native-svg';
@@ -103,6 +104,18 @@ const HomeScreen = ({ navigation }) => {
   const [stepSheetWeekOffset, setStepSheetWeekOffset] = useState(0);
   const [stepSheetSelectedBar, setStepSheetSelectedBar] = useState(null);
   const stepSheetAnim = useState(new Animated.Value(0))[0];
+
+  // Today rest day state (user-toggled from workout screen)
+  const [todayIsRestDay, setTodayIsRestDay] = useState(false);
+  const REST_DAY_KEY = '@rest_day_';
+
+  const loadTodayRestDay = async () => {
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const val = await AsyncStorage.getItem(REST_DAY_KEY + todayStr);
+      setTodayIsRestDay(val === 'true');
+    } catch (e) { /* ignore */ }
+  };
 
   const getDateString = (d) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -294,6 +307,7 @@ const HomeScreen = ({ navigation }) => {
       fetchWorkoutData();
     });
     fetchDailyStreak();
+    loadTodayRestDay();
   }, []);
 
   // Refresh clock every 30 seconds; detect day change to auto-reset
@@ -320,6 +334,7 @@ const HomeScreen = ({ navigation }) => {
       dispatch(loadWorkoutTrackingLocal());
       setNow(new Date());
       fetchDailyStreak();
+      loadTodayRestDay();
     });
     return unsubscribe;
   }, [navigation]);
@@ -517,6 +532,11 @@ const HomeScreen = ({ navigation }) => {
   const completedCount = tracking.meals.filter(m => m.completed).length;
   const totalMealCalories = tracking.meals.reduce((s, m) => s + (m.calories || 0), 0);
 
+  // ---------- Rest day detection (must be before workout helpers that reference isRestDay) ----------
+  const todayDayName = DAY_NAMES_UPPER[now.getDay()];
+  const planRestDay = workoutTracking.activePlan?.workoutPlan?.restDay;
+  const isRestDay = workoutTracking.activePlan && (todayDayName === planRestDay || todayIsRestDay);
+
   // ---------- Workout tracking helpers ----------
   const exerciseTime = workoutTracking.activePlan?.workoutPlan?.exerciseTime || '6:00 AM';
   const exerciseMin = getTimeInMinutes(exerciseTime);
@@ -524,7 +544,7 @@ const HomeScreen = ({ navigation }) => {
   const nowMin = getNowMinutes();
   const isPreWorkout = nowMin >= exerciseMin - 30 && nowMin < exerciseMin;
   const isPostWorkoutTime = nowMin >= exerciseMin + 90;
-  const showWorkoutPrompt = workoutTracking.activePlan && isPostWorkoutTime && !workoutTracking.todayCompleted;
+  const showWorkoutPrompt = workoutTracking.activePlan && isPostWorkoutTime && !workoutTracking.todayCompleted && !isRestDay;
 
   const handleCompleteWorkout = async () => {
     try {
@@ -559,10 +579,6 @@ const HomeScreen = ({ navigation }) => {
   const hour = now.getHours();
   const dateStr = `${DAY_NAMES[now.getDay()]}, ${now.getDate()} ${MONTH_NAMES[now.getMonth()]}`;
 
-  // Rest day detection
-  const todayDayName = DAY_NAMES_UPPER[now.getDay()];
-  const planRestDay = workoutTracking.activePlan?.workoutPlan?.restDay;
-  const isRestDay = workoutTracking.activePlan && todayDayName === planRestDay;
 
   // Meal progress
   const mealTotal = tracking.meals.length;

@@ -71,7 +71,6 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
   const [newRestSeconds, setNewRestSeconds] = useState('60');
 
   const [saving, setSaving] = useState(false);
-  const [restDay, setRestDay] = useState('');
   const [exerciseTime, setExerciseTime] = useState('6:00 AM');
   const [validationErrors, setValidationErrors] = useState({});
 
@@ -84,21 +83,12 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
   const toggleDay = (day) => {
     setSelectedDays(prev => {
       const updated = prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day];
-      if (day === restDay) setRestDay('');
       return updated;
     });
     // Clear days validation error when a day is toggled
     if (validationErrors.days) {
       setValidationErrors(prev => ({ ...prev, days: null }));
     }
-  };
-
-  const toggleRestDay = (day) => {
-    setRestDay(prev => prev === day ? '' : day);
-  };
-
-  const getAvailableRestDays = () => {
-    return DAYS.filter(d => !selectedDays.includes(d));
   };
 
   const getWeeklyCyclePreview = () => {
@@ -108,8 +98,6 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
     DAYS.forEach(day => {
       if (selectedDays.includes(day)) {
         preview[day] = { type: 'workout', source: day };
-      } else if (day === restDay) {
-        preview[day] = { type: 'rest', source: null };
       } else {
         preview[day] = { type: 'cycle', source: sortedWorkoutDays[cycleIndex % sortedWorkoutDays.length] };
         cycleIndex++;
@@ -412,7 +400,6 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
         planName: planName.trim() || 'My Custom Workout',
         planType: 'CUSTOM',
         daysPerWeek: selectedDays.length,
-        restDay: restDay || null,
         exerciseTime: exerciseTime,
         exercises: allExercises,
       };
@@ -489,33 +476,6 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
           ))}
         </View>
 
-        {/* Rest Day Selection */}
-        {getAvailableRestDays().length > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>😴 Rest Day</Text>
-            <Text style={styles.sectionHint}>Select a day for complete rest (optional)</Text>
-            <View style={styles.dayRow}>
-              {getAvailableRestDays().map(day => (
-                <TouchableOpacity
-                  key={day}
-                  style={[
-                    styles.dayChip,
-                    restDay === day && styles.restDayChipSelected,
-                  ]}
-                  onPress={() => toggleRestDay(day)}
-                >
-                  <Text style={[
-                    styles.dayChipText,
-                    restDay === day && styles.restDayChipTextSelected,
-                  ]}>
-                    {day.substring(0, 3)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </>
-        )}
-
         {/* Weekly Cycle Preview */}
         {selectedDays.length > 0 && selectedDays.length < 7 && (
           <View style={styles.cyclePreview}>
@@ -528,10 +488,6 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
                   {info.type === 'workout' ? (
                     <Text style={[styles.cycleSource, { color: colors.primary, fontWeight: '700' }]}>
                       🏋️ Workout Day
-                    </Text>
-                  ) : info.type === 'rest' ? (
-                    <Text style={[styles.cycleSource, { color: '#374151', fontWeight: '700' }]}>
-                      😴 Rest Day
                     </Text>
                   ) : (
                     <Text style={[styles.cycleSource, { color: colors.text.secondary }]}>
@@ -676,12 +632,6 @@ const FreeWorkoutBuilderScreen = ({ navigation }) => {
             <Text style={styles.summaryLabel}>Workout days</Text>
             <Text style={styles.summaryValue}>{selectedDays.length} days/week</Text>
           </View>
-          {restDay ? (
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Rest day</Text>
-              <Text style={[styles.summaryValue, { color: '#374151' }]}>{formatLabel(restDay)}</Text>
-            </View>
-          ) : null}
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Exercise time</Text>
             <Text style={styles.summaryValue}>🕐 {exerciseTime}</Text>

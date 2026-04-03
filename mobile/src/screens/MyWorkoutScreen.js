@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/core';
 import { useDispatch, useSelector } from 'react-redux';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import workoutService from '../services/workoutService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from '../i18n';
 import {
   setActivePlan, completeWorkout, uncompleteWorkout,
@@ -40,6 +41,46 @@ const MyWorkoutScreen = ({ navigation }) => {
   const [restTimer, setRestTimer] = useState({ active: false, seconds: 0, total: 0, exerciseName: '' });
   const restTimerRef = useRef(null);
 
+  // Today rest day state
+  const [todayIsRestDay, setTodayIsRestDay] = useState(false);
+
+  const REST_DAY_KEY = '@rest_day_';
+  const getLocalDateString = () => new Date().toISOString().split('T')[0];
+
+  const loadTodayRestDay = async () => {
+    try {
+      const val = await AsyncStorage.getItem(REST_DAY_KEY + getLocalDateString());
+      setTodayIsRestDay(val === 'true');
+    } catch (e) { /* ignore */ }
+  };
+
+  const toggleTodayRestDay = async () => {
+    const newVal = !todayIsRestDay;
+    const doToggle = async () => {
+      setTodayIsRestDay(newVal);
+      try {
+        if (newVal) {
+          await AsyncStorage.setItem(REST_DAY_KEY + getLocalDateString(), 'true');
+        } else {
+          await AsyncStorage.removeItem(REST_DAY_KEY + getLocalDateString());
+        }
+      } catch (e) { /* ignore */ }
+    };
+
+    if (newVal) {
+      if (Platform.OS === 'web') {
+        if (window.confirm('Mark today as rest day? Your exercises will shift to the next day.')) doToggle();
+      } else {
+        Alert.alert('😴 Rest Day', 'Mark today as rest day? Your exercises will shift to the next day.', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Yes, Rest Today', onPress: doToggle },
+        ]);
+      }
+    } else {
+      doToggle();
+    }
+  };
+
   const startRestTimer = (seconds, exerciseName) => {
     // Validate: 1-600 seconds
     const safe = Math.min(600, Math.max(1, Math.round(seconds)));
@@ -70,6 +111,7 @@ const MyWorkoutScreen = ({ navigation }) => {
 
   useEffect(() => {
     dispatch(loadWorkoutTrackingLocal());
+    loadTodayRestDay();
   }, []);
 
   useEffect(() => {
@@ -149,9 +191,8 @@ const MyWorkoutScreen = ({ navigation }) => {
   // Today's exercises
   const todayDay = DAY_NAMES[now.getDay()];
   const allExercises = userPlan?.workoutPlan?.exercises || [];
-  const planRestDay = userPlan?.workoutPlan?.restDay || '';
 
-  // Build cycle map: non-workout, non-rest days repeat workout days in order
+  // Build cycle map: non-workout days repeat workout days in order
   const ORDERED_DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
 
   const getWorkoutDaysFromPlan = () => {
@@ -165,8 +206,19 @@ const MyWorkoutScreen = ({ navigation }) => {
     const cycleMap = {};
     let cycleIndex = 0;
     ORDERED_DAYS.forEach(day => {
-      if (workoutDays.includes(day)) return;
-      if (day === planRestDay) { cycleMap[day] = '__REST__'; return; }
+      if (workoutDays.includes(day)) {
+        // If today is marked as rest day, treat it as rest
+        if (day === todayDay && todayIsRestDay) {
+          cycleMap[day] = '__REST__';
+          return;
+        }
+        return;
+      }
+      // If today is marked as rest day, skip it without advancing cycle
+      if (day === todayDay && todayIsRestDay) {
+        cycleMap[day] = '__REST__';
+        return;
+      }
       cycleMap[day] = workoutDays[cycleIndex % workoutDays.length];
       cycleIndex++;
     });
@@ -185,7 +237,7 @@ const MyWorkoutScreen = ({ navigation }) => {
 
   const todayData = getExercisesForDay(todayDay);
   const todayExercises = todayData.exercises;
-  const isRestDay = todayExercises.length === 0;
+  const isRestDay = todayExercises.length === 0 || todayIsRestDay;
   const todayCalories = todayExercises.reduce((s, e) => s + (e.caloriesBurned || 0), 0);
 
   const handleCompleteWorkout = async () => {
@@ -317,6 +369,23 @@ const MyWorkoutScreen = ({ navigation }) => {
           </TouchableOpacity>
         )}
 
+        {/* Mark Today as Rest Day */}
+        <TouchableOpacity
+          style={[styles.restDayToggleBtn, todayIsRestDay && styles.restDayToggleBtnActive]}
+          onPress={toggleTodayRestDay}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.restDayToggleIcon}>{todayIsRestDay ? '✅' : '😴'}</Text>
+          <View style={styles.restDayToggleContent}>
+            <Text style={[styles.restDayToggleTitle, todayIsRestDay && styles.restDayToggleTitleActive]}>
+              {todayIsRestDay ? 'Today is Rest Day' : 'Mark Today as Rest Day'}
+            </Text>
+            <Text style={styles.restDayToggleDesc}>
+              {todayIsRestDay ? 'Tap to resume today\'s workout' : 'Skip today\'s exercises and rest'}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
         {/* Weekly Overview — Expandable */}
         <Text style={styles.sectionTitle}>{t('workout.weeklyOverview')}</Text>
         {ORDERED_DAYS.map(day => {
@@ -326,7 +395,7 @@ const MyWorkoutScreen = ({ navigation }) => {
           const isExpanded = expandedDays[day] || false;
           const hasExercises = dayExercises.length > 0;
           const dayCals = dayExercises.reduce((s, e) => s + (e.caloriesBurned || 0), 0);
-          const isRest = dayData.isRest || (day === planRestDay);
+          const isRest = dayData.isRest || (isToday && todayIsRestDay);
           const isCycled = dayData.sourceDay != null;
 
           return (
@@ -516,6 +585,19 @@ const styles = StyleSheet.create({
   checkMark: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
   completedText: { ...typography.body, color: colors.success, fontWeight: '600', flex: 1 },
   undoHint: { ...typography.caption, color: colors.text.light, fontStyle: 'italic' },
+  restDayToggleBtn: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.md,
+    borderWidth: 1.5, borderColor: colors.border || '#e0e0e0', ...shadows.sm,
+  },
+  restDayToggleBtnActive: {
+    backgroundColor: '#374151' + '10', borderColor: '#374151',
+  },
+  restDayToggleIcon: { fontSize: 28, marginRight: spacing.md },
+  restDayToggleContent: { flex: 1 },
+  restDayToggleTitle: { ...typography.body, fontWeight: '700', color: colors.text.primary },
+  restDayToggleTitleActive: { color: '#374151' },
+  restDayToggleDesc: { ...typography.caption, color: colors.text.secondary, marginTop: 2 },
   weekDayRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     padding: spacing.md, backgroundColor: colors.surface, borderRadius: borderRadius.md,

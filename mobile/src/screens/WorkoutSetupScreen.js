@@ -1,37 +1,61 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Alert, Platform, TextInput,
+  TextInput, Alert, Platform, ActivityIndicator,
 } from 'react-native';
-import { useSelector, useDispatch } from 'react-redux';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSelector } from 'react-redux';
 import { colors, spacing, typography, borderRadius, shadows } from '../config/theme';
 import workoutService from '../services/workoutService';
 import subscriptionService from '../services/subscriptionService';
-import userService from '../services/userService';
-import { updateUser } from '../store/slices/authSlice';
 import { useTranslation } from '../i18n';
 
-const PREFS_KEY = '@workout_setup_prefs';
+const DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
 
-const EXERCISE_TYPES = [
-  { key: 'GYM', label: '🏋️ Gym', desc: 'Weights & machines' },
-  { key: 'OUTDOOR', label: '🌳 Outdoor', desc: 'Bodyweight outdoors' },
-  { key: 'RUNNING', label: '🏃 Running', desc: 'Running & jogging' },
-  { key: 'YOGA', label: '🧘 Yoga', desc: 'Yoga & stretching' },
-  { key: 'HOME', label: '🏠 Home', desc: 'Home workouts' },
+const SPLIT_TYPES = [
+  {
+    key: 'SINGLE_MUSCLE',
+    label: '🎯 Single Muscle',
+    desc: 'One muscle group per day (e.g., Chest Day, Back Day)',
+    example: 'Mon: Chest • Tue: Back • Wed: Legs • Thu: Shoulders • Fri: Arms',
+  },
+  {
+    key: 'DOUBLE_MUSCLE',
+    label: '💪 Double Muscle',
+    desc: 'Two muscle groups per day for efficient training',
+    example: 'Mon: Chest+Triceps • Tue: Back+Biceps • Wed: Legs+Shoulders',
+  },
+  {
+    key: 'PUSH_PULL_LEGS',
+    label: '🔄 Push / Pull / Legs',
+    desc: 'Classic PPL split for balanced strength',
+    example: 'Push: Chest+Shoulders+Triceps • Pull: Back+Biceps • Legs: Full lower body',
+  },
+  {
+    key: 'UPPER_LOWER',
+    label: '⬆️⬇️ Upper / Lower',
+    desc: 'Alternate upper and lower body days',
+    example: 'Mon: Upper • Tue: Lower • Thu: Upper • Fri: Lower',
+  },
+  {
+    key: 'FULL_BODY',
+    label: '🏋️ Full Body',
+    desc: 'Hit all major muscles every session',
+    example: 'Each day: Compound movements covering all muscle groups',
+  },
+];
+
+const TIME_OPTIONS = [
+  '5:00 AM', '5:30 AM', '6:00 AM', '6:30 AM', '7:00 AM', '7:30 AM', '8:00 AM', '8:30 AM',
+  '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '12:00 PM',
+  '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM', '3:00 PM', '3:30 PM',
+  '4:00 PM', '4:30 PM', '5:00 PM', '5:30 PM', '6:00 PM', '6:30 PM', '7:00 PM',
+  '7:30 PM', '8:00 PM', '8:30 PM', '9:00 PM', '9:30 PM', '10:00 PM', '10:30 PM',
 ];
 
 const ALL_GOALS = [
-  { key: 'MUSCLE_BUILDING', label: '💪 Muscle Building', duration: '12 weeks' },
-  { key: 'SLIMMING', label: '🔥 Slimming', duration: '8 weeks' },
-  { key: 'SLIMMING_PLUS_MUSCLE', label: '⚡ Slim + Muscle', duration: '12 weeks' },
-];
-
-// Running and Yoga can only slim — no muscle building
-const CARDIO_ONLY_TYPES = ['RUNNING', 'YOGA'];
-const CARDIO_GOALS = [
-  { key: 'SLIMMING', label: '🔥 Slimming', duration: '8 weeks' },
+  { key: 'MUSCLE_BUILDING', label: '💪 Muscle Building' },
+  { key: 'SLIMMING', label: '🔥 Slimming' },
+  { key: 'SLIMMING_PLUS_MUSCLE', label: '⚡ Slim + Muscle' },
 ];
 
 const DIFFICULTIES = [
@@ -40,184 +64,87 @@ const DIFFICULTIES = [
   { key: 'ADVANCED', label: '🔴 Advanced' },
 ];
 
-const CARDIO_TYPES = [
-  { key: 'RUNNING', label: '🏃 Running' },
-  { key: 'WALKING', label: '🚶 Walking' },
-  { key: 'CYCLING', label: '🚴 Cycling' },
-  { key: 'SKIPPING', label: '⏩ Skipping' },
-];
-
-const GENDERS = [
-  { key: 'MALE', label: '👨 Male' },
-  { key: 'FEMALE', label: '👩 Female' },
-  { key: 'OTHER', label: '⚧ Other' },
-];
-
-const TIME_OPTIONS = [
-  '5:00 AM', '6:00 AM', '7:00 AM', '8:00 AM',
-  '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM',
-  '9:00 PM', '9:30 PM', '10:00 PM', '10:30 PM',
-];
+const formatLabel = (str) => {
+  if (!str) return '';
+  return str.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+};
 
 const WorkoutSetupScreen = ({ navigation }) => {
   const { t } = useTranslation();
-  const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
-  const profileGender = user?.profile?.gender;
 
-  const [exerciseType, setExerciseType] = useState(null);
-  const [goal, setGoal] = useState(null);
+  const [planName, setPlanName] = useState('My AI Workout');
+  const [goal, setGoal] = useState('MUSCLE_BUILDING');
   const [difficulty, setDifficulty] = useState('INTERMEDIATE');
-  const [daysPerWeek, setDaysPerWeek] = useState(4);
-  const [durationMinutes, setDurationMinutes] = useState(60);
-  const [exerciseTime, setExerciseTime] = useState('6:00 AM');
-  const [includeCardio, setIncludeCardio] = useState(false);
-  const [cardioType, setCardioType] = useState('RUNNING');
-  const [cardioDuration, setCardioDuration] = useState(20);
-  const [cardioSteps, setCardioSteps] = useState(0);
-  const [gender, setGender] = useState(profileGender || '');
+  const [selectedDays, setSelectedDays] = useState(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']);
+  const [splitType, setSplitType] = useState('PUSH_PULL_LEGS');
   const [loading, setLoading] = useState(false);
-  const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const [exerciseTime, setExerciseTime] = useState('6:00 AM');
+  const [validationErrors, setValidationErrors] = useState({});
 
-  // Determine whether gender is missing from profile
-  const needsGender = !profileGender;
-
-  // Load previous preferences
-  useEffect(() => {
-    (async () => {
-      try {
-        const raw = await AsyncStorage.getItem(PREFS_KEY);
-        if (raw) {
-          const prefs = JSON.parse(raw);
-          if (prefs.exerciseType) setExerciseType(prefs.exerciseType);
-          if (prefs.goal) setGoal(prefs.goal);
-          if (prefs.difficulty) setDifficulty(prefs.difficulty);
-          if (prefs.daysPerWeek) setDaysPerWeek(prefs.daysPerWeek);
-          if (prefs.durationMinutes) setDurationMinutes(prefs.durationMinutes);
-          if (prefs.exerciseTime) setExerciseTime(prefs.exerciseTime);
-          if (prefs.includeCardio !== undefined) setIncludeCardio(prefs.includeCardio);
-          if (prefs.cardioType) setCardioType(prefs.cardioType);
-          if (prefs.cardioDuration) setCardioDuration(prefs.cardioDuration);
-          if (prefs.cardioSteps !== undefined) setCardioSteps(prefs.cardioSteps);
-        }
-      } catch (e) { /* ignore */ }
-      setPrefsLoaded(true);
-    })();
-  }, []);
-
-  // When exercise type changes, reset goal if it becomes invalid
-  useEffect(() => {
-    if (CARDIO_ONLY_TYPES.includes(exerciseType)) {
-      if (goal && goal !== 'SLIMMING') {
-        setGoal('SLIMMING');
-      }
+  const toggleDay = (day) => {
+    setSelectedDays(prev => {
+      const updated = prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day];
+      return updated;
+    });
+    if (validationErrors.days) {
+      setValidationErrors(prev => ({ ...prev, days: null }));
     }
-  }, [exerciseType]);
+  };
 
-  const availableGoals = CARDIO_ONLY_TYPES.includes(exerciseType) ? CARDIO_GOALS : ALL_GOALS;
-
-  // Persist preferences to AsyncStorage
-  const savePrefs = async () => {
-    try {
-      await AsyncStorage.setItem(PREFS_KEY, JSON.stringify({
-        exerciseType, goal, difficulty, daysPerWeek, durationMinutes,
-        exerciseTime, includeCardio, cardioType, cardioDuration, cardioSteps,
-      }));
-    } catch (e) { /* ignore */ }
+  const getWeeklyCyclePreview = () => {
+    const sortedWorkoutDays = selectedDays.slice().sort((a, b) => DAYS.indexOf(a) - DAYS.indexOf(b));
+    const preview = {};
+    let cycleIndex = 0;
+    DAYS.forEach(day => {
+      if (selectedDays.includes(day)) {
+        preview[day] = { type: 'workout', source: day };
+      } else {
+        preview[day] = { type: 'cycle', source: sortedWorkoutDays[cycleIndex % sortedWorkoutDays.length] };
+        cycleIndex++;
+      }
+    });
+    return preview;
   };
 
   const handleGenerate = async () => {
-    // Validate exercise type
-    if (!exerciseType) {
-      const msg = t('workoutSetup.selectExerciseType');
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('common.missingInfo'), msg);
-      return;
+    setValidationErrors({});
+    const errors = {};
+
+    const trimmedName = planName.trim();
+    if (!trimmedName) {
+      errors.planName = 'Please enter a plan name';
+    } else if (trimmedName.length > 100) {
+      errors.planName = 'Plan name must be 100 characters or less';
     }
-    // Validate goal
-    if (!goal) {
-      const msg = t('workoutSetup.selectGoal');
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('common.missingInfo'), msg);
-      return;
+
+    if (selectedDays.length === 0) {
+      errors.days = 'Please select at least one workout day';
     }
-    // Validate difficulty
-    if (!difficulty) {
-      const msg = t('workoutSetup.selectDifficulty');
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('common.missingInfo'), msg);
-      return;
+
+    if (!exerciseTime || !exerciseTime.trim()) {
+      errors.exerciseTime = 'Please select your preferred workout time';
     }
-    // Validate days per week
-    if (daysPerWeek < 1 || daysPerWeek > 6) {
-      const msg = t('workoutSetup.daysRange');
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('workoutSetup.invalidInput'), msg);
-      return;
+
+    if (!splitType) {
+      errors.splitType = 'Please select a workout split type';
     }
-    // Validate duration
-    if (durationMinutes < 15 || durationMinutes > 120) {
-      const msg = t('workoutSetup.durationRange');
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('workoutSetup.invalidInput'), msg);
-      return;
-    }
-    // Validate exercise time
-    if (!exerciseTime) {
-      const msg = t('workoutSetup.selectWorkoutTime');
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('common.missingInfo'), msg);
-      return;
-    }
-    // Validate cardio settings if included
-    if (includeCardio) {
-      if (!cardioType) {
-        const msg = t('workoutSetup.selectCardioType');
-        Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('common.missingInfo'), msg);
-        return;
-      }
-      if (cardioDuration < 5 || cardioDuration > 60) {
-        const msg = t('workoutSetup.cardioDurationRange');
-        Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('workoutSetup.invalidInput'), msg);
-        return;
-      }
-      if ((cardioType === 'RUNNING' || cardioType === 'WALKING') && cardioSteps < 0) {
-        const msg = t('workoutSetup.cardioStepsNegative');
-        Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('workoutSetup.invalidInput'), msg);
-        return;
-      }
-    }
-    // Validate gender if needed
-    if (needsGender && !gender) {
-      const msg = t('workoutSetup.selectGender');
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('common.missingInfo'), msg);
+
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
       return;
     }
 
     setLoading(true);
     try {
-      // Save gender to profile if it was missing
-      if (needsGender && gender) {
-        try {
-          const updatedProfile = await userService.updateProfile({
-            ...user?.profile,
-            gender,
-          });
-          // Update local user state
-          dispatch(updateUser({ ...user, profile: { ...user?.profile, gender } }));
-        } catch (e) {
-          
-        }
-      }
-
-      // Save preferences for next time
-      await savePrefs();
-
       const request = {
-        daysPerWeek,
-        exerciseType,
-        exerciseTime,
-        durationMinutes,
-        goal,
-        difficulty,
-        includeCardio,
-        cardioType: includeCardio ? cardioType : null,
-        cardioDurationMinutes: includeCardio ? cardioDuration : null,
-        cardioSteps: includeCardio ? cardioSteps : null,
+        planName: trimmedName,
+        daysPerWeek: selectedDays.length,
+        exerciseTime: exerciseTime,
+        goal: goal,
+        difficulty: difficulty,
+        workoutDays: selectedDays,
+        splitType: splitType,
       };
 
       // Add plan generation limit info from subscription
@@ -228,56 +155,17 @@ const WorkoutSetupScreen = ({ navigation }) => {
           request.maxPlanGenerations = sub.maxPlanGenerations || sub.durationMonths || 3;
           request.subscriptionStartDate = sub.startDate;
         }
-      } catch (e) { /* ignore - backend will still work without limit info */ }
+      } catch (e) { /* ignore */ }
 
       const plan = await workoutService.generateWorkoutPlan(request);
       navigation.navigate('GeneratedWorkoutPlanView', { plan, exerciseTime });
     } catch (error) {
-      const msg = error?.response?.data?.message || t('workout.loadingWorkout');
+      const msg = error?.response?.data?.message || 'Failed to generate workout plan';
       Platform.OS === 'web' ? window.alert(msg) : Alert.alert(t('common.error'), msg);
     } finally {
       setLoading(false);
     }
   };
-
-  const renderRadioGroup = (items, selected, onSelect) => (
-    <View style={styles.radioGroup}>
-      {items.map(item => (
-        <TouchableOpacity
-          key={item.key}
-          style={[styles.radioItem, selected === item.key && styles.radioItemSelected]}
-          onPress={() => onSelect(item.key)}
-        >
-          <Text style={[styles.radioLabel, selected === item.key && styles.radioLabelSelected]}>
-            {item.label}
-          </Text>
-          {item.desc && <Text style={styles.radioDesc}>{item.desc}</Text>}
-          {item.duration && <Text style={styles.radioDuration}>{item.duration}</Text>}
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-
-  const renderNumberPicker = (label, value, onChange, min, max, step = 1) => (
-    <View style={styles.numberPicker}>
-      <Text style={styles.pickerLabel}>{label}</Text>
-      <View style={styles.pickerControls}>
-        <TouchableOpacity
-          style={styles.pickerBtn}
-          onPress={() => onChange(Math.max(min, value - step))}
-        >
-          <Text style={styles.pickerBtnText}>−</Text>
-        </TouchableOpacity>
-        <Text style={styles.pickerValue}>{value}</Text>
-        <TouchableOpacity
-          style={styles.pickerBtn}
-          onPress={() => onChange(Math.min(max, value + step))}
-        >
-          <Text style={styles.pickerBtnText}>+</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
 
   if (loading) {
     return (
@@ -289,95 +177,226 @@ const WorkoutSetupScreen = ({ navigation }) => {
     );
   }
 
-  const canGenerate = exerciseType && goal && (!needsGender || gender);
+  const selectedSplit = SPLIT_TYPES.find(s => s.key === splitType);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>{t('common.back')}</Text>
+          <Text style={styles.backText}>{t('common.back')}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('workoutSetup.title')}</Text>
         <View style={{ width: 60 }} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Gender — only show if not set in profile */}
-        {needsGender && (
-          <>
-            <Text style={styles.sectionTitle}>👤 {t('workoutSetup.yourGender')}</Text>
-            <Text style={styles.sectionHint}>{t('workoutSetup.genderRequired')}</Text>
-            {renderRadioGroup(GENDERS, gender, setGender)}
-          </>
-        )}
-
-        {/* Exercise Type */}
-        <Text style={styles.sectionTitle}>🏋️ {t('workoutSetup.exerciseType')}</Text>
-        {renderRadioGroup(EXERCISE_TYPES, exerciseType, setExerciseType)}
-
-        {/* Goal — filtered based on exercise type */}
-        <Text style={styles.sectionTitle}>🎯 {t('workoutSetup.yourGoal')}</Text>
-        {CARDIO_ONLY_TYPES.includes(exerciseType) && (
-          <Text style={styles.sectionHint}>
-            {t('workoutSetup.cardioOnlyHint')}
-          </Text>
-        )}
-        {renderRadioGroup(availableGoals, goal, setGoal)}
-
-        {/* Difficulty */}
-        <Text style={styles.sectionTitle}>📊 {t('workoutSetup.difficultyLevel')}</Text>
-        {renderRadioGroup(DIFFICULTIES, difficulty, setDifficulty)}
-
-        {/* Days per week */}
-        {renderNumberPicker(`📅 ${t('workoutSetup.daysPerWeek')}`, daysPerWeek, setDaysPerWeek, 1, 6)}
-
-        {/* Duration */}
-        {renderNumberPicker(`⏱️ ${t('workoutSetup.durationMinutes')}`, durationMinutes, setDurationMinutes, 15, 120, 15)}
-
-        {/* Exercise Time — extended to 10:30 PM */}
-        <View style={styles.timeSection}>
-          <Text style={styles.sectionTitle}>🕐 {t('workoutSetup.workoutTime')}</Text>
-          <View style={styles.timeOptions}>
-            {TIME_OPTIONS.map(t => (
-              <TouchableOpacity
-                key={t}
-                style={[styles.timeChip, exerciseTime === t && styles.timeChipSelected]}
-                onPress={() => setExerciseTime(t)}
-              >
-                <Text style={[styles.timeChipText, exerciseTime === t && styles.timeChipTextSelected]}>
-                  {t}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        {/* AI Premium Badge */}
+        <View style={styles.aiBadge}>
+          <Text style={styles.aiBadgeIcon}>🤖</Text>
+          <View style={styles.aiBadgeContent}>
+            <Text style={styles.aiBadgeTitle}>AI-Powered Plan</Text>
+            <Text style={styles.aiBadgeDesc}>
+              Choose your preferences and our AI will generate the perfect workout plan with exercises tailored for you
+            </Text>
           </View>
         </View>
 
-        {/* Include Cardio */}
-        <TouchableOpacity
-          style={[styles.cardioToggle, includeCardio && styles.cardioToggleActive]}
-          onPress={() => setIncludeCardio(!includeCardio)}
-        >
-          <Text style={styles.cardioToggleText}>
-            {includeCardio ? '✅' : '⬜'} {t('workoutSetup.includeCardio')}
-          </Text>
-        </TouchableOpacity>
+        {/* Plan Name */}
+        <Text style={styles.sectionTitle}>📝 Plan Name</Text>
+        <TextInput
+          style={[styles.nameInput, validationErrors.planName && styles.inputError]}
+          value={planName}
+          onChangeText={(text) => {
+            setPlanName(text);
+            if (validationErrors.planName) {
+              setValidationErrors(prev => ({ ...prev, planName: null }));
+            }
+          }}
+          placeholder="My AI Workout"
+          maxLength={100}
+          placeholderTextColor={colors.text.light}
+        />
+        {validationErrors.planName && (
+          <Text style={styles.errorText}>⚠️ {validationErrors.planName}</Text>
+        )}
 
-        {includeCardio && (
-          <View style={styles.cardioSection}>
-            <Text style={styles.sectionSubtitle}>{t('workoutSetup.cardioType')}</Text>
-            {renderRadioGroup(CARDIO_TYPES, cardioType, setCardioType)}
-            {renderNumberPicker(t('workoutSetup.cardioDuration'), cardioDuration, setCardioDuration, 5, 60, 5)}
-            {(cardioType === 'RUNNING' || cardioType === 'WALKING') && (
-              renderNumberPicker(t('workoutSetup.targetSteps'), cardioSteps, setCardioSteps, 0, 20000, 1000)
-            )}
+        {/* Your Goal */}
+        <Text style={styles.sectionTitle}>🎯 {t('workoutSetup.yourGoal') || 'Your Goal'}</Text>
+        <View style={styles.radioGroup}>
+          {ALL_GOALS.map(item => (
+            <TouchableOpacity
+              key={item.key}
+              style={[styles.radioItem, goal === item.key && styles.radioItemSelected]}
+              onPress={() => setGoal(item.key)}
+            >
+              <Text style={[styles.radioLabel, goal === item.key && styles.radioLabelSelected]}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Difficulty Level */}
+        <Text style={styles.sectionTitle}>📊 {t('workoutSetup.difficultyLevel') || 'Difficulty Level'}</Text>
+        <View style={styles.radioGroup}>
+          {DIFFICULTIES.map(item => (
+            <TouchableOpacity
+              key={item.key}
+              style={[styles.radioItem, difficulty === item.key && styles.radioItemSelected]}
+              onPress={() => setDifficulty(item.key)}
+            >
+              <Text style={[styles.radioLabel, difficulty === item.key && styles.radioLabelSelected]}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Workout Split Type */}
+        <Text style={styles.sectionTitle}>🏋️ Workout Split</Text>
+        <Text style={styles.sectionHint}>How would you like to split your exercises across days?</Text>
+        {validationErrors.splitType && (
+          <Text style={styles.errorText}>⚠️ {validationErrors.splitType}</Text>
+        )}
+        {SPLIT_TYPES.map(item => (
+          <TouchableOpacity
+            key={item.key}
+            style={[styles.splitCard, splitType === item.key && styles.splitCardSelected]}
+            onPress={() => {
+              setSplitType(item.key);
+              if (validationErrors.splitType) {
+                setValidationErrors(prev => ({ ...prev, splitType: null }));
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={styles.splitCardHeader}>
+              <View style={[styles.splitRadio, splitType === item.key && styles.splitRadioSelected]}>
+                {splitType === item.key && <View style={styles.splitRadioDot} />}
+              </View>
+              <Text style={[styles.splitLabel, splitType === item.key && styles.splitLabelSelected]}>
+                {item.label}
+              </Text>
+            </View>
+            <Text style={styles.splitDesc}>{item.desc}</Text>
+            <View style={styles.splitExampleBox}>
+              <Text style={styles.splitExampleText}>💡 {item.example}</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+
+        {/* Day Selection */}
+        <Text style={styles.sectionTitle}>📅 {t('freeWorkoutBuilder.selectDays') || 'Workout Days'}</Text>
+        {validationErrors.days && (
+          <Text style={styles.errorText}>⚠️ {validationErrors.days}</Text>
+        )}
+        <View style={styles.dayRow}>
+          {DAYS.map(day => (
+            <TouchableOpacity
+              key={day}
+              style={[styles.dayChip, selectedDays.includes(day) && styles.dayChipSelected]}
+              onPress={() => toggleDay(day)}
+            >
+              <Text style={[styles.dayChipText, selectedDays.includes(day) && styles.dayChipTextSelected]}>
+                {day.substring(0, 3)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Weekly Cycle Preview */}
+        {selectedDays.length > 0 && selectedDays.length < 7 && (
+          <View style={styles.cyclePreview}>
+            <Text style={styles.cyclePreviewTitle}>📆 Weekly Schedule Preview</Text>
+            {DAYS.map(day => {
+              const info = getWeeklyCyclePreview()[day];
+              return (
+                <View key={day} style={styles.cycleRow}>
+                  <Text style={styles.cycleDayName}>{formatLabel(day)}</Text>
+                  {info.type === 'workout' ? (
+                    <Text style={[styles.cycleSource, { color: colors.primary, fontWeight: '700' }]}>
+                      🏋️ Workout Day
+                    </Text>
+                  ) : (
+                    <Text style={[styles.cycleSource, { color: colors.text.secondary }]}>
+                      🔄 Same as {formatLabel(info.source)}
+                    </Text>
+                  )}
+                </View>
+              );
+            })}
           </View>
         )}
 
-        {/* Generate Button */}
+        {/* Exercise Time */}
+        <Text style={styles.sectionTitle}>🕐 {t('workoutSetup.workoutTime') || 'Exercise Time'} *</Text>
+        <Text style={styles.sectionHint}>When do you prefer to workout?</Text>
+        {validationErrors.exerciseTime && (
+          <Text style={styles.errorText}>⚠️ {validationErrors.exerciseTime}</Text>
+        )}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.timeRow}>
+          {TIME_OPTIONS.map(time => (
+            <TouchableOpacity
+              key={time}
+              style={[styles.timeChip, exerciseTime === time && styles.timeChipSelected]}
+              onPress={() => {
+                setExerciseTime(time);
+                if (validationErrors.exerciseTime) {
+                  setValidationErrors(prev => ({ ...prev, exerciseTime: null }));
+                }
+              }}
+            >
+              <Text style={[styles.timeChipText, exerciseTime === time && styles.timeChipTextSelected]}>
+                {time}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* AI-generated exercises info */}
+        <View style={styles.aiExerciseInfo}>
+          <Text style={styles.aiExerciseInfoIcon}>✨</Text>
+          <View style={styles.aiExerciseInfoContent}>
+            <Text style={styles.aiExerciseInfoTitle}>Exercises Generated by AI</Text>
+            <Text style={styles.aiExerciseInfoDesc}>
+              Based on your {selectedSplit?.label || 'selected'} split, our AI will automatically generate the best exercises for each workout day — including sets, reps, rest times, and calorie estimates.
+            </Text>
+          </View>
+        </View>
+
+        {/* Summary */}
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>📊 Plan Summary</Text>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Workout days</Text>
+            <Text style={styles.summaryValue}>{selectedDays.length} days/week</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Exercise time</Text>
+            <Text style={styles.summaryValue}>🕐 {exerciseTime}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Goal</Text>
+            <Text style={styles.summaryValue}>{formatLabel(goal)}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Difficulty</Text>
+            <Text style={styles.summaryValue}>{formatLabel(difficulty)}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Workout split</Text>
+            <Text style={styles.summaryValue}>{selectedSplit?.label || '—'}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Exercises</Text>
+            <Text style={[styles.summaryValue, { color: colors.primary }]}>🤖 AI Generated</Text>
+          </View>
+        </View>
+
+        {/* Generate Plan Button */}
         <TouchableOpacity
-          style={[styles.generateBtn, !canGenerate && styles.generateBtnDisabled]}
+          style={styles.generateBtn}
           onPress={handleGenerate}
-          disabled={!canGenerate}
         >
           <Text style={styles.generateBtnText}>🚀 {t('workoutSetup.generateWorkoutPlan')}</Text>
         </TouchableOpacity>
@@ -398,12 +417,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
   backButton: { padding: spacing.xs },
-  backButtonText: { ...typography.body, color: colors.text.inverse, fontWeight: '600' },
+  backText: { ...typography.body, color: colors.text.inverse, fontWeight: '600' },
   headerTitle: { ...typography.h3, color: colors.text.inverse },
   content: { flex: 1, padding: spacing.lg },
+  aiBadge: {
+    flexDirection: 'row', backgroundColor: colors.primary + '10', borderRadius: borderRadius.lg,
+    padding: spacing.md, borderWidth: 1, borderColor: colors.primary + '30', alignItems: 'center',
+  },
+  aiBadgeIcon: { fontSize: 32, marginRight: spacing.md },
+  aiBadgeContent: { flex: 1 },
+  aiBadgeTitle: { ...typography.body, fontWeight: '700', color: colors.primary, marginBottom: 2 },
+  aiBadgeDesc: { ...typography.caption, color: colors.text.secondary, lineHeight: 18 },
   sectionTitle: { ...typography.h3, color: colors.text.primary, marginTop: spacing.lg, marginBottom: spacing.sm },
-  sectionHint: { ...typography.caption, color: colors.text.secondary, marginBottom: spacing.sm, fontStyle: 'italic' },
-  sectionSubtitle: { ...typography.body, fontWeight: '600', color: colors.text.primary, marginBottom: spacing.sm },
+  sectionHint: { ...typography.caption, color: colors.text.light, marginBottom: spacing.sm },
   radioGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   radioItem: {
     backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.md,
@@ -412,42 +438,119 @@ const styles = StyleSheet.create({
   radioItemSelected: { borderColor: colors.primary, backgroundColor: colors.primary + '10' },
   radioLabel: { ...typography.body, fontWeight: '600', color: colors.text.primary, textAlign: 'center' },
   radioLabelSelected: { color: colors.primary },
-  radioDesc: { ...typography.caption, color: colors.text.secondary, textAlign: 'center', marginTop: 2 },
-  radioDuration: { ...typography.caption, color: colors.primary, fontWeight: '600', marginTop: 2 },
-  numberPicker: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.md, marginTop: spacing.md, ...shadows.sm,
+  nameInput: {
+    backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.md,
+    ...typography.body, color: colors.text.primary, borderWidth: 1, borderColor: colors.border || '#e0e0e0',
   },
-  pickerLabel: { ...typography.body, fontWeight: '600', color: colors.text.primary },
-  pickerControls: { flexDirection: 'row', alignItems: 'center' },
-  pickerBtn: {
-    width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primary,
+  // Workout Split
+  splitCard: {
+    backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.md,
+    marginBottom: spacing.sm, borderWidth: 2, borderColor: 'transparent', ...shadows.sm,
+  },
+  splitCardSelected: {
+    borderColor: colors.primary, backgroundColor: colors.primary + '08',
+  },
+  splitCardHeader: {
+    flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs,
+  },
+  splitRadio: {
+    width: 22, height: 22, borderRadius: 11, borderWidth: 2,
+    borderColor: colors.text.light, marginRight: spacing.sm,
     justifyContent: 'center', alignItems: 'center',
   },
-  pickerBtnText: { color: '#FFF', fontSize: 20, fontWeight: 'bold' },
-  pickerValue: { ...typography.h3, color: colors.primary, marginHorizontal: spacing.lg },
-  timeSection: { marginBottom: spacing.md },
-  timeOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  splitRadioSelected: {
+    borderColor: colors.primary,
+  },
+  splitRadioDot: {
+    width: 12, height: 12, borderRadius: 6, backgroundColor: colors.primary,
+  },
+  splitLabel: {
+    ...typography.body, fontWeight: '700', color: colors.text.primary,
+  },
+  splitLabelSelected: {
+    color: colors.primary,
+  },
+  splitDesc: {
+    ...typography.bodySmall, color: colors.text.secondary, marginLeft: 34, marginBottom: spacing.xs,
+  },
+  splitExampleBox: {
+    backgroundColor: colors.background, borderRadius: borderRadius.sm, padding: spacing.sm,
+    marginLeft: 34,
+  },
+  splitExampleText: {
+    ...typography.caption, color: colors.text.light, fontStyle: 'italic', lineHeight: 18,
+  },
+  // Day selection
+  dayRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  dayChip: {
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: borderRadius.full || 20,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border || '#e0e0e0',
+  },
+  dayChipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  dayChipText: { ...typography.bodySmall, color: colors.text.primary, fontWeight: '600' },
+  dayChipTextSelected: { color: colors.text.inverse },
+  // Weekly cycle preview
+  cyclePreview: {
+    backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.lg,
+    marginTop: spacing.lg, ...shadows.sm, borderWidth: 1, borderColor: colors.border || '#e0e0e0',
+  },
+  cyclePreviewTitle: { ...typography.body, fontWeight: '700', color: colors.text.primary, marginBottom: spacing.md },
+  cycleRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: spacing.sm, borderBottomWidth: 0.5, borderBottomColor: colors.border || '#e0e0e0',
+  },
+  cycleDayName: { ...typography.bodySmall, fontWeight: '600', color: colors.text.primary, width: 90 },
+  cycleSource: { ...typography.bodySmall, flex: 1, textAlign: 'right' },
+  // Time
+  timeRow: { marginBottom: spacing.md, maxHeight: 44 },
   timeChip: {
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full || 20, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: borderRadius.md,
+    backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border || '#e0e0e0',
+    marginRight: spacing.sm,
   },
   timeChipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  timeChipText: { ...typography.bodySmall, color: colors.text.primary },
-  timeChipTextSelected: { color: colors.text.inverse, fontWeight: '600' },
-  cardioToggle: {
-    flexDirection: 'row', alignItems: 'center', padding: spacing.md,
-    backgroundColor: colors.surface, borderRadius: borderRadius.md, marginTop: spacing.lg, ...shadows.sm,
+  timeChipText: { ...typography.bodySmall, color: colors.text.primary, fontWeight: '600' },
+  timeChipTextSelected: { color: colors.text.inverse, fontWeight: '700' },
+  // AI Exercise Info
+  aiExerciseInfo: {
+    flexDirection: 'row', backgroundColor: colors.success + '10', borderRadius: borderRadius.lg,
+    padding: spacing.md, marginTop: spacing.lg, borderWidth: 1, borderColor: colors.success + '30',
+    alignItems: 'center',
   },
-  cardioToggleActive: { backgroundColor: colors.primary + '10', borderWidth: 1, borderColor: colors.primary },
-  cardioToggleText: { ...typography.body, fontWeight: '600', color: colors.text.primary },
-  cardioSection: { marginLeft: spacing.md },
+  aiExerciseInfoIcon: { fontSize: 28, marginRight: spacing.md },
+  aiExerciseInfoContent: { flex: 1 },
+  aiExerciseInfoTitle: { ...typography.body, fontWeight: '700', color: colors.success, marginBottom: 2 },
+  aiExerciseInfoDesc: { ...typography.caption, color: colors.text.secondary, lineHeight: 18 },
+  // Summary
+  summaryCard: {
+    backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.lg,
+    marginTop: spacing.xl, ...shadows.sm,
+  },
+  summaryTitle: { ...typography.h3, color: colors.text.primary, marginBottom: spacing.md },
+  summaryRow: {
+    flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.xs,
+    borderBottomWidth: 0.5, borderBottomColor: colors.border || '#e0e0e0',
+  },
+  summaryLabel: { ...typography.bodySmall, color: colors.text.secondary },
+  summaryValue: { ...typography.bodySmall, color: colors.text.primary, fontWeight: '600' },
+  // Generate button
   generateBtn: {
     backgroundColor: colors.primary, padding: spacing.lg, borderRadius: borderRadius.lg,
     alignItems: 'center', marginTop: spacing.xl, ...shadows.md,
   },
-  generateBtnDisabled: { opacity: 0.5 },
   generateBtnText: { ...typography.h3, color: colors.text.inverse },
+  // Validation
+  errorText: {
+    ...typography.bodySmall,
+    color: '#EF4444',
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+    fontWeight: '500',
+  },
+  inputError: {
+    borderColor: '#EF4444',
+    borderWidth: 1.5,
+  },
 });
 
 export default WorkoutSetupScreen;

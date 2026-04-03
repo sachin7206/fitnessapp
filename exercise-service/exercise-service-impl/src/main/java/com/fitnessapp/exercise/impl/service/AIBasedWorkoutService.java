@@ -44,20 +44,24 @@ public class AIBasedWorkoutService implements AIBasedWorkoutOperations {
                     request.getDurationMinutes(), request.getGoal(), request.getDifficulty(),
                     request.getIncludeCardio(), request.getCardioType(), request.getCardioDurationMinutes(),
                     request.getCardioSteps(), request.getFocusMuscleGroups(),
-                    request.getWorkoutDays(), convertCustomExercises(request.getCustomExercises())
+                    request.getWorkoutDays(), request.getSplitType(),
+                    convertCustomExercises(request.getCustomExercises())
                 );
                 AiWorkoutPlanResponse aiResponse = aiServiceSalClient.generateWorkoutPlan(aiRequest);
                 if (aiResponse != null && aiResponse.getExercises() != null && !aiResponse.getExercises().isEmpty()) {
                     exercises = convertAiExercisesToEntities(aiResponse.getExercises());
                 }
             } catch (Exception e) {
-                log.warn("AI workout generation failed, falling back to prebuilt: {}", e.getMessage());
+                log.warn("AI workout generation failed: {}", e.getMessage());
+                throw new RuntimeException("AI service is temporarily unavailable. Please try again in a few moments. Your plan generation count has not been affected.", e);
             }
+        } else {
+            throw new RuntimeException("AI service is currently unavailable. Please try again later. Your plan generation count has not been affected.");
         }
 
-        // Fallback to prebuilt exercises
+        // If AI returned empty response, don't count it
         if (exercises == null || exercises.isEmpty()) {
-            exercises = buildFallbackExercises(request);
+            throw new RuntimeException("AI service returned an empty plan. Please try again. Your plan generation count has not been affected.");
         }
 
         // Calculate total calories per session
@@ -74,19 +78,20 @@ public class AIBasedWorkoutService implements AIBasedWorkoutOperations {
         WorkoutPlan plan = new WorkoutPlan();
         plan.setUserId(userId);
         plan.setPlanName(buildPlanName(request));
-        plan.setPlanType(request.getExerciseType());
+        plan.setPlanType(request.getExerciseType() != null ? request.getExerciseType() : "CUSTOM");
         plan.setExercises(exercises);
         plan.setFrequency(daysPerWeek + " days/week");
         plan.setDifficulty(request.getDifficulty() != null ? request.getDifficulty() : "INTERMEDIATE");
         plan.setDurationWeeks(durationWeeks);
         plan.setIsActive(true);
-        plan.setExerciseType(request.getExerciseType());
+        plan.setExerciseType(request.getExerciseType() != null ? request.getExerciseType() : "CUSTOM");
         plan.setExerciseTime(request.getExerciseTime());
         plan.setExerciseDurationMinutes(request.getDurationMinutes());
-        plan.setGoal(request.getGoal());
+        plan.setGoal(request.getGoal() != null ? request.getGoal() : "MUSCLE_BUILDING");
         plan.setDaysPerWeek(daysPerWeek);
         plan.setCaloriesPerSession(caloriesPerSession);
         plan.setIsTemplate(false);
+        plan.setRestDay(request.getRestDay());
 
         if (Boolean.TRUE.equals(request.getIncludeCardio())) {
             plan.setCardioType(request.getCardioType());

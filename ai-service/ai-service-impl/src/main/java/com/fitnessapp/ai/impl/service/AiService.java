@@ -190,6 +190,26 @@ public class AiService implements AiOperations {
         p.append("Days Per Week: ").append(request.getDaysPerWeek()).append("\n");
         p.append("Duration Per Session: ").append(request.getDurationMinutes()).append(" minutes\n");
         if (request.getDifficulty() != null) p.append("Difficulty: ").append(request.getDifficulty()).append("\n");
+        if (request.getSplitType() != null) {
+            p.append("Workout Split: ").append(request.getSplitType()).append("\n");
+            switch (request.getSplitType()) {
+                case "SINGLE_MUSCLE":
+                    p.append("- Train ONE muscle group per day (e.g., Monday=Chest, Tuesday=Back, Wednesday=Legs, Thursday=Shoulders, Friday=Arms)\n");
+                    break;
+                case "DOUBLE_MUSCLE":
+                    p.append("- Train TWO muscle groups per day (e.g., Monday=Chest+Triceps, Tuesday=Back+Biceps, Wednesday=Legs+Shoulders)\n");
+                    break;
+                case "PUSH_PULL_LEGS":
+                    p.append("- Follow Push/Pull/Legs split: Push days=Chest+Shoulders+Triceps, Pull days=Back+Biceps, Leg days=Quads+Hamstrings+Calves+Glutes\n");
+                    break;
+                case "UPPER_LOWER":
+                    p.append("- Follow Upper/Lower split: alternate Upper Body days and Lower Body days\n");
+                    break;
+                case "FULL_BODY":
+                    p.append("- Each day is a Full Body workout hitting all major muscle groups\n");
+                    break;
+            }
+        }
         if (Boolean.TRUE.equals(request.getIncludeCardio())) {
             p.append("Include Cardio: Yes\n");
             if (request.getCardioType() != null) p.append("Cardio Type: ").append(request.getCardioType()).append("\n");

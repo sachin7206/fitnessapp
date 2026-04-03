@@ -40,18 +40,25 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
         int durationWeeks = plan.getDurationWeeks() != null ? plan.getDurationWeeks() : 8;
         int daysPerWeek = plan.getDaysPerWeek() != null ? plan.getDaysPerWeek() : 4;
 
-        // Delete all exercise log data and completions for this user first
-        customLogRepo.deleteByUserId(userId);
-        completionRepo.deleteByUserId(userId);
-
-        // Collect old workout plan IDs to delete (but not the new plan being assigned)
+        // Collect old user workout plan IDs to handle FK references
         List<UserWorkoutPlan> existingPlans = userPlanRepo.findByUserId(userId);
+        List<Long> oldUserPlanIds = new ArrayList<>();
         List<Long> oldWorkoutPlanIds = new ArrayList<>();
         for (UserWorkoutPlan oldUserPlan : existingPlans) {
+            oldUserPlanIds.add(oldUserPlan.getId());
             if (oldUserPlan.getWorkoutPlan() != null && !oldUserPlan.getWorkoutPlan().getId().equals(planId)) {
                 oldWorkoutPlanIds.add(oldUserPlan.getWorkoutPlan().getId());
             }
         }
+
+        // Detach workout completions from old plans (preserve history, just nullify FK)
+        // This allows old plans to be deleted without losing completion history
+        if (!oldUserPlanIds.isEmpty()) {
+            completionRepo.detachFromPlans(userId, oldUserPlanIds);
+        }
+
+        // NOTE: Do NOT delete workout completions or exercise logs — they are user history
+        // that should persist across plan changes for workout count, history, and reports.
 
         // Delete all user workout plan entries
         userPlanRepo.deleteAll(existingPlans);
@@ -76,13 +83,25 @@ public class WorkoutTrackingService implements WorkoutTrackingOperations {
         userPlan.setTotalWorkouts(durationWeeks * daysPerWeek);
         userPlan.setCurrentWeek(1);
 
-        UserWorkoutPlanDTO dto = toDTO(userPlanRepo.save(userPlan));
+        UserWorkoutPlan savedPlan = userPlanRepo.save(userPlan);
+
+        // If the user already completed a workout today (under old plan),
+        // re-link that completion to the new plan and count it
+        Optional<WorkoutCompletion> todayCompletion = completionRepo.findByUserIdAndCompletionDate(userId, startDate);
+        if (todayCompletion.isPresent() && todayCompletion.get().getCompleted()) {
+            todayCompletion.get().setUserWorkoutPlan(savedPlan);
+            completionRepo.save(todayCompletion.get());
+            savedPlan.setCompletedWorkouts(1);
+            savedPlan = userPlanRepo.save(savedPlan);
+        }
+
+        UserWorkoutPlanDTO dto = toDTO(savedPlan);
         dto.setScheduledForTomorrow(false);
 
         // Create initial log entries for each exercise
         createInitialExerciseLogs(userId, plan, startDate);
 
-        log.info("Assigned new workout plan {} to user {} immediately. Old plans and logs deleted.", planId, userId);
+        log.info("Assigned new workout plan {} to user {}. Old plans deleted, workout history preserved.", planId, userId);
 
         return dto;
     }
